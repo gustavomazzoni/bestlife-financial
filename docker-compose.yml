@@ -1,0 +1,132 @@
+# docker-compose.yml
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: lifeos-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: lifeos
+      POSTGRES_PASSWORD: lifeos_dev_password
+      POSTGRES_DB: lifeos_financial
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U lifeos -d lifeos_financial']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - lifeos-network
+
+  # Next.js Application (Development)
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      target: development
+    container_name: lifeos-app-dev
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=${NODE_ENV}
+      - DATABASE_URL=${DATABASE_URL}
+      - NEXTAUTH_URL=${NEXTAUTH_URL}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+    ports:
+      - '3000:3000'
+    volumes:
+      # Mount source code for hot reload
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+      - pnpm_store:/app/.pnpm-store
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - lifeos-network
+    command: pnpm dev
+
+  # Prisma Studio (Database GUI)
+  prisma-studio:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      target: development
+    container_name: lifeos-prisma-studio
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+    ports:
+      - '5555:5555'
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - pnpm_store:/app/.pnpm-store
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - lifeos-network
+    command: pnpm prisma studio --browser none --port 5555
+
+  # Redis (for future use: caching, sessions, queues)
+  redis:
+    image: redis:7-alpine
+    container_name: lifeos-redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - lifeos-network
+
+  # Mailpit (Email testing - receives all emails in dev)
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: lifeos-mailpit
+    restart: unless-stopped
+    ports:
+      - ${SMTP_PORT}:1025 # SMTP server
+      - ${SMTP_HTTP_PORT}:8025 # Web UI
+    networks:
+      - lifeos-network
+
+  playwright:
+    build:
+      context: .
+      dockerfile: Dockerfile.e2e
+    container_name: lifeos-playwright
+    working_dir: /app
+    environment:
+      - CI=true
+      - PLAYWRIGHT_BASE_URL=http://app:3000
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - pnpm_store:/app/.pnpm-store
+    depends_on:
+      - app
+    networks:
+      - lifeos-network
+    profiles:
+      - testing
+
+volumes:
+  postgres_data:
+  redis_data:
+  pnpm_store:
+
+networks:
+  lifeos-network:
+    driver: bridge

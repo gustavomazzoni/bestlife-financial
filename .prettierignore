@@ -1,0 +1,15 @@
+node_modules
+.next
+.docker
+coverage
+dist
+build
+*.lock
+pnpm-lock.yaml
+.claude
+.husky
+.pnpm-store
+playwright-report
+scripts
+test-results
+src/generated

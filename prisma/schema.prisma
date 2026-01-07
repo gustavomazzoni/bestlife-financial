@@ -1,0 +1,221 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                    String    @id @default(cuid())
+  email                 String    @unique
+  name                  String?
+  emailVerified         DateTime?
+  image                 String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  
+  // Financial data
+  currentInvestments    Decimal   @default(0) @db.Decimal(12, 2)
+  emergencyFund         Decimal   @default(0) @db.Decimal(12, 2)
+  passiveIncomeMonthly  Decimal   @default(0) @db.Decimal(12, 2)
+  expectedReturnRate    Decimal   @default(0.07) @db.Decimal(4, 4)
+  dreamLifestyleCost    Decimal?  @db.Decimal(12, 2)
+  hourlyRate            Decimal?  @db.Decimal(10, 2)
+  
+  // Preferences
+  currency              String    @default("BRL")
+  dailyReminderTime     String    @default("21:00")
+  weeklyReviewDay       String    @default("SUNDAY")
+  weeklyReviewTime      String    @default("18:00")
+  purchaseCheckThreshold Decimal  @default(100) @db.Decimal(10, 2)
+  notificationPush      Boolean   @default(true)
+  notificationEmail     Boolean   @default(true)
+  gamificationEnabled   Boolean   @default(true)
+  
+  // Gamification
+  currentStreak         Int       @default(0)
+  longestStreak         Int       @default(0)
+  level                 String    @default("BEGINNER")
+  
+  // Relations
+  transactions          Transaction[]
+  recurringTransactions RecurringTransaction[]
+  purchaseConsiderations PurchaseConsideration[]
+  badges                Badge[]
+  accounts              Account[]
+  sessions              Session[]
+  
+  @@index([email])
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+  SAVING
+  TRANSFER
+}
+
+enum NecessityLevel {
+  IMPORTANT
+  NEEDS
+  WANTS
+}
+
+enum ValueAlignment {
+  ALIGNED
+  DEFAULT
+  EXPERIENCE
+  MATERIAL
+  FREEDOM_ENABLING
+  FREEDOM_LIMITING
+}
+
+model Transaction {
+  id              String           @id @default(cuid())
+  userId          String
+  date            DateTime
+  amount          Decimal          @db.Decimal(12, 2)
+  description     String
+  type            TransactionType
+  category        String
+  necessityLevel  NecessityLevel?
+  valueAlignment  ValueAlignment?
+  isRecurring     Boolean          @default(false)
+  recurringId     String?
+  notes           String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt @default(now())
+  
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recurring       RecurringTransaction? @relation(fields: [recurringId], references: [id])
+  
+  @@index([userId, date])
+  @@index([userId, type])
+  @@index([userId, category])
+}
+
+enum RecurringFrequency {
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+model RecurringTransaction {
+  id                    String              @id @default(cuid())
+  userId                String
+  amount                Decimal             @db.Decimal(12, 2)
+  description           String
+  type                  TransactionType
+  category              String
+  necessityLevel        NecessityLevel?
+  valueAlignment        ValueAlignment?
+  frequency             RecurringFrequency
+  startDate             DateTime
+  endDate               DateTime?
+  nextDueDate           DateTime
+  notificationDaysBefore Int                @default(3)
+  isActive              Boolean             @default(true)
+  lastCreatedDate       DateTime?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  
+  user                  User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions          Transaction[]
+  
+  @@index([userId, nextDueDate])
+  @@index([userId, isActive])
+}
+
+model Category {
+  id              String          @id @default(cuid())
+  name            String
+  type            TransactionType
+  isSystemDefault Boolean         @default(true)
+  color           String          @default("#6B7280")
+  icon            String          @default("📊")
+  createdAt       DateTime        @default(now())
+  
+  @@unique([name, type])
+  @@index([type])
+}
+
+enum ConsiderationDecision {
+  PURCHASED
+  SAVED_FOR_LATER
+  PASSED
+  PENDING
+}
+
+model PurchaseConsideration {
+  id                  String                @id @default(cuid())
+  userId              String
+  date                DateTime              @default(now())
+  amount              Decimal               @db.Decimal(12, 2)
+  category            String
+  reason              String
+  alignmentResponses  Json
+  decision            ConsiderationDecision @default(PENDING)
+  transactionId       String?               @unique
+  notes               String?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  
+  user                User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId, date])
+  @@index([userId, decision])
+}
+
+model Badge {
+  id          String   @id @default(cuid())
+  userId      String
+  badgeType   String
+  earnedAt    DateTime @default(now())
+  metadata    Json?
+  
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, badgeType])
+  @@index([userId, earnedAt])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}

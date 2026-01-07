@@ -1,0 +1,35 @@
+# Dockerfile.dev - Multi-stage development image
+FROM node:20-alpine AS base
+
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+# Set working directory
+WORKDIR /app
+
+# Install dependencies for native modules
+RUN apk add --no-cache libc6-compat openssl
+
+# Configure pnpm to use local store
+RUN pnpm config set store-dir /app/.pnpm-store
+
+# Development stage
+FROM base AS development
+
+# Copy package files
+COPY package.json pnpm-lock.yaml* ./
+
+# Install dependencies (including dev dependencies) (Use shamefully-hoist to avoid store location issues)
+RUN pnpm install --frozen-lockfile --shamefully-hoist
+
+# Copy application code
+COPY . .
+
+# Generate Prisma Client
+RUN pnpm prisma generate
+
+# Expose ports
+EXPOSE 3000 5555
+
+# Default command (can be overridden in docker-compose)
+CMD ["pnpm", "dev"]

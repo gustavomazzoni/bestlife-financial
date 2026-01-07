@@ -1,0 +1,16 @@
+.next
+node_modules
+npm-debug.log
+yarn-error.log
+.git
+.gitignore
+lifeos-financial.code-workspace
+*.log
+.DS_Store
+coverage
+.vscode
+.idea
+README.md
+docker-compose*.yml
+Dockerfile*
+.dockerignore

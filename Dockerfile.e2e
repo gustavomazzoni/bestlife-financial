@@ -1,0 +1,26 @@
+# Use a Node.js base image with Playwright
+FROM mcr.microsoft.com/playwright:v1.57.0-noble
+
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+# Set working directory
+WORKDIR /app
+
+# Configure pnpm to use local store
+RUN pnpm config set store-dir /app/.pnpm-store
+
+# Copy package files
+COPY package.json pnpm-lock.yaml* ./
+
+# Install dependencies (including dev dependencies) (Use shamefully-hoist to avoid store location issues)
+RUN pnpm install --frozen-lockfile --shamefully-hoist
+
+# Copy application code
+COPY . .
+
+# Install Playwright browsers (chromium, firefox, webkit)
+RUN pnpm playwright install
+
+# Default command to run tests
+CMD ["pnpm", "playwright", "test"]
