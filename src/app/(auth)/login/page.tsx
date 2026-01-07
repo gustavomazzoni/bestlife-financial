@@ -44,19 +44,13 @@ export default function LoginPage() {
   async function onSubmit(data: FormData) {
     setIsLoading(true);
 
-    const signInResult = await signIn('email', {
+    await signIn('email', {
       email: data.email.toLowerCase(),
       callbackUrl: searchParams?.get('from') || '/dashboard',
+      // redirect: false // Se deu certo, o NextAuth redireciona automaticamente para a página verify-request
     });
 
     setIsLoading(false);
-
-    if (!signInResult?.ok) {
-      // Aqui você poderia adicionar um Toast de erro
-      return console.error('Erro ao fazer login');
-    }
-
-    // Se deu certo, o NextAuth redireciona automaticamente para a página verify-request
   }
 
   // Login via Google
