@@ -47,3 +47,6 @@ next-env.d.ts
 
 # local workspace
 *.code-workspace
+
+# Prisma generated folder
+/src/generated
