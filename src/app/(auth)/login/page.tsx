@@ -125,7 +125,7 @@ export default function LoginPage() {
                   </p>
                 )}
               </div>
-              <Button disabled={isLoading || isGoogleLoading}>
+              <Button disabled={isLoading || isGoogleLoading} type="submit">
                 {isLoading && (
                   <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
                 )}
