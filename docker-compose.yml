@@ -111,6 +111,10 @@ services:
     environment:
       - CI=true
       - PLAYWRIGHT_BASE_URL=http://app:3000
+      - PLAYWRIGHT_HTML_HOST=0.0.0.0
+    ports:
+      - '9323:9323'
+    ipc: host
     volumes:
       - .:/app
       - /app/node_modules
@@ -121,6 +125,7 @@ services:
       - lifeos-network
     profiles:
       - testing
+    command: tail -f /dev/null
 
 volumes:
   postgres_data:
