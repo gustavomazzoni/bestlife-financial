@@ -20,7 +20,10 @@ RUN pnpm install --frozen-lockfile --shamefully-hoist
 COPY . .
 
 # Install Playwright browsers (chromium, firefox, webkit)
-RUN pnpm playwright install
+RUN pnpm playwright install --with-deps
+
+# Expose ports
+EXPOSE 9323
 
 # Default command to run tests
-CMD ["pnpm", "playwright", "test"]
+# CMD ["pnpm", "playwright", "test"]
