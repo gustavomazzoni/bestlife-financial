@@ -1,6 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const baseURL = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000';
+const baseURL = process.env.PLAYWRIGHT_BASE_URL || 'http://app:3000';
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -8,7 +8,16 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
-  reporter: 'html',
+  reporter: [
+    [
+      'html',
+      {
+        open: 'never', // Prevent auto-opening a browser inside Docker
+        host: '0.0.0.0', // Expose to the network
+        port: 9223, // Default port, can be changed
+      },
+    ],
+  ],
   use: {
     baseURL,
     trace: 'on-first-retry',
