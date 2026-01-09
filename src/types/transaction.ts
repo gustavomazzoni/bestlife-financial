@@ -1,6 +1,11 @@
-import { Transaction } from '@/generated/prisma/client';
+import {
+  Transaction,
+  TransactionType,
+  NecessityLevel,
+  ValueAlignment,
+} from '@/generated/prisma/client';
 
-export type { Transaction };
+export type { Transaction, TransactionType, NecessityLevel, ValueAlignment };
 
 export interface TransactionListResult {
   data: Transaction[];

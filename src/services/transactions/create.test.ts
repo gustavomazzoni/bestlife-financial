@@ -5,7 +5,7 @@ import { createTransaction } from './create';
 
 vi.mock('@/lib/db', () => ({
   prisma: {
-    category: { findFirst: vi.fn() },
+    category: { findUnique: vi.fn() },
     transaction: { create: vi.fn() },
   },
 }));
@@ -17,7 +17,7 @@ describe('createTransaction', () => {
     amount: 100.5,
     description: 'Grocery shopping',
     type: 'EXPENSE' as const,
-    category: 'Alimentação',
+    categoryId: 'cat_food_123',
   };
 
   const decimalAmount = new Prisma.Decimal(validData.amount);
@@ -27,8 +27,8 @@ describe('createTransaction', () => {
   });
 
   it('should create transaction with valid data', async () => {
-    vi.mocked(prisma.category.findFirst).mockResolvedValue({
-      id: 'cat_1',
+    vi.mocked(prisma.category.findUnique).mockResolvedValue({
+      id: 'cat_food_123',
       name: 'Alimentação',
       type: 'EXPENSE',
       isSystemDefault: true,
@@ -49,6 +49,15 @@ describe('createTransaction', () => {
       notes: null,
       createdAt: new Date(),
       updatedAt: new Date(),
+      // category: {
+      //   id: 'cat_food_123',
+      //   name: 'Alimentação',
+      //   type: 'EXPENSE',
+      //   isSystemDefault: true,
+      //   color: '#F97316',
+      //   icon: '🍔',
+      //   createdAt: new Date(),
+      // }
     });
 
     const result = await createTransaction(userId, validData);
@@ -56,6 +65,7 @@ describe('createTransaction', () => {
     expect(result).toBeDefined();
     expect(result.amount).toStrictEqual(decimalAmount);
     expect(result.userId).toBe(userId);
+    expect(result.categoryId).toBe('cat_food_123');
     expect(prisma.transaction.create).toHaveBeenCalledWith({
       data: {
         ...validData,
@@ -70,7 +80,15 @@ describe('createTransaction', () => {
   });
 
   it('should throw error for invalid category', async () => {
-    vi.mocked(prisma.category.findFirst).mockResolvedValue(null);
+    vi.mocked(prisma.category.findUnique).mockResolvedValue(null);
+
+    await expect(createTransaction(userId, validData)).rejects.toThrow(
+      'Category not found'
+    );
+  });
+
+  it('should throw error for mismatched category type', async () => {
+    vi.mocked(prisma.category.findUnique).mockResolvedValue(null);
 
     await expect(createTransaction(userId, validData)).rejects.toThrow(
       'Category not found'

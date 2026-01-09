@@ -10,18 +10,21 @@ export async function listTransactions(
   query: ListTransactionsQuery
 ): Promise<TransactionListResult> {
   const validated = ListTransactionsQuerySchema.parse(query);
-  const { page, limit, type, category, startDate, endDate, sortBy, sortOrder } =
-    validated;
+  const {
+    page,
+    limit,
+    type,
+    categoryId,
+    startDate,
+    endDate,
+    sortBy,
+    sortOrder,
+  } = validated;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const where: any = { userId };
-
-  if (type) where.type = type;
-  if (category) where.category = category;
+  const where: any = { userId, type, categoryId };
   if (startDate || endDate) {
-    where.date = {};
-    if (startDate) where.date.gte = startDate;
-    if (endDate) where.date.lte = endDate;
+    where.date = { gte: startDate, lte: endDate };
   }
 
   const [data, total] = await Promise.all([
@@ -30,6 +33,7 @@ export async function listTransactions(
       skip: (page - 1) * limit,
       take: limit,
       orderBy: { [sortBy]: sortOrder },
+      include: { category: true },
     }),
     prisma.transaction.count({ where }),
   ]);

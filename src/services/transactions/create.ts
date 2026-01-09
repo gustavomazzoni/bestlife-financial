@@ -12,15 +12,12 @@ export async function createTransaction(
   // Validate
   const validated = CreateTransactionSchema.parse(data);
 
-  // Check if category exists
-  const categoryExists = await prisma.category.findFirst({
-    where: {
-      name: validated.category,
-      type: validated.type,
-    },
+  // Verify category exists and matches type
+  const category = await prisma.category.findUnique({
+    where: { id: validated.categoryId, type: validated.type },
   });
 
-  if (!categoryExists) {
+  if (!category) {
     throw new Error('Category not found');
   }
 

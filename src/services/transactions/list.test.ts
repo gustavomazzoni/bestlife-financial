@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi, Mock } from 'vitest';
 import { listTransactions } from './list';
-import { ListTransactionsQuerySchema } from '@/lib/validations/transaction';
 import { prisma } from '@/lib/db';
+import { ListTransactionsQuery } from '@/lib/validations/transaction';
 
 vi.mock('@/lib/db', () => ({
   prisma: {
@@ -14,6 +14,12 @@ vi.mock('@/lib/db', () => ({
 
 describe('listTransactions', () => {
   const userId = 'user_test_123';
+  const defaultQuery: ListTransactionsQuery = {
+    page: 1,
+    limit: 20,
+    sortBy: 'date',
+    sortOrder: 'desc',
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -30,10 +36,7 @@ describe('listTransactions', () => {
     );
     vi.mocked(prisma.transaction.count).mockResolvedValue(50);
 
-    const result = await listTransactions(
-      userId,
-      ListTransactionsQuerySchema.parse({ page: 1, limit: 20 })
-    );
+    const result = await listTransactions(userId, defaultQuery);
 
     expect(result.data).toHaveLength(2);
     expect(result.total).toBe(50);
@@ -44,10 +47,7 @@ describe('listTransactions', () => {
     vi.mocked(prisma.transaction.findMany).mockResolvedValue([]);
     vi.mocked(prisma.transaction.count).mockResolvedValue(0);
 
-    await listTransactions(
-      userId,
-      ListTransactionsQuerySchema.parse({ type: 'EXPENSE', page: 1, limit: 20 })
-    );
+    await listTransactions(userId, { ...defaultQuery, type: 'EXPENSE' });
 
     expect(prisma.transaction.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -63,15 +63,11 @@ describe('listTransactions', () => {
     const startDate = new Date('2024-01-01');
     const endDate = new Date('2024-01-31');
 
-    await listTransactions(
-      userId,
-      ListTransactionsQuerySchema.parse({
-        startDate,
-        endDate,
-        page: 1,
-        limit: 20,
-      })
-    );
+    await listTransactions(userId, {
+      ...defaultQuery,
+      startDate,
+      endDate,
+    });
 
     expect(prisma.transaction.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
