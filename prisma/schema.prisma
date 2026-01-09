@@ -79,7 +79,7 @@ model Transaction {
   amount          Decimal          @db.Decimal(12, 2)
   description     String
   type            TransactionType
-  category        String
+  categoryId      String
   necessityLevel  NecessityLevel?
   valueAlignment  ValueAlignment?
   isRecurring     Boolean          @default(false)
@@ -89,11 +89,13 @@ model Transaction {
   updatedAt       DateTime         @updatedAt @default(now())
   
   user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category        Category         @relation(fields: [categoryId], references: [id])
   recurring       RecurringTransaction? @relation(fields: [recurringId], references: [id])
   
   @@index([userId, date])
   @@index([userId, type])
-  @@index([userId, category])
+  @@index([userId, categoryId])
+  @@index([categoryId])
 }
 
 enum RecurringFrequency {
@@ -108,7 +110,7 @@ model RecurringTransaction {
   amount                Decimal             @db.Decimal(12, 2)
   description           String
   type                  TransactionType
-  category              String
+  categoryId            String
   necessityLevel        NecessityLevel?
   valueAlignment        ValueAlignment?
   frequency             RecurringFrequency
@@ -122,10 +124,12 @@ model RecurringTransaction {
   updatedAt             DateTime            @updatedAt
   
   user                  User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category              Category            @relation(fields: [categoryId], references: [id])
   transactions          Transaction[]
   
   @@index([userId, nextDueDate])
   @@index([userId, isActive])
+  @@index([categoryId])
 }
 
 model Category {
@@ -136,6 +140,10 @@ model Category {
   color           String          @default("#6B7280")
   icon            String          @default("📊")
   createdAt       DateTime        @default(now())
+
+  transactions    Transaction[]
+  recurringTransactions RecurringTransaction[]
+  purchaseConsiderations PurchaseConsideration[]
   
   @@unique([name, type])
   @@index([type])
@@ -153,7 +161,7 @@ model PurchaseConsideration {
   userId              String
   date                DateTime              @default(now())
   amount              Decimal               @db.Decimal(12, 2)
-  category            String
+  categoryId          String
   reason              String
   alignmentResponses  Json
   decision            ConsiderationDecision @default(PENDING)
@@ -163,9 +171,11 @@ model PurchaseConsideration {
   updatedAt           DateTime              @updatedAt
   
   user                User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category            Category              @relation(fields: [categoryId], references: [id])
   
   @@index([userId, date])
   @@index([userId, decision])
+  @@index([categoryId])
 }
 
 model Badge {

@@ -177,6 +177,19 @@ async function main() {
   });
 
   if (transactionsCheck === 0) {
+    const catSalary = await prisma.category.findFirstOrThrow({
+      where: { name: 'Salary', type: TransactionType.INCOME },
+      select: { id: true },
+    });
+    const catHousing = await prisma.category.findFirstOrThrow({
+      where: { name: 'Housing', type: TransactionType.EXPENSE },
+      select: { id: true },
+    });
+    const catFood = await prisma.category.findFirstOrThrow({
+      where: { name: 'Food', type: TransactionType.EXPENSE },
+      select: { id: true },
+    });
+
     await prisma.transaction.createMany({
       data: [
         {
@@ -185,7 +198,7 @@ async function main() {
           amount: 8500,
           description: 'Salário Mensal',
           type: TransactionType.INCOME,
-          category: 'Salário',
+          categoryId: catSalary.id,
           necessityLevel: NecessityLevel.IMPORTANT,
           valueAlignment: ValueAlignment.FREEDOM_ENABLING,
         },
@@ -195,7 +208,7 @@ async function main() {
           amount: 2500,
           description: 'Aluguel',
           type: TransactionType.EXPENSE,
-          category: 'Moradia',
+          categoryId: catHousing.id,
           necessityLevel: NecessityLevel.IMPORTANT,
           valueAlignment: ValueAlignment.ALIGNED,
         },
@@ -205,7 +218,7 @@ async function main() {
           amount: 600,
           description: 'Supermercado Semanal',
           type: TransactionType.EXPENSE,
-          category: 'Alimentação',
+          categoryId: catFood.id,
           necessityLevel: NecessityLevel.NEEDS,
           valueAlignment: ValueAlignment.DEFAULT,
         },
