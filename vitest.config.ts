@@ -1,5 +1,5 @@
 // vitest.config.ts
-import { defineConfig } from 'vitest/config';
+import { defineConfig, configDefaults } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 
@@ -9,15 +9,24 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./tests/setup.ts'],
+    exclude: [
+      // Excluding from testings
+      ...configDefaults.exclude,
+      'node_modules/**',
+      'tests/**', // Excludes the entire 'tests' directory and its subdirectories
+      '**/*.config.*',
+      '**/.*',
+    ],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
       exclude: [
-        'node_modules/',
-        'tests/',
+        // Excluding from Code Coverage Reports
+        ...configDefaults.exclude,
+        'node_modules/**',
+        'tests/**',
         '**/*.config.*',
         '**/.*',
-        'app/api/**',
       ],
     },
   },
