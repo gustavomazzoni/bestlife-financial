@@ -1,5 +1,6 @@
-import { auth } from './config';
 import { redirect } from 'next/navigation';
+import { auth } from './config';
+import { UnauthorizedError } from '../api/response';
 
 /**
  * Server-side function to require authentication
@@ -9,7 +10,7 @@ export async function requireAuth() {
   const session = await auth();
 
   if (!session?.user?.id) {
-    throw new Error('Unauthorized');
+    throw new UnauthorizedError();
   }
 
   return session;
@@ -17,15 +18,25 @@ export async function requireAuth() {
 
 /**
  * Server-side function to get current user ID
- * Redirects to login if not authenticated
+ * Throws error if user is not authenticated
  */
 export async function getUserId(): Promise<string> {
   const session = await auth();
 
   if (!session?.user?.id) {
-    redirect('/login');
+    throw new UnauthorizedError();
   }
 
+  return session.user.id;
+}
+
+/**
+ * Client-side function to get current user ID
+ * Redirects to login if not authenticated
+ */
+export async function getUserIdOrRedirect(): Promise<string> {
+  const session = await auth();
+  if (!session?.user?.id) redirect('/login');
   return session.user.id;
 }
 
