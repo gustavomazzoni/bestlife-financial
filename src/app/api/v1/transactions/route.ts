@@ -2,13 +2,18 @@ import { NextRequest } from 'next/server';
 import { getUserId } from '@/lib/auth/session';
 import { createTransaction, listTransactions } from '@/services/transactions';
 import { apiResponse, apiError } from '@/lib/api/response';
-import { ListTransactionsQuerySchema } from '@/lib/validations/transaction';
+import {
+  CreateTransactionSchema,
+  ListTransactionsQuerySchema,
+} from '@/lib/validations/transaction';
 
 export async function POST(request: NextRequest) {
   try {
     const userId = await getUserId();
     const body = await request.json();
-    const transaction = await createTransaction(userId, body);
+
+    const validated = CreateTransactionSchema.parse(body);
+    const transaction = await createTransaction(userId, validated);
     return apiResponse(transaction, 201);
   } catch (error) {
     return apiError(error);
@@ -20,7 +25,7 @@ export async function GET(request: NextRequest) {
     const userId = await getUserId();
     const { searchParams } = new URL(request.url);
 
-    const query = ListTransactionsQuerySchema.parse({
+    const validatedQuery = ListTransactionsQuerySchema.parse({
       page: searchParams.get('page'),
       limit: searchParams.get('limit'),
       type: searchParams.get('type'),
@@ -31,7 +36,7 @@ export async function GET(request: NextRequest) {
       sortOrder: searchParams.get('sortOrder'),
     });
 
-    const result = await listTransactions(userId, query);
+    const result = await listTransactions(userId, validatedQuery);
     return apiResponse(result.data, 200, {
       page: result.page,
       limit: result.limit,

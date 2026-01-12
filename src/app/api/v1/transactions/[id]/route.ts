@@ -6,6 +6,7 @@ import {
   deleteTransaction,
 } from '@/services/transactions';
 import { apiResponse, apiError } from '@/lib/api/response';
+import { UpdateTransactionSchema } from '@/lib/validations/transaction';
 
 export async function GET(
   request: NextRequest,
@@ -27,7 +28,9 @@ export async function PATCH(
   try {
     const userId = await getUserId();
     const body = await request.json();
-    const transaction = await updateTransaction(userId, params.id, body);
+
+    const validated = UpdateTransactionSchema.parse(body);
+    const transaction = await updateTransaction(userId, params.id, validated);
     return apiResponse(transaction);
   } catch (error) {
     return apiError(error);
