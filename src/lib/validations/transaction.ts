@@ -1,11 +1,13 @@
 import { z } from 'zod';
 import { TransactionType, NecessityLevel, ValueAlignment } from '@/types';
 
+const minimumDate = new Date('2023-01-01T00:00:00Z');
 export const CreateTransactionSchema = z.object({
   amount: z.coerce.number().positive('O valor deve ser positivo'),
   description: z.string().min(3, 'Descrição muito curta').max(500),
   date: z.coerce
     .date()
+    .min(minimumDate, { message: 'Date must be on or after January 1, 2023' })
     .max(new Date(), { message: 'Date cannot be in the future' }),
   type: z.enum(Object.values(TransactionType)),
   categoryId: z.string().min(1, 'Category required'),
