@@ -1,20 +1,14 @@
 import { prisma } from '@/lib/db';
-import {
-  CreateTransactionInput,
-  CreateTransactionSchema,
-} from '@/lib/validations/transaction';
+import { CreateTransactionInput } from '@/lib/validations/transaction';
 import { Transaction } from '@/types/transaction';
 
 export async function createTransaction(
   userId: string,
   data: CreateTransactionInput
 ): Promise<Transaction> {
-  // Validate
-  const validated = CreateTransactionSchema.parse(data);
-
   // Verify category exists and matches type
   const category = await prisma.category.findUnique({
-    where: { id: validated.categoryId, type: validated.type },
+    where: { id: data.categoryId, type: data.type },
   });
 
   if (!category) {
@@ -24,7 +18,7 @@ export async function createTransaction(
   // Create transaction
   const transaction = await prisma.transaction.create({
     data: {
-      ...validated,
+      ...data,
       userId,
     },
   });

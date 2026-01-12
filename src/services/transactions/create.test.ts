@@ -74,11 +74,6 @@ describe('createTransaction', () => {
     });
   });
 
-  it('should throw error for negative amount', async () => {
-    const invalidData = { ...validData, amount: -100 };
-    await expect(createTransaction(userId, invalidData)).rejects.toThrow();
-  });
-
   it('should throw error for invalid category', async () => {
     vi.mocked(prisma.category.findUnique).mockResolvedValue(null);
 
@@ -92,14 +87,6 @@ describe('createTransaction', () => {
 
     await expect(createTransaction(userId, validData)).rejects.toThrow(
       'Category not found'
-    );
-  });
-
-  it('should throw error for future date', async () => {
-    const futureData = { ...validData, date: new Date('2030-01-01') };
-
-    await expect(createTransaction(userId, futureData)).rejects.toThrow(
-      'Date cannot be in the future'
     );
   });
 });
