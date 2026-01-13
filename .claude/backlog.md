@@ -15,19 +15,19 @@
 ### Tasks
 
 #### 1.1 Project Initialization
-- [ ] **Create Next.js project** with TypeScript
+- [x] **Create Next.js project** with TypeScript
   - Command: `pnpm create next-app@latest lifeos-financial --typescript --tailwind --app --use-pnpm`
   - Configure: App Router, TypeScript, Tailwind, ESLint
-- [ ] **Install core dependencies**
+- [x] **Install core dependencies**
   - Prisma, NextAuth.js, Zod, date-fns, Recharts, shadcn/ui
-- [ ] **Set up testing framework**
+- [x] **Set up testing framework**
   - Install Vitest, Playwright, testing-library
   - Configure vitest.config.ts
   - Create test utilities and fixtures
-- [ ] **Configure linting & formatting**
+- [x] **Configure linting & formatting**
   - ESLint, Prettier, TypeScript strict mode
   - Pre-commit hooks (husky + lint-staged)
-- [ ] **Project structure setup**
+- [x] **Project structure setup**
   - Create folder structure (services, components, lib, etc.)
   - Set up path aliases in tsconfig
 
@@ -39,10 +39,10 @@
 ---
 
 #### 1.2 Database Setup (TDD)
-- [ ] **Write Prisma schema**
+- [x] **Write Prisma schema**
   - Define User, Transaction, RecurringTransaction, Category, PurchaseConsideration, Badge models
   - Set up relations and indexes
-- [ ] **Write seed data**
+- [x] **Write seed data**
   - System default categories
   - Test user data
 - [ ] **Write database tests**
@@ -53,7 +53,7 @@
   - Create project
   - Get connection string
   - Configure environment variables
-- [ ] **Run migrations**
+- [x] **Run migrations**
   - `prisma migrate dev`
   - Verify schema in Supabase
 - [ ] **Test database connection**
@@ -73,15 +73,15 @@
   - Test login flow
   - Test protected route access
   - Test session management
-- [ ] **Configure NextAuth.js**
+- [x] **Configure NextAuth.js**
   - Set up email provider (Resend)
   - Configure JWT strategy
   - Set up session handling
   - Create auth API routes
-- [ ] **Implement auth middleware**
+- [x] **Implement auth middleware**
   - Protect API routes
   - Protect dashboard pages
-- [ ] **Build auth UI components**
+- [x] **Build auth UI components**
   - Login page
   - Signup page
   - Magic link email template
@@ -106,7 +106,7 @@
   - Dashboard home
   - Transactions page (skeleton)
   - Settings page (skeleton)
-- [ ] **Implement logout**
+- [x] **Implement logout**
 - [ ] **Add loading states**
 
 **Acceptance Criteria**:
@@ -124,7 +124,7 @@
 ### Tasks
 
 #### 2.1 Transaction Service (TDD)
-- [ ] **Write transaction service tests**
+- [x] **Write transaction service tests**
   - Test create transaction
   - Test get transaction by ID
   - Test list transactions with filters
@@ -132,7 +132,7 @@
   - Test delete transaction
   - Test validation rules
   - Test category assignment
-- [ ] **Implement transaction service**
+- [x] **Implement transaction service**
   - `createTransaction()`
   - `getTransaction()`
   - `listTransactions()`
@@ -157,22 +157,22 @@
 ---
 
 #### 2.2 Transaction API (TDD)
-- [ ] **Write API endpoint tests**
+- [x] **Write API endpoint tests**
   - Test POST /api/v1/transactions
   - Test GET /api/v1/transactions (with pagination)
   - Test GET /api/v1/transactions/:id
   - Test PATCH /api/v1/transactions/:id
   - Test DELETE /api/v1/transactions/:id
   - Test error cases (unauthorized, not found, validation)
-- [ ] **Implement API routes**
+- [x] **Implement API routes**
   - POST /api/v1/transactions
   - GET /api/v1/transactions
   - GET /api/v1/transactions/:id
   - PATCH /api/v1/transactions/:id
   - DELETE /api/v1/transactions/:id
   - Error handling and responses
-- [ ] **Add request validation**
-- [ ] **Add response formatting**
+- [x] **Add request validation**
+- [x] **Add response formatting**
 
 **Acceptance Criteria**:
 - All API tests pass
