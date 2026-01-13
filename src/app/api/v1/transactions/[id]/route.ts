@@ -44,7 +44,7 @@ export async function DELETE(
   try {
     const userId = await getUserId();
     await deleteTransaction(userId, params.id);
-    return apiResponse({ success: true });
+    return apiResponse(null, 204);
   } catch (error) {
     return apiError(error);
   }

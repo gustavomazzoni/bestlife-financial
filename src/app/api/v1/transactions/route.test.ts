@@ -1,11 +1,15 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { NextRequest } from 'next/server';
-import { POST } from './route';
+import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
+import { POST, GET } from './route';
 import {
   NecessityLevel,
   TransactionType,
   ValueAlignment,
 } from '@/types/transaction';
+import {
+  createMockRequest,
+  createMockPostRequest,
+  parseResponse,
+} from '@tests-helpers/api';
 
 // 1. Mocks
 // Mock da Sessão (Autenticação)
@@ -17,11 +21,12 @@ vi.mock('@/lib/auth/session', () => ({
 // Isso garante que estamos testando a ROTA, não o Banco de Dados agora
 vi.mock('@/services/transactions', () => ({
   createTransaction: vi.fn(),
+  listTransactions: vi.fn(),
 }));
 
 // Importamos os mocks para poder manipulá-los nos testes
 import { getUserId } from '@/lib/auth/session';
-import { createTransaction } from '@/services/transactions';
+import { createTransaction, listTransactions } from '@/services/transactions';
 import { UnauthorizedError } from '@/lib/api/response';
 
 describe('API v1 - Transactions POST', () => {
@@ -42,12 +47,8 @@ describe('API v1 - Transactions POST', () => {
   });
 
   // Helper para criar requisições POST
-  const createPostRequest = (body: unknown) => {
-    return new NextRequest('http://localhost:3000/api/v1/transactions', {
-      method: 'POST',
-      body: JSON.stringify(body),
-    });
-  };
+  const createPostRequest = (body: unknown) =>
+    createMockPostRequest('/api/v1/transactions', body);
 
   it('deve retornar 401 se o usuário não estiver autenticado', async () => {
     // Setup: getUserId lança erro (comportamento padrão quando sem sessão)
@@ -68,11 +69,11 @@ describe('API v1 - Transactions POST', () => {
 
     const req = createPostRequest(invalidPayload);
     const response = await POST(req);
-    const json = await response.json();
+    const json = await parseResponse(response);
 
     expect(response.status).toBe(400);
     // Verificamos se foi erro de validação e se veio do campo date
-    expect(JSON.stringify(json)).toContain('VALIDATION_ERROR');
+    expect(json.error.code).toBe('VALIDATION_ERROR');
     expect(JSON.stringify(json)).toContain(
       'Date must be on or after January 1, 2023'
     );
@@ -88,11 +89,11 @@ describe('API v1 - Transactions POST', () => {
     const invalidPayload = { ...validPayload, amount: -100 };
     const req = createPostRequest(invalidPayload);
     const response = await POST(req);
-    const json = await response.json();
+    const json = await parseResponse(response);
 
     expect(response.status).toBe(400);
     // Verificamos se foi erro de validação e se veio do campo amount
-    expect(JSON.stringify(json)).toContain('VALIDATION_ERROR');
+    expect(json.error.code).toBe('VALIDATION_ERROR');
     expect(JSON.stringify(json)).toContain('O valor deve ser positivo');
 
     // GARANTIA: O Service NÃO deve ter sido chamado
@@ -107,11 +108,11 @@ describe('API v1 - Transactions POST', () => {
 
     const req = createPostRequest(invalidPayload);
     const response = await POST(req);
-    const json = await response.json();
+    const json = await parseResponse(response);
 
     expect(response.status).toBe(400);
     // Verificamos se foi erro de validação e se veio do campo date
-    expect(JSON.stringify(json)).toContain('VALIDATION_ERROR');
+    expect(json.error.code).toBe('VALIDATION_ERROR');
     expect(JSON.stringify(json)).toContain('Date cannot be in the future');
 
     // GARANTIA: O Service NÃO deve ter sido chamado
@@ -125,13 +126,13 @@ describe('API v1 - Transactions POST', () => {
     // Setup: Mock do retorno do service
     const mockTransactionCreated = { id: 'trans-1', amount: 100 };
 
-    vi.mocked(createTransaction).mockResolvedValue(
-      mockTransactionCreated as any
-    ); // eslint-disable-line @typescript-eslint/no-explicit-any
+    vi.mocked(createTransaction as Mock).mockResolvedValue(
+      mockTransactionCreated
+    );
 
     const req = createPostRequest(validPayload);
     const response = await POST(req);
-    const json = await response.json();
+    const json = await parseResponse(response);
 
     expect(response.status).toBe(201);
     expect(json.data).toEqual(mockTransactionCreated);
@@ -145,6 +146,48 @@ describe('API v1 - Transactions POST', () => {
         // O Zod coerce.date() deve ter transformado a string em Date
         date: expect.any(Date),
         type: TransactionType.EXPENSE,
+      })
+    );
+  });
+});
+
+describe('API v1 - Transactions GET (List)', () => {
+  const mockUserId = 'user-123';
+
+  it('deve aplicar paginação e filtros corretamente e retornar formatado', async () => {
+    vi.mocked(getUserId).mockResolvedValue(mockUserId);
+
+    const mockServiceResponse = {
+      data: [{ id: '1', amount: 100 }],
+      page: 1,
+      limit: 10,
+      total: 1,
+      totalPages: 1,
+    };
+    vi.mocked(listTransactions as Mock).mockResolvedValue(mockServiceResponse);
+
+    const req = createMockRequest(
+      'api/v1/transactions?page=2&limit=5&type=INCOME'
+    );
+    const response = await GET(req);
+    const json = await parseResponse(response);
+
+    expect(response.status).toBe(200);
+    // Verifica se os metadados de resposta seguem o padrão apiResponse
+    expect(json.meta).toEqual({
+      page: 1,
+      limit: 10,
+      total: 1,
+      totalPages: 1,
+    });
+
+    // Garante que o service recebeu os tipos convertidos (string -> number/enum)
+    expect(listTransactions).toHaveBeenCalledWith(
+      mockUserId,
+      expect.objectContaining({
+        page: 2,
+        limit: 5,
+        type: 'INCOME',
       })
     );
   });

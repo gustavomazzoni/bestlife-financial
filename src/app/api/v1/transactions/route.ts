@@ -23,18 +23,10 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const userId = await getUserId();
-    const { searchParams } = new URL(request.url);
+    const searchParams = request.nextUrl.searchParams;
 
-    const validatedQuery = ListTransactionsQuerySchema.parse({
-      page: searchParams.get('page'),
-      limit: searchParams.get('limit'),
-      type: searchParams.get('type'),
-      categoryId: searchParams.get('categoryId'),
-      startDate: searchParams.get('startDate'),
-      endDate: searchParams.get('endDate'),
-      sortBy: searchParams.get('sortBy'),
-      sortOrder: searchParams.get('sortOrder'),
-    });
+    const allPresentParams = Object.fromEntries(searchParams);
+    const validatedQuery = ListTransactionsQuerySchema.parse(allPresentParams);
 
     const result = await listTransactions(userId, validatedQuery);
     return apiResponse(result.data, 200, {
