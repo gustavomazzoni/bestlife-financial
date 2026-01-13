@@ -33,6 +33,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      '@tests-helpers': path.resolve(__dirname, './tests/helpers'),
     },
   },
 });

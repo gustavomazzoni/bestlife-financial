@@ -25,7 +25,8 @@
       "@/components/*": ["./src/components/*"],
       "@/lib/*": ["./src/lib/*"],
       "@/types/*": ["./src/types/*"],
-      "@/config/*": ["./src/config/*"]
+      "@/config/*": ["./src/config/*"],
+      "@tests-helpers/*": ["./tests/helpers/*"]
     },
     "strictNullChecks": true,
     "strictFunctionTypes": true,
