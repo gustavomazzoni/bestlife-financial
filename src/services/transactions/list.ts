@@ -1,15 +1,11 @@
 import { prisma } from '@/lib/db';
-import {
-  ListTransactionsQuery,
-  ListTransactionsQuerySchema,
-} from '@/lib/validations/transaction';
+import { ListTransactionsQuery } from '@/lib/validations/transaction';
 import { TransactionListResult } from '@/types/transaction';
 
 export async function listTransactions(
   userId: string,
   query: ListTransactionsQuery
 ): Promise<TransactionListResult> {
-  const validated = ListTransactionsQuerySchema.parse(query);
   const {
     page,
     limit,
@@ -19,7 +15,7 @@ export async function listTransactions(
     endDate,
     sortBy,
     sortOrder,
-  } = validated;
+  } = query;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const where: any = { userId, type, categoryId };
