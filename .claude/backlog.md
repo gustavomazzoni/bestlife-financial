@@ -125,6 +125,15 @@
 
 #### 2.1 Transaction Service (TDD)
 - [x] **Write transaction service tests**
+  - [ ] 2.1.1 Unit test infer transaction
+    - User types natural language: "Comprei café e pão na padaria, 25 reais"
+    - AI inference service (MVP: rule-based parsing, future: LLM integration)
+    - Auto-detects from natural language:
+      - Amount (currency parsing)
+      - Category (keyword matching, context analysis)
+      - Type (Income/Expense/Saving/Transfer)
+      - Value alignment (Essential/Important/Want based on category and keywords)
+      - Date (if mentioned, else default to today)
   - Test create transaction
   - Test get transaction by ID
   - Test list transactions with filters

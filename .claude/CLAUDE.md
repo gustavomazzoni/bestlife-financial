@@ -1,4 +1,4 @@
-# Technical Specification - LifeOS Financial Freedom Module
+# Technical Specification - BestLife Financial Freedom Module
 
 ## Project Overview
 
@@ -142,44 +142,29 @@ Users succeed when they:
 
 ## Architecture
 
-### High-Level Architecture
-```
-┌─────────────────────────────────────┐
-│   Web App (Mobile-First Responsive) │
-│         Next.js 14 + React           │
-└──────────────┬──────────────────────┘
-               │
-               │ REST API
-               ▼
-┌──────────────────────────────────────┐
-│      Next.js API Routes              │
-│   (Future: Separate for Mobile)      │
-└──────────────┬───────────────────────┘
-               │
-               │ Prisma ORM
-               ▼
-┌──────────────────────────────────────┐
-│      PostgreSQL Database             │
-│         (Supabase)                   │
-└──────────────────────────────────────┘
-```
+**Philosophy**: The architecture supports a user journey focused on freedom discovery - helping users define what truly matters, discover their Freedom Number, and make conscious financial choices aligned with their values.
 
 ### Design Principles
-1. **API-First**: All business logic via APIs (reusable for future mobile app)
-2. **Mobile-First UI**: Responsive design, touch-optimized, PWA-ready
-3. **Test-Driven**: Write tests before implementation
-4. **Type-Safe**: TypeScript everywhere
-5. **Database-First**: Strong schema, enforce constraints at DB level
+
+1. **Separation of Concerns**: Business logic is independent of presentation layer
+2. **API-First**: All features exposed as REST APIs
+3. **Code Reuse**: 70-80% of backend code shared between web and mobile
+4. **Mobile-First UI**: Responsive design, touch-optimized
+5. **Type Safety**: End-to-end TypeScript with Zod validation
+6. **Test-Driven**: Write tests before implementation
+7. **Database-First**: Strong schema, enforce constraints at DB level
+8. **User-Centric**: Architecture supports natural language interaction, intelligent inference, and constant alignment monitoring
 
 ---
 
 ## Tech Stack
 
 ### Core
-- **Framework**: Next.js 14.2+ (App Router)
+- **Framework**: Next.js 16.1+ (App Router)
 - **Language**: TypeScript 5.3+
 - **Runtime**: Node.js 20+
 - **Package Manager**: pnpm (faster, efficient)
+- **Environment**: Docker
 
 ### Frontend
 - **UI Library**: React 18+
@@ -195,10 +180,10 @@ Users succeed when they:
 ### Backend
 - **API**: Next.js API Routes (REST)
 - **Database**: PostgreSQL 15+
-- **ORM**: Prisma 5.8+
+- **ORM**: Prisma 7.2+
 - **Validation**: Zod schemas (shared with frontend)
 - **Authentication**: NextAuth.js v5 (Auth.js)
-- **Email**: Resend
+- **Email**: Resend (Mailpit during development)
 - **Cron Jobs**: Vercel Cron (for reminders, recurring transactions)
 
 ### Testing (TDD Approach)
@@ -221,50 +206,248 @@ Users succeed when they:
 
 ---
 
-## Project Structure
+This is a Dockerized Application to make local development a breeze and also easy to replicate in other machines.
+---
+
+## 🏗️ Architecture Diagram
 
 ```
-lifeos-financial/
-├── .github/
-│   └── workflows/          # CI/CD pipelines
-├── prisma/
-│   ├── schema.prisma       # Database schema
-│   ├── migrations/         # Migration history
-│   └── seed.ts            # Seed data for dev/testing
-├── src/
-│   ├── app/               # Next.js App Router
-│   │   ├── (auth)/        # Auth-related routes
-│   │   ├── (dashboard)/   # Protected dashboard routes
-│   │   ├── api/           # API routes
-│   │   ├── layout.tsx     # Root layout
-│   │   └── page.tsx       # Landing page
-│   ├── components/        # React components
-│   │   ├── ui/            # shadcn/ui components
-│   │   ├── features/      # Feature-specific components
-│   │   └── shared/        # Shared components
-│   ├── lib/               # Utility functions
-│   │   ├── db.ts          # Prisma client
-│   │   ├── auth.ts        # Auth config
-│   │   ├── utils.ts       # Helpers
-│   │   └── validations/   # Zod schemas
-│   ├── services/          # Business logic (testable)
-│   │   ├── transactions.ts
+┌─────────────────────────────────────────────────────────────┐
+│                        Clients                              │
+├──────────────────────┬──────────────────────────────────────┤
+│   Next.js Web App    │   React Native Mobile (Future)       │
+│   - Server Components│   - Native Screens                   │
+│   - Client Components│   - Navigation                       │
+│   - Forms/UI         │   - API Client                       │
+└──────────────────────┴──────────────────────────────────────┘
+           │                           │
+           └───────────┬───────────────┘
+                       │ HTTP/JSON
+                       ▼
+┌─────────────────────────────────────────────────────────────┐
+│              REST API Layer (/api/v1/*)                     │
+│  - Authentication & Authorization                           │
+│  - Request Validation (Zod)                                 │
+│  - Response Formatting                                      │
+│  - Error Handling                                           │
+└────────────────────────┬────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────┐
+│                  Service Layer (Business Logic)             │
+│  - Transaction Management                                   │
+│  - Financial Calculations                                   │
+│  - User Management                                          │
+│  - Notifications                                            │
+└────────────────────────┬────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   Data Access Layer                         │
+│  - Prisma ORM                                               │
+│  - Database Queries                                         │
+│  - Transactions                                             │
+└────────────────────────┬────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────┐
+│                PostgreSQL Database                          │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 📁 Project Structure
+
+```
+bestlifeos-financial/
+│
+├── app/                                # Next.js App Router
+│   │
+│   ├── api/v1/                        # REST API (Mobile + Web)
+│   │   ├── auth/
+│   │   │   └── [...nextauth]/route.ts
+│   │   │
+│   │   ├── transactions/
+│   │   │   ├── route.ts               # GET, POST /transactions
+│   │   │   ├── [id]/route.ts          # GET, PATCH, DELETE /:id
+│   │   │   ├── import/route.ts        # POST /import (CSV)
+│   │   │   └── summary/route.ts       # GET /summary
+│   │   │
+│   │   ├── recurring/
+│   │   │   ├── route.ts
+│   │   │   ├── [id]/route.ts
+│   │   │   └── [id]/execute/route.ts
+│   │   │
+│   │   ├── calculations/
+│   │   │   ├── lifestyle-cost/route.ts
+│   │   │   ├── freedom-metrics/route.ts
+│   │   │   ├── fi-projection/route.ts
+│   │   │   └── purchase-check/route.ts
+│   │   │
+│   │   ├── categories/
+│   │   │   ├── route.ts
+│   │   │   └── [id]/route.ts
+│   │   │
+│   │   ├── user/
+│   │   │   ├── profile/route.ts
+│   │   │   ├── preferences/route.ts
+│   │   │   └── stats/route.ts
+│   │   │
+│   │   └── reports/
+│   │       ├── weekly/route.ts
+│   │       └── monthly/route.ts
+│   │
+│   ├── (frontend)/                         # Web-specific routes (RSC)
+│   │   ├── layout.tsx
+│   │   ├── page.tsx                   # Landing page
+│   │   │
+│   │   ├── dashboard/
+│   │   │   └── page.tsx               # Freedom metrics dashboard
+│   │   │
+│   │   ├── transactions/
+│   │   │   ├── page.tsx               # List transactions
+│   │   │   ├── new/page.tsx           # Create transaction
+│   │   │   └── [id]/page.tsx          # Edit transaction
+│   │   │
+│   │   ├── lifestyle/
+│   │   │   ├── current/page.tsx       # Current lifestyle cost
+│   │   │   └── dream/page.tsx         # Dream lifestyle setup
+│   │   │
+│   │   ├── reports/
+│   │   │   ├── weekly/page.tsx
+│   │   │   └── monthly/page.tsx
+│   │   │
+│   │   └── settings/
+│   │       ├── page.tsx
+│   │       ├── profile/page.tsx
+│   │       └── preferences/page.tsx
+│   │
+│   ├── (auth)/                        # Auth-specific routes
+│   │   ├── login/page.tsx
+│   │   └── signup/page.tsx
+│   │
+│   └── layout.tsx                     # Root layout
+│
+├── services/                          # Business Logic Layer (SHARED)
+│   │
+│   ├── transactions/
+│   │   ├── create.ts
+│   │   ├── create.test.ts
+│   │   ├── get.ts
+│   │   ├── get.test.ts
+│   │   ├── list.ts
+│   │   ├── list.test.ts
+│   │   ├── update.ts
+│   │   ├── update.test.ts
+│   │   ├── delete.ts
+│   │   ├── delete.test.ts
+│   │   ├── import.ts
+│   │   ├── import.test.ts
+│   │   └── index.ts
+│   │
+│   ├── calculations/
+│   │   ├── lifestyle-cost.ts
+│   │   ├── lifestyle-cost.test.ts
+│   │   ├── freedom-metrics.ts
+│   │   ├── freedom-metrics.test.ts
+│   │   ├── purchase-analysis.ts
+│   │   ├── purchase-analysis.test.ts
+│   │   └── index.ts
+│   │
+│   ├── recurring/
+│   │   ├── create.ts
+│   │   ├── execute.ts
+│   │   └── index.ts
+│   │
+│   ├── user/
+│   │   ├── profile.ts
+│   │   ├── preferences.ts
+│   │   └── index.ts
+│   │
+│   └── notifications/
+│       ├── email.ts
+│       ├── push.ts
+│       └── index.ts
+│
+├── lib/                               # Utilities & Config (SHARED)
+│   │
+│   ├── db.ts                          # Prisma client singleton
+│   │
+│   ├── validations/                   # Zod schemas (SHARED)
+│   │   ├── transaction.ts
+│   │   ├── user.ts
+│   │   ├── recurring.ts
+│   │   └── index.ts
+│   │
+│   ├── utils/                         # Helper functions (SHARED)
+│   │   ├── currency.ts
+│   │   ├── date.ts
 │   │   ├── calculations.ts
-│   │   ├── notifications.ts
-│   │   └── *.test.ts      # Service tests
-│   ├── types/             # TypeScript types
-│   └── config/            # App configuration
-├── tests/
-│   ├── integration/       # API integration tests
-│   ├── e2e/              # End-to-end tests
-│   └── fixtures/         # Test data
-├── public/               # Static assets
-├── .env.example          # Environment variables template
-├── package.json
-├── tsconfig.json
-├── tailwind.config.ts
-├── vitest.config.ts
-└── README.md
+│   │   └── index.ts
+│   │
+│   ├── auth/
+│   │   ├── config.ts                  # NextAuth configuration
+│   │   └── session.ts                 # Session helpers
+│   │
+│   └── api/
+│       ├── response.ts                # API response helpers
+│       └── error.ts                   # Error handling
+│
+├── components/                        # UI Components (Web-only)
+│   │
+│   ├── ui/                            # shadcn/ui base components
+│   │   ├── button.tsx
+│   │   ├── input.tsx
+│   │   ├── card.tsx
+│   │   └── ...
+│   │
+│   ├── features/                      # Feature-specific components
+│   │   ├── transactions/
+│   │   │   ├── transaction-form.tsx
+│   │   │   ├── transaction-list.tsx
+│   │   │   └── transaction-card.tsx
+│   │   │
+│   │   ├── dashboard/
+│   │   │   ├── freedom-metrics.tsx
+│   │   │   ├── fi-progress-card.tsx
+│   │   │   └── runway-card.tsx
+│   │   │
+│   │   └── lifestyle/
+│   │       ├── cost-calculator.tsx
+│   │       └── dream-questionnaire.tsx
+│   │
+│   └── shared/                        # Shared components
+│       ├── header.tsx
+│       ├── nav.tsx
+│       └── footer.tsx
+│
+├── types/                             # TypeScript Types (SHARED)
+│   ├── api.ts                         # API request/response types
+│   ├── transaction.ts
+│   ├── user.ts
+│   ├── calculations.ts
+│   └── index.ts
+│
+├── hooks/                             # React Hooks (Web-only)
+│   ├── use-transactions.ts
+│   ├── use-freedom-metrics.ts
+│   └── use-auth.ts
+│
+├── prisma/                            # Database (SHARED)
+│   ├── schema.prisma
+│   ├── seed.ts
+│   └── migrations/
+│
+├── tests/                             # Tests
+│   ├── unit/
+│   ├── integration/
+│   ├── e2e/
+│   └── fixtures/
+│
+└── config/                            # Configuration (SHARED)
+    ├── constants.ts
+    └── env.ts
 ```
 
 ---
@@ -469,19 +652,92 @@ model Badge {
 
 ---
 
-## API Design
+## 🔌 API Layer Design
 
 ### REST API Conventions
 - **Base URL**: `/api/v1`
 - **Authentication**: JWT via NextAuth.js
 - **Response Format**: JSON
-- **Error Format**: `{ error: string, details?: any }`
-- **Success Format**: `{ data: any, meta?: any }`
+- **Success Response Format**:
+```json
+{
+  "data": { ... },
+  "meta": {
+    "page": 1,
+    "limit": 20,
+    "total": 100
+  }
+}
+```
+- **Error Response Format**:
+```json
+{
+  "error": {
+    "message": "Validation failed",
+    "code": "VALIDATION_ERROR",
+    "details": [
+      {
+        "field": "amount",
+        "message": "Amount must be positive"
+      }
+    ]
+  }
+}
+```
+
+### HTTP Status Codes
+
+- `200 OK` - Successful GET, PATCH, DELETE
+- `201 Created` - Successful POST
+- `400 Bad Request` - Validation error
+- `401 Unauthorized` - Not authenticated
+- `403 Forbidden` - Not authorized
+- `404 Not Found` - Resource not found
+- `409 Conflict` - Conflict (duplicate)
+- `500 Internal Server Error` - Server error
+
+---
+
+## 📝 API Endpoint Structure
+
+### Natural Language Transaction Entry
+
+**Primary User Interface**: ChatGPT-like prompt box - "What's your Transaction?"
+
+Users interact with the app through natural language entry, similar to ChatGPT. The app intelligently infers transaction details from natural language input.
+
+**Example User Input:**
+```
+"Bought coffee and pastry for breakfast, R$ 25"
+```
+
+**Inferred Transaction:**
+- Amount: R$ 25.00
+- Category: Food
+- Type: EXPENSE
+- Description: "Coffee and pastry for breakfast"
+- Value Alignment: WANTS (non-essential)
+- Date: Today (if not specified)
+
+**Implementation Notes:**
+- **MVP**: Rule-based parsing using keyword matching, regex patterns, and context analysis
+- **Future**: LLM integration (OpenAI API) for more accurate inference
+- **Fallback**: If inference fails or is unclear, show structured form for manual entry
+- **Service Layer**: `services/transactions/infer.ts` - Natural language inference logic
+- **API Endpoint**: POST `/api/v1/transactions/infer` - Returns inferred transaction data before creation
+
+**API Endpoint:**
+```
+POST /api/v1/transactions/infer
+Body: { "text": "Bought coffee and pastry for breakfast, R$ 25" }
+Response: { "data": { "inferred": {...}, "confidence": 0.95 } }
+```
 
 ### Core Endpoints
 
 #### Transactions
 ```
+POST   /api/v1/transactions/infer        - Rule-based parsing using keyword matching, regex patterns, and context analysis (LLM integration in the future)
 POST   /api/v1/transactions              - Create transaction
 GET    /api/v1/transactions              - List transactions (with filters)
 GET    /api/v1/transactions/:id          - Get transaction
@@ -611,7 +867,7 @@ function calculateSavingsRate(
 ## Authentication & Authorization
 
 ### NextAuth.js Configuration
-- **Providers**: Email (magic link), Google, GitHub (future)
+- **Providers**: Email (magic link), Google (future)
 - **Session Strategy**: JWT
 - **Session Duration**: 30 days
 - **Email Provider**: Resend
@@ -860,6 +1116,6 @@ ENABLE_EMAIL_NOTIFICATIONS="true"
 
 ---
 
-**Last Updated**: December 2025
+**Last Updated**: Jan 2026
 **Status**: Ready for Development
 **Next Review**: After Alpha Release

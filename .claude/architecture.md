@@ -15,6 +15,7 @@ BestLifeOS uses an **API-First architecture** built on Next.js 16, designed for 
 5. **Testability**: Services isolated and easily testable (TDD approach)
 6. **User-Centric**: Architecture supports natural language interaction, intelligent inference, and constant alignment monitoring
 
+This is a Dockerized Application to make local development a breeze and also easy to replicate in other machines.
 ---
 
 ## 🏗️ Architecture Diagram
@@ -106,7 +107,7 @@ bestlifeos-financial/
 │   │       ├── weekly/route.ts
 │   │       └── monthly/route.ts
 │   │
-│   ├── (web)/                         # Web-specific routes (RSC)
+│   ├── (frontend)/                         # Web-specific routes (RSC)
 │   │   ├── layout.tsx
 │   │   ├── page.tsx                   # Landing page
 │   │   │
@@ -937,7 +938,7 @@ shared/
 └── constants/          # Constants
 ```
 
-### Option 1: Monorepo (Recommended for Future)
+### Monorepo
 
 ```
 lifeos/
@@ -949,17 +950,6 @@ lifeos/
     ├── shared/        # Shared code
     ├── api-client/    # API client library
     └── ui/            # Shared UI components (future)
-```
-
-### Option 2: Copy Files (MVP Approach)
-
-For MVP, simply copy shared files when building mobile:
-
-```bash
-# When starting mobile development
-cp -r web/types mobile/src/types
-cp -r web/lib/validations mobile/src/lib/validations
-cp -r web/lib/utils mobile/src/lib/utils
 ```
 
 ---
