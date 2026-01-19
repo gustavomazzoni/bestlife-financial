@@ -7,10 +7,12 @@ import { prisma } from '@/lib/db';
 
 // Extend the built-in session types
 declare module 'next-auth' {
+  interface User {
+    id: string;
+    email: string;
+  }
   interface Session {
-    user: {
-      id: string;
-    } & DefaultSession['user'];
+    user: User & DefaultSession['user'];
   }
 }
 

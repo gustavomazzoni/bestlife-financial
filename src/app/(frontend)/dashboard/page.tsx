@@ -1,7 +1,8 @@
-import { auth, signOut } from '@/lib/auth/config';
+import { signOut } from '@/lib/auth/config';
+import { getUserOrRedirect } from '@/lib/auth/session';
 
 export default async function DashboardPage() {
-  const session = await auth();
+  const user = await getUserOrRedirect();
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -28,19 +29,22 @@ export default async function DashboardPage() {
         <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-sm">
           <h2 className="text-3xl font-bold text-gray-900">Dashboard</h2>
           <p className="mt-4 text-gray-600">
-            Olá, <strong>{session?.user?.email}</strong>!
+            Olá, <strong>{user?.email}</strong>!
           </p>
           <p className="mt-2 text-gray-600">
             Sua jornada para a liberdade financeira começa aqui. 🚀
           </p>
 
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="rounded-lg border border-gray-200 p-6">
+            <a
+              href="/transactions"
+              className="rounded-lg border border-gray-200 p-6 transition hover:border-primary hover:shadow-md"
+            >
               <h3 className="font-semibold text-gray-900">Transações</h3>
               <p className="mt-2 text-sm text-gray-500">
-                Em breve: Registre suas receitas e despesas
+                Registre suas receitas e despesas com linguagem natural
               </p>
-            </div>
+            </a>
             <div className="rounded-lg border border-gray-200 p-6">
               <h3 className="font-semibold text-gray-900">
                 Métricas de Liberdade

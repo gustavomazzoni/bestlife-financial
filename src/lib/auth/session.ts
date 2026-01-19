@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { auth } from './config';
 import { UnauthorizedError } from '../api/response';
+import { User } from 'next-auth';
 
 /**
  * Server-side function to require authentication
@@ -31,13 +32,13 @@ export async function getUserId(): Promise<string> {
 }
 
 /**
- * Client-side function to get current user ID
+ * Client-side function to get current user
  * Redirects to login if not authenticated
  */
-export async function getUserIdOrRedirect(): Promise<string> {
+export async function getUserOrRedirect(): Promise<User> {
   const session = await auth();
   if (!session?.user?.id) redirect('/login');
-  return session.user.id;
+  return session.user;
 }
 
 /**
