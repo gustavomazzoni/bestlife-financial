@@ -2,11 +2,141 @@
 
 ## Project Overview
 
-**Name**: LifeOS - Financial Freedom Module (MVP)
-**Purpose**: Help users achieve financial freedom by tracking money flows, optimizing lifestyle costs, and providing clear freedom metrics
-**Philosophy**: Freedom > Money, Experiences > Possessions, Value-aligned spending over default consumption
+**Name**: Best Life - Financial Module (MVP)
+**Purpose**: Help people create freedom to live a life rich in what truly matters by making wise and conscious financial choices towards it with a minimalist approach to remove what's not essential or important, to then have more of what's truly important.
+**Philosophy**: Freedom > Money. Instead of pursuing money and society's definition of success, we should pursue our own definition of success based on what truly matters to us, and create the freedom to do so.
 **Timeline**: 6 weeks to Public Beta
 **Development Approach**: Test-Driven Development (TDD)
+
+---
+
+## Philosophy & User Journey
+
+### The Problem
+Society teaches us to pursue a successful life based on money, material possessions, social status, comfort, security, and power. We sacrifice our health, passions, dreams, and time with loved ones. As a consequence, we end up stuck in a life we don't want. We might have money, but we don't have freedom to spend our time on what truly matters.
+
+### The Solution
+**Freedom > Money.** The app helps users discover their "Freedom Number" - how much money is enough to cover their ideal lifestyle without having to work. By making smart, conscious, and aligned financial choices, users can create the freedom to live their Best Life (rich in what truly matters).
+
+### Core Methodology
+1. **Define what truly matters** - Core values and life goals
+2. **Design ideal lifestyle** - Cost of living aligned with values
+3. **Discover Freedom Number** - Calculate how much is enough
+4. **Understand current reality** - Analyze actual spending vs. ideal
+5. **Make conscious choices** - Eliminate non-essential spending to create more freedom for what matters
+6. **Track progress** - Monitor runway gained, FI progress, and value-aligned spending
+
+### User Journey: Onboarding Flow
+
+#### Step 1: Defining What's Truly Important (Core Values & Life Goals)
+- App presents a curated list of life goals/values (user can select up to 10)
+- Examples:
+  - Family and meaningful relationships (time with kids, family, friends)
+  - Energy and vitality (active lifestyle, low stress, healthy food, good sleep/rest)
+  - New experiences and adventure (travel, exploration)
+  - Freedom (autonomy, independence, control of time/life) - **Mandatory, always selected**
+- User can add custom values/goals
+- These selections drive the rest of the journey
+
+#### Step 2: Defining the Ideal Life (Lifestyle Design)
+- Based on selected values, app suggests lifestyle categories aligned with those values
+- App automatically includes "essential" categories (housing, food) if not already selected
+- User can arrange and customize lifestyle buckets (combination of categories and values)
+- User sets monthly/annual budget for each lifestyle bucket
+- **Total defines the cost of living for the ideal life** (Dream Lifestyle Cost)
+
+#### Step 3: Income & Investments Setup
+- User sets:
+  - Active income (salary, business income)
+  - Passive income (rental, dividends, etc.)
+  - Total investments (current savings/investments)
+- User can optionally set expected return rate (default: 7%)
+
+#### Step 4: Freedom Number Discovery
+- App calculates **Freedom Number** using 4% rule: `Dream Lifestyle Cost × 12 × 25`
+- Shows three scenarios:
+  - Lean FI (80% of dream)
+  - Standard FI (100% of dream)
+  - Fat FI (150% of dream)
+- This is the user's first "aha moment": Seeing how much money is enough
+
+#### Step 5: Current Cost of Living Analysis
+- User uploads past 12-month transaction statements (CSV for MVP)
+- App calculates current annual cost of living from actual spending data
+- App identifies outlier expenses (one-time purchases) vs. regular expenses
+- **Aha moment**: Seeing current annual cost calculated automatically
+- User can skip this step and upload later, but calculations will be less accurate
+
+#### Step 6: Alignment Analysis & Spending Insights
+- App compares current spending vs. ideal lifestyle cost
+- App highlights **inconsistency** between what's truly important (from Step 1) and actual spending
+- App identifies:
+  - Non-essential spending habits
+  - Non-important spending (not aligned with core values)
+  - Opportunities to cut spending to create more freedom for what matters
+- **Aha moment**: Seeing how much spending is non-aligned with values
+
+**Onboarding Complete** - User is ready to start their freedom journey!
+
+### User Journey: Regular Flow
+
+#### 1. Transaction Entry (Natural Language Interface)
+- **Primary interaction**: ChatGPT-like prompt box - "What's your Transaction?"
+- User types natural language: "Bought coffee and pastry for breakfast, R$ 25"
+- App uses AI to infer:
+  - Amount
+  - Category
+  - Value alignment (Essential, Important, Want)
+  - Whether aligned with core values
+- User can confirm/edit before saving
+- Transaction creation should feel conversational and effortless
+
+#### 2. Daily Habit Building
+- App sends reminder at end of day (user-configurable, default 9 PM)
+- Prompts user to log today's transactions
+- Tracks daily logging streak
+- Celebrates consistency with badges
+
+#### 3. Recurring Transaction Management
+- User adds recurring income/expenses to calendar
+- App automatically suggests recurring patterns from transaction history
+- User can set frequency (weekly/monthly/yearly) and notification preferences
+
+#### 4. Proactive Transaction Reminders
+- App reminds user of scheduled transactions:
+  - Weekly preview (start of week)
+  - Day-before reminder (or 2 days before, user configurable)
+- User can mark as paid, skip, or execute early
+
+#### 5. Constant Alignment Monitoring
+- App **always highlights** inconsistent expenses (not aligned with essentials or important)
+- Dashboard prominently shows:
+  - Monthly runway gained/lost (highlighted)
+  - FI Progress %
+  - Value-aligned spending %
+  - Savings rate %
+- Real-time feedback helps users make conscious choices
+
+### Core User Outcomes (Success Metrics)
+
+Users succeed when they:
+1. **Reduce spending** by cutting non-important expenses
+2. **Increase value-aligned spending** percentage
+3. **Increase freedom bucket** (investments/savings toward FI)
+
+### Primary Dashboard Metrics (Priority Order)
+
+1. **Monthly Runway Gained/Lost** (Highlighted) - Shows immediate impact of spending choices
+2. **FI Progress %** - How close to Freedom Number
+3. **Value-Aligned Spending %** - Percentage aligned with core values
+4. **Savings Rate %** - Overall savings performance
+
+### Key "Aha Moments" (In Priority Order)
+
+1. **Seeing how many years of freedom current savings buy** - Current runway calculation (primary aha moment)
+2. **Seeing current annual cost of living calculated automatically** - Reality check
+3. **Seeing how much spending is non-aligned** - Awareness of spending patterns
+4. **Seeing Freedom Number for the first time** - The target to reach
 
 ---
 

@@ -185,11 +185,27 @@
 
 #### 2.3 Transaction UI Components (Component Testing)
 - [ ] **Write component tests**
+  - Test natural language transaction entry
+  - Test AI inference accuracy
   - Test transaction form validation
   - Test transaction list display
   - Test filtering and sorting
   - Test mobile interactions
-- [ ] **Build transaction form**
+- [ ] **Build natural language transaction entry (Primary Interface)**
+  - **ChatGPT-like prompt box**: "What's your Transaction?"
+  - Large, prominent input field (full-width on mobile)
+  - User types natural language: "Bought coffee and pastry for breakfast, R$ 25"
+  - AI inference service (MVP: rule-based parsing, future: LLM integration)
+  - Auto-detects from natural language:
+    - Amount (currency parsing)
+    - Category (keyword matching, context analysis)
+    - Type (Income/Expense/Saving/Transfer)
+    - Value alignment (Essential/Important/Want based on category and keywords)
+    - Date (if mentioned, else default to today)
+  - Show inferred details before confirmation
+  - User can confirm or edit before saving
+  - Transaction creation should feel conversational and effortless
+- [ ] **Build transaction form (Secondary - Edit Mode)**
   - Date picker (mobile-friendly)
   - Amount input (BRL formatting)
   - Type selector (Income/Expense/Saving)
@@ -198,24 +214,31 @@
   - Value alignment tags
   - Description field
   - Form validation feedback
+  - Use when editing or when natural language fails
 - [ ] **Build transaction list**
   - Transaction cards (mobile-optimized)
-  - Filters (date range, type, category)
+  - Filters (date range, type, category, alignment)
   - Sort options
   - Search
   - Infinite scroll / pagination
+  - Highlight non-aligned transactions
 - [ ] **Build transaction detail/edit**
   - View transaction details
-  - Edit transaction
+  - Edit transaction (full form)
   - Delete confirmation
 - [ ] **Add quick-add button**
   - Floating action button (mobile)
-  - Quick add most common transaction types
+  - Opens natural language entry (primary interface)
+  - Quick add templates for most common transactions (optional)
 
 **Acceptance Criteria**:
+- Natural language entry is fast and intuitive
+- AI inference is accurate (80%+ correct on first try)
+- User can easily edit inferred details
 - Forms work on mobile and desktop
 - Validation provides clear feedback
 - Transactions display correctly
+- Non-aligned transactions are highlighted
 - Filters and search work
 - Quick-add is accessible
 - Component tests pass
@@ -243,6 +266,164 @@
 - Users can create custom categories
 - Categories display with icons and colors
 - Cannot delete categories in use
+
+---
+
+#### 2.5 Onboarding Flow - Core Setup
+
+**Goal**: Guide new users through the freedom discovery journey
+
+##### 2.5.1 Core Values & Life Goals Selection (TDD)
+- [ ] **Write core values service tests**
+  - Test value list retrieval
+  - Test user value selection (up to 10)
+  - Test "Freedom" mandatory enforcement
+  - Test custom value creation
+- [ ] **Define core values list**
+  - Family and meaningful relationships
+  - Energy and vitality
+  - New experiences and adventure
+  - Freedom (mandatory)
+  - Add more curated options
+- [ ] **Implement core values API**
+  - GET /api/v1/onboarding/values (available values)
+  - POST /api/v1/user/values (save user selections)
+  - GET /api/v1/user/values (retrieve user selections)
+- [ ] **Build core values selection UI**
+  - Multi-select list of values/goals
+  - Visual feedback for selections
+  - Custom value input
+  - Progress indicator
+  - Mobile-optimized cards
+  - "Freedom" pre-selected and locked
+
+**Acceptance Criteria**:
+- Users can select up to 10 values
+- "Freedom" is always selected
+- Custom values can be added
+- Selections are saved to user profile
+- Mobile-friendly interface
+
+##### 2.5.2 Ideal Lifestyle Definition (TDD)
+- [ ] **Write lifestyle bucket service tests**
+  - Test bucket creation based on values
+  - Test essential category inclusion (housing, food)
+  - Test total cost calculation
+  - Test bucket updates
+- [ ] **Design lifestyle bucket structure**
+  - Map values to suggested categories
+  - Auto-include essentials (housing, food)
+  - Allow custom buckets
+- [ ] **Implement lifestyle bucket API**
+  - GET /api/v1/onboarding/lifestyle-buckets (suggested based on values)
+  - POST /api/v1/user/lifestyle-buckets (save user-defined buckets)
+  - PATCH /api/v1/user/lifestyle-buckets/:id (update bucket amount)
+  - GET /api/v1/user/lifestyle-buckets (get user buckets)
+- [ ] **Build lifestyle bucket UI**
+  - Show suggested buckets based on selected values
+  - Budget input per bucket
+  - Real-time total calculation
+  - Visual breakdown
+  - Can add/remove buckets
+  - Progress indicator
+
+**Acceptance Criteria**:
+- Buckets suggested based on values
+- Essentials automatically included
+- User can set budget per bucket
+- Total dream lifestyle cost calculated
+- Saved to user profile (dreamLifestyleCost)
+
+##### 2.5.3 Income & Investments Setup
+- [ ] **Build income setup form**
+  - Active income input
+  - Passive income input
+  - Total investments input
+  - Expected return rate (default 7%, optional)
+- [ ] **Implement income API**
+  - PATCH /api/v1/user/profile (update income/investment fields)
+  - Fields: currentInvestments, passiveIncomeMonthly, expectedReturnRate
+- [ ] **Add validation**
+  - All amounts must be >= 0
+  - Return rate between 0-100%
+
+**Acceptance Criteria**:
+- Users can set all income/investment fields
+- Values saved to user profile
+- Validation prevents invalid inputs
+
+##### 2.5.4 Freedom Number Calculation & Display
+- [ ] **Implement Freedom Number calculation** (in freedom metrics service)
+  - Calculate: Dream Lifestyle Cost × 12 × 25 (4% rule)
+  - Calculate Lean FI (80%), Standard FI (100%), Fat FI (150%)
+- [ ] **Build Freedom Number display UI**
+  - Large, prominent display of Freedom Number
+  - Show three scenarios (Lean/Standard/Fat)
+  - Explanatory text about what it means
+  - This is user's first "aha moment"
+- [ ] **Save to user profile**
+  - Calculated values can be stored/displayed (or calculated on demand)
+
+**Acceptance Criteria**:
+- Freedom Number calculated correctly
+- User sees the number prominently
+- Three scenarios displayed
+- User understands what it means
+
+##### 2.5.5 Current Cost of Living - CSV Upload
+- [ ] **Build CSV upload UI for onboarding**
+  - File upload interface
+  - Instructions for preparing CSV
+  - CSV template download
+  - Upload progress indicator
+  - "Skip for later" option
+- [ ] **Handle onboarding CSV import**
+  - Parse 12 months of transactions
+  - Calculate annual cost of living
+  - Show summary after import
+  - Save calculated cost to user profile (or calculate on demand)
+- [ ] **Show current vs. ideal comparison**
+  - Side-by-side comparison
+  - Highlight difference
+  - This is another "aha moment"
+
+**Acceptance Criteria**:
+- Users can upload 12-month CSV during onboarding
+- Can skip if not ready
+- Cost of living calculated accurately
+- Comparison shown clearly
+- Mobile-friendly upload
+
+##### 2.5.6 Alignment Analysis & Spending Insights
+- [ ] **Implement alignment analysis service**
+  - Compare actual spending categories vs. ideal lifestyle buckets
+  - Identify non-essential spending
+  - Identify non-aligned spending (not matching core values)
+  - Calculate value-aligned spending percentage
+- [ ] **Build alignment insights UI**
+  - Visual comparison: Ideal vs. Actual
+  - Highlight inconsistent expenses
+  - Show non-essential spending breakdown
+  - Show non-aligned spending (not matching values)
+  - Actionable suggestions: "You could save R$X by reducing Y"
+- [ ] **Complete onboarding**
+  - Mark onboarding as complete
+  - Redirect to dashboard
+  - Show welcome message with key insights
+
+**Acceptance Criteria**:
+- Alignment analysis is accurate
+- Visualizations are clear and actionable
+- User understands the insights
+- Onboarding completion is tracked
+- User is motivated to continue
+
+**Overall Onboarding Acceptance Criteria**:
+- Complete onboarding flow takes <15 minutes
+- Users can skip CSV upload for later
+- All "aha moments" are clear and impactful
+- Mobile-optimized throughout
+- Onboarding completion is saved (can be restarted from settings)
 
 ---
 
@@ -337,33 +518,60 @@
 #### 3.4 Freedom Dashboard UI
 - [ ] **Design freedom dashboard layout**
   - Card-based layout
-  - Most important metrics at top
+  - **Primary metrics prioritized at top** (in priority order)
   - Responsive grid
-- [ ] **Build metric cards**
-  - FI Progress (with progress bar)
-  - FI Number (with 3 scenarios)
-  - Current Runway (visual indicator)
+  - Highlight the most important metric visually
+- [ ] **Build primary metric cards (Priority Order)**
+  - **1. Monthly Runway Gained/Lost** (HIGHLIGHTED - Primary motivator)
+    - Shows immediate impact of spending choices this month
+    - Visual indicator: positive (gained) vs negative (lost)
+    - Color-coded: green for gained, red for lost
+    - This is the user's primary "aha moment" - seeing how many years of freedom current savings buy
+  - **2. FI Progress %** (Secondary - How close to Freedom Number)
+    - Progress bar showing % toward Freedom Number
+    - Shows current investments vs FI Number
+    - Visual milestone markers (25%, 50%, 75%, 100%)
+  - **3. Value-Aligned Spending %** (Tertiary - Alignment with core values)
+    - Percentage of spending aligned with core values (from onboarding)
+    - Trend indicator (increasing/decreasing)
+    - Breakdown: Essential, Important, Want
+  - **4. Savings Rate %** (Supporting - Overall savings performance)
+    - Current savings rate %
+    - Trend over time
+    - Comparison to target (if user sets one)
+- [ ] **Build supporting metric cards**
+  - FI Number (with 3 scenarios: Lean/Standard/Fat)
+  - Current Runway (total months of freedom)
   - Minimum Work Required
   - Emergency Fund Status
-  - Savings Rate (with trend)
   - Time to FI (with projection chart)
   - Freedom Milestones (progress tracker)
+- [ ] **Add constant alignment monitoring**
+  - **Always highlight inconsistent expenses** (not aligned with essentials or important)
+  - Show non-aligned spending breakdown
+  - Actionable insights: "You spent R$X on Y, which doesn't align with your values"
+  - Suggestions for cutting non-essential spending
 - [ ] **Add interactivity**
   - Tooltips explaining each metric
-  - "What if" calculator (adjust savings to see impact)
-  - Expandable details
+  - "What if" calculator (adjust savings to see impact on runway)
+  - Expandable details for each metric
+  - Drill-down into spending categories
 - [ ] **Optimize for mobile**
   - Swipeable cards
   - Collapsible sections
   - Touch-friendly
+  - Primary metrics always visible (sticky header)
 
 **Acceptance Criteria**:
-- Dashboard shows all key metrics
+- **Monthly Runway Gained/Lost is prominently highlighted**
+- Dashboard shows all key metrics in priority order
+- Non-aligned expenses are always highlighted
 - Visually appealing and motivating
 - Loads fast (<2s)
 - Mobile-optimized
 - Tooltips are helpful
 - Interactive elements work
+- User understands their progress at a glance
 
 ---
 

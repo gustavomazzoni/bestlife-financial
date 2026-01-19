@@ -4,6 +4,8 @@
 
 BestLifeOS uses an **API-First architecture** built on Next.js 16, designed for seamless transition from web MVP to native mobile applications with maximum code reuse.
 
+**Philosophy**: The architecture supports a user journey focused on freedom discovery - helping users define what truly matters, discover their Freedom Number, and make conscious financial choices aligned with their values.
+
 ### Core Principles
 
 1. **Separation of Concerns**: Business logic is independent of presentation layer
@@ -11,6 +13,7 @@ BestLifeOS uses an **API-First architecture** built on Next.js 16, designed for 
 3. **Code Reuse**: 70-80% of backend code shared between web and mobile
 4. **Type Safety**: End-to-end TypeScript with Zod validation
 5. **Testability**: Services isolated and easily testable (TDD approach)
+6. **User-Centric**: Architecture supports natural language interaction, intelligent inference, and constant alignment monitoring
 
 ---
 
@@ -314,6 +317,39 @@ bestlifeos-financial/
 ---
 
 ## 📝 API Endpoint Structure
+
+### Natural Language Transaction Entry
+
+**Primary User Interface**: ChatGPT-like prompt box - "What's your Transaction?"
+
+Users interact with the app through natural language entry, similar to ChatGPT. The app intelligently infers transaction details from natural language input.
+
+**Example User Input:**
+```
+"Bought coffee and pastry for breakfast, R$ 25"
+```
+
+**Inferred Transaction:**
+- Amount: R$ 25.00
+- Category: Food
+- Type: EXPENSE
+- Description: "Coffee and pastry for breakfast"
+- Value Alignment: WANTS (non-essential)
+- Date: Today (if not specified)
+
+**Implementation Notes:**
+- **MVP**: Rule-based parsing using keyword matching, regex patterns, and context analysis
+- **Future**: LLM integration (OpenAI API) for more accurate inference
+- **Fallback**: If inference fails or is unclear, show structured form for manual entry
+- **Service Layer**: `services/transactions/infer.ts` - Natural language inference logic
+- **API Endpoint**: POST `/api/v1/transactions/infer` - Returns inferred transaction data before creation
+
+**API Endpoint:**
+```
+POST /api/v1/transactions/infer
+Body: { "text": "Bought coffee and pastry for breakfast, R$ 25" }
+Response: { "data": { "inferred": {...}, "confidence": 0.95 } }
+```
 
 ### Example: Transaction API Route
 
