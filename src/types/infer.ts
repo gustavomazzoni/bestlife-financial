@@ -1,3 +1,4 @@
+import { CreateTransactionInput } from '@/lib/validations/transaction';
 import { TransactionType, NecessityLevel, ValueAlignment } from './transaction';
 
 export interface InferredCategory {
@@ -16,7 +17,8 @@ export interface InferredTransaction {
 }
 
 export interface InferTransactionResult {
-  inferred: InferredTransaction;
+  inferred: Partial<CreateTransactionInput>;
   confidence: number;
   rawInput: string;
+  missingFields: string[];
 }

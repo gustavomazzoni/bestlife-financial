@@ -1,4 +1,5 @@
 import { auth, signOut } from '@/lib/auth/config';
+import { TransactionQuickEntry } from '@/components/features/transactions';
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -24,21 +25,35 @@ export default async function DashboardPage() {
         </div>
       </nav>
 
-      <div className="container mx-auto p-8">
-        <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-sm">
-          <h2 className="text-3xl font-bold text-gray-900">Dashboard</h2>
-          <p className="mt-4 text-gray-600">
-            Olá, <strong>{session?.user?.email}</strong>!
-          </p>
+      <div className="container mx-auto p-4 sm:p-8">
+        {/* Transaction Quick Entry - Primary Interface */}
+        <div className="mb-8">
+          <div className="mb-4 text-center">
+            <h2 className="text-lg font-semibold text-gray-900">
+              Qual é a sua transação?
+            </h2>
+            <p className="text-sm text-gray-500">
+              Digite em linguagem natural, ex: &ldquo;Comprei café e pão, R$
+              25&rdquo;
+            </p>
+          </div>
+          <TransactionQuickEntry className="mx-auto max-w-2xl" />
+        </div>
+
+        {/* Welcome Section */}
+        <div className="rounded-xl border border-gray-200 bg-white p-6 sm:p-8 shadow-sm">
+          <h2 className="text-2xl font-bold text-gray-900">
+            Olá, {session?.user?.name || session?.user?.email?.split('@')[0]}!
+          </h2>
           <p className="mt-2 text-gray-600">
-            Sua jornada para a liberdade financeira começa aqui. 🚀
+            Sua jornada para a liberdade financeira começa aqui.
           </p>
 
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <div className="rounded-lg border border-gray-200 p-6">
               <h3 className="font-semibold text-gray-900">Transações</h3>
               <p className="mt-2 text-sm text-gray-500">
-                Em breve: Registre suas receitas e despesas
+                Use o campo acima para registrar suas transações
               </p>
             </div>
             <div className="rounded-lg border border-gray-200 p-6">
