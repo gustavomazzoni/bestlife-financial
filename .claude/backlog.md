@@ -125,7 +125,7 @@
 
 #### 2.1 Transaction Service (TDD)
 - [x] **Write transaction service tests**
-  - [ ] 2.1.1 Unit test infer transaction
+  - [x] 2.1.1 Unit test infer transaction
     - User types natural language: "Comprei café e pão na padaria, 25 reais"
     - AI inference service (MVP: rule-based parsing, future: LLM integration)
     - Auto-detects from natural language:
@@ -176,6 +176,7 @@
 - [x] **Implement API routes**
   - POST /api/v1/transactions
   - GET /api/v1/transactions
+  - POST /api/v1/transactions/infer
   - GET /api/v1/transactions/:id
   - PATCH /api/v1/transactions/:id
   - DELETE /api/v1/transactions/:id
@@ -193,17 +194,17 @@
 ---
 
 #### 2.3 Transaction UI Components (Component Testing)
-- [ ] **Write component tests**
+- [ ] **2.3.1 Write component tests**
   - Test natural language transaction entry
   - Test AI inference accuracy
   - Test transaction form validation
   - Test transaction list display
   - Test filtering and sorting
   - Test mobile interactions
-- [ ] **Build natural language transaction entry (Primary Interface)**
+- [ ] **2.3.2 Build natural language transaction entry (Primary Interface)**
   - **ChatGPT-like prompt box**: "What's your Transaction?"
   - Large, prominent input field (full-width on mobile)
-  - User types natural language: "Bought coffee and pastry for breakfast, R$ 25"
+  - User types natural language: "Comprei café e pão na padaria para café da manhã, R$ 25"
   - AI inference service (MVP: rule-based parsing, future: LLM integration)
   - Auto-detects from natural language:
     - Amount (currency parsing)
@@ -379,31 +380,74 @@
 - Three scenarios displayed
 - User understands what it means
 
-##### 2.5.5 Current Cost of Living - CSV Upload
-- [ ] **Build CSV upload UI for onboarding**
-  - File upload interface
-  - Instructions for preparing CSV
-  - CSV template download
-  - Upload progress indicator
+##### 2.5.5 Current Cost of Living - CSV Import
+- [ ] **Write CSV import tests**
+  - Test CSV parsing
+  - Test field mapping
+  - Test validation
+  - Test bulk insert
+  - Test error handling (invalid data)
+  - Test duplicate detection
+- [ ] **Create CSV template**
+  - Define required columns
+  - Provide example file
+- [ ] **Implement CSV parser**
+  - Parse CSV with Papaparse
+  - Map columns to transaction fields
+  - Validate each row
+  - Handle errors gracefully
+- [ ] **Implement bulk import API**
+  - POST /api/v1/transactions/import
+  - Accept CSV file
+  - Return success/error report
+- [ ] **Build import UI (can be used for onboarding or after)**
+  - File upload
+  - Column mapping interface
+  - Preview before import
+  - Import progress indicator
+  - Error report with line numbers
+  - Success summary
   - "Skip for later" option
-- [ ] **Handle onboarding CSV import**
-  - Parse 12 months of transactions
-  - Calculate annual cost of living
-  - Show summary after import
-  - Save calculated cost to user profile (or calculate on demand)
+
+**Acceptance Criteria**:
+- Users can import up to 12 months of data quickly
+- CSV template is clear and easy to use
+- Validation catches common errors
+- Error messages are helpful
+- Import completes in <30 seconds for 500 rows
+- All tests pass
+
+##### 2.5.6 Current Cost of Living Calculator (TDD)
+- [ ] **Write calculation tests**
+  - Test current lifestyle cost calculation (12-month average)
+  - Test outlier detection (one-time expenses)
+  - Test annualized irregular expenses
+  - Test category breakdown
+  - Test trend analysis
+- [ ] **Implement lifestyle cost service**
+  - `calculateCurrentLifestyleCost()`
+  - `analyzeSpendingTrends()`
+  - `getCategoryBreakdown()`
+  - `identifyOptimizationOpportunities()`
+- [ ] **Write API tests**
+  - Test GET /api/v1/calculations/lifestyle-cost
+- [ ] **Implement API**
+  - GET /api/v1/calculations/lifestyle-cost
 - [ ] **Show current vs. ideal comparison**
   - Side-by-side comparison
   - Highlight difference
   - This is another "aha moment"
 
 **Acceptance Criteria**:
-- Users can upload 12-month CSV during onboarding
-- Can skip if not ready
+- Calculation logic correct and tested
+- Handles edge cases (new users, sparse data)
+- API returns accurate results
+- All tests pass
 - Cost of living calculated accurately
 - Comparison shown clearly
 - Mobile-friendly upload
 
-##### 2.5.6 Alignment Analysis & Spending Insights
+##### 2.5.7 Alignment Analysis & Spending Insights
 - [ ] **Implement alignment analysis service**
   - Compare actual spending categories vs. ideal lifestyle buckets
   - Identify non-essential spending
@@ -442,58 +486,7 @@
 
 ### Tasks
 
-#### 3.1 Lifestyle Cost Calculator (TDD)
-- [ ] **Write calculation tests**
-  - Test current lifestyle cost calculation (12-month average)
-  - Test outlier detection (one-time expenses)
-  - Test annualized irregular expenses
-  - Test category breakdown
-  - Test trend analysis
-- [ ] **Implement lifestyle cost service**
-  - `calculateCurrentLifestyleCost()`
-  - `analyzeSpendingTrends()`
-  - `getCategoryBreakdown()`
-  - `identifyOptimizationOpportunities()`
-- [ ] **Write API tests**
-  - Test GET /api/v1/calculations/lifestyle-cost
-- [ ] **Implement API**
-  - GET /api/v1/calculations/lifestyle-cost
-
-**Acceptance Criteria**:
-- Calculation logic correct and tested
-- Handles edge cases (new users, sparse data)
-- API returns accurate results
-- All tests pass
-
----
-
-#### 3.2 Dream Lifestyle Questionnaire (TDD)
-- [ ] **Write questionnaire logic tests**
-  - Test cost estimation per answer
-  - Test total dream cost calculation
-- [ ] **Design questionnaire flow**
-  - Question structure and options
-  - Cost estimates per answer
-- [ ] **Implement questionnaire component**
-  - Multi-step form
-  - Progress indicator
-  - Cost preview as user answers
-  - Category-by-category review
-  - Editable after completion
-- [ ] **Save dream lifestyle cost**
-  - Update user profile
-  - Store questionnaire responses (for future reference)
-
-**Acceptance Criteria**:
-- Questionnaire is user-friendly
-- Cost calculations are reasonable
-- User can complete in <10 minutes
-- Mobile-optimized
-- Can update anytime
-
----
-
-#### 3.3 Freedom Metrics Service (TDD)
+#### 3.1 Freedom Metrics Service (TDD)
 - [ ] **Write freedom metrics tests**
   - Test FI number calculation (4% rule)
   - Test Lean/Standard/Fat FI scenarios
@@ -524,7 +517,7 @@
 
 ---
 
-#### 3.4 Freedom Dashboard UI
+#### 3.2 Freedom Dashboard UI
 - [ ] **Design freedom dashboard layout**
   - Card-based layout
   - **Primary metrics prioritized at top** (in priority order)
@@ -584,51 +577,13 @@
 
 ---
 
-## WEEK 4: CSV Import & Recurring Transactions (Jan 13-19)
+## WEEK 4: Recurring Transactions (Jan 13-19)
 
-### 🎯 Goal: Bulk import working, recurring transactions automated
+### 🎯 Goal: recurring transactions automated
 
 ### Tasks
 
-#### 4.1 CSV Import (TDD)
-- [ ] **Write CSV import tests**
-  - Test CSV parsing
-  - Test field mapping
-  - Test validation
-  - Test bulk insert
-  - Test error handling (invalid data)
-  - Test duplicate detection
-- [ ] **Create CSV template**
-  - Define required columns
-  - Provide example file
-- [ ] **Implement CSV parser**
-  - Parse CSV with Papaparse
-  - Map columns to transaction fields
-  - Validate each row
-  - Handle errors gracefully
-- [ ] **Implement bulk import API**
-  - POST /api/v1/transactions/import
-  - Accept CSV file
-  - Return success/error report
-- [ ] **Build import UI**
-  - File upload
-  - Column mapping interface
-  - Preview before import
-  - Import progress indicator
-  - Error report with line numbers
-  - Success summary
-
-**Acceptance Criteria**:
-- Users can import 12 months of data quickly
-- CSV template is clear and easy to use
-- Validation catches common errors
-- Error messages are helpful
-- Import completes in <30 seconds for 500 rows
-- All tests pass
-
----
-
-#### 4.2 Recurring Transactions Service (TDD)
+#### 4.1 Recurring Transactions Service (TDD)
 - [ ] **Write recurring transaction tests**
   - Test create recurring transaction
   - Test list recurring transactions
@@ -659,7 +614,7 @@
 
 ---
 
-#### 4.3 Recurring Transactions UI
+#### 4.2 Recurring Transactions UI
 - [ ] **Build recurring setup form**
   - All transaction fields
   - Frequency selector (weekly/monthly/yearly)
@@ -684,7 +639,7 @@
 
 ---
 
-#### 4.4 Cron Job Setup
+#### 4.3 Cron Job Setup
 - [ ] **Set up Vercel Cron**
   - Configure cron.json or vercel.json
 - [ ] **Implement daily cron job**
