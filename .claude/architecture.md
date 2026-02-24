@@ -365,18 +365,15 @@ import { apiResponse, apiError } from '@/lib/api/response'
 // POST /api/v1/transactions - Create transaction
 export async function POST(request: NextRequest) {
   try {
-    // 1. Authentication
-    const session = await getServerSession()
-    if (!session?.user?.id) {
-      return apiError('Unauthorized', 401)
-    }
+    // 1. Validate auth session and get user id
+    const userId = await getUserId();
 
     // 2. Parse & Validate
-    const body = await request.json()
-    const validated = CreateTransactionSchema.parse(body)
+    const body = await request.json();
+    const validated = CreateTransactionSchema.parse(body);
 
     // 3. Call Service (Business Logic)
-    const transaction = await createTransaction(session.user.id, validated)
+    const transaction = await createTransaction(userId, validated);
 
     // 4. Return Response
     return apiResponse(transaction, 201)
@@ -388,36 +385,18 @@ export async function POST(request: NextRequest) {
 // GET /api/v1/transactions - List transactions
 export async function GET(request: NextRequest) {
   try {
-    // 1. Authentication
-    const session = await getServerSession()
-    if (!session?.user?.id) {
-      return apiError('Unauthorized', 401)
-    }
+    // 1. Validate auth session and get user id
+    const userId = await getUserId();
 
-    // 2. Parse Query Params
-    const { searchParams } = new URL(request.url)
-    const page = parseInt(searchParams.get('page') || '1')
-    const limit = parseInt(searchParams.get('limit') || '20')
-    const type = searchParams.get('type')
-    const startDate = searchParams.get('startDate')
-    const endDate = searchParams.get('endDate')
+    // 2. Parse & Validate Query Params
+    const allPresentParams = Object.fromEntries(request.nextUrl.searchParams);
+    const validatedQuery = ListTransactionsQuerySchema.parse(allPresentParams);
 
     // 3. Call Service
-    const result = await listTransactions(session.user.id, {
-      page,
-      limit,
-      type,
-      startDate,
-      endDate,
-    })
+    const { data, ...meta } = await listTransactions(userId, validatedQuery);
 
     // 4. Return Response with Pagination
-    return apiResponse(result.data, 200, {
-      page,
-      limit,
-      total: result.total,
-      totalPages: Math.ceil(result.total / limit),
-    })
+    return apiResponse(data, 200, meta);
   } catch (error) {
     return apiError(error)
   }
@@ -438,23 +417,15 @@ import { Transaction } from '@/types/transaction'
 
 export async function createTransaction(
   userId: string,
-  data: CreateTransactionInput
+  data: CreateTransactionInput // CreateTransactionInput ensures the data structure is valid
 ): Promise<Transaction> {
-  // Business logic validation
-  if (data.amount <= 0) {
-    throw new Error('Amount must be positive')
-  }
+  // Verify category exists and matches type
+  const category = await prisma.category.findUnique({
+    where: { id: data.categoryId, type: data.type },
+  });
 
-  // Check if category exists
-  const categoryExists = await prisma.category.findFirst({
-    where: {
-      name: data.category,
-      type: data.type,
-    },
-  })
-
-  if (!categoryExists) {
-    throw new Error('Invalid category')
+  if (!category) {
+    throw new Error('Invalid category');
   }
 
   // Create transaction
@@ -463,70 +434,89 @@ export async function createTransaction(
       ...data,
       userId,
     },
-  })
+  });
 
-  return transaction
+  return transaction;
 }
 ```
 
 ```typescript
 // services/transactions/create.test.ts
-import { describe, it, expect, beforeEach } from 'vitest'
-import { createTransaction } from './create'
-import { prisma } from '@/lib/db'
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { prisma } from '@/lib/db';
+import { Prisma } from '@/types';
+import { createTransaction } from './create';
+
+vi.mock('@/lib/db', () => ({
+  prisma: {
+    category: { findUnique: vi.fn() },
+    transaction: { create: vi.fn() },
+  },
+}));
 
 describe('createTransaction', () => {
-  const userId = 'user_test_123'
+  const userId = 'user_test_123';
+  const validData = {
+    date: new Date('2024-01-15'),
+    amount: 100.5,
+    description: 'Grocery shopping',
+    type: 'EXPENSE' as const,
+    categoryId: 'cat_food_123',
+  };
 
-  beforeEach(async () => {
-    // Clean up test data
-    await prisma.transaction.deleteMany({ where: { userId } })
-  })
+  const decimalAmount = new Prisma.Decimal(validData.amount);
 
-  it('should create a transaction successfully', async () => {
-    const data = {
-      date: new Date(),
-      amount: 100,
-      description: 'Test transaction',
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('should create transaction with valid data', async () => {
+    vi.mocked(prisma.category.findUnique).mockResolvedValue({
+      id: 'cat_food_123',
+      name: 'Alimentação',
       type: 'EXPENSE',
-      category: 'Food',
-    }
+      isSystemDefault: true,
+      color: '#F97316',
+      icon: '🍔',
+      createdAt: new Date(),
+    });
 
-    const transaction = await createTransaction(userId, data)
+    vi.mocked(prisma.transaction.create).mockResolvedValue({
+      id: 'txn_1',
+      userId,
+      ...validData,
+      amount: new Prisma.Decimal(validData.amount),
+      necessityLevel: null,
+      valueAlignment: null,
+      isRecurring: false,
+      recurringId: null,
+      notes: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
 
-    expect(transaction).toBeDefined()
-    expect(transaction.amount).toBe(100)
-    expect(transaction.userId).toBe(userId)
-  })
+    const result = await createTransaction(userId, validData);
 
-  it('should throw error for negative amount', async () => {
-    const data = {
-      date: new Date(),
-      amount: -100,
-      description: 'Test',
-      type: 'EXPENSE',
-      category: 'Food',
-    }
+    expect(result).toBeDefined();
+    expect(result.amount).toStrictEqual(decimalAmount);
+    expect(result.userId).toBe(userId);
+    expect(result.categoryId).toBe('cat_food_123');
+    expect(prisma.transaction.create).toHaveBeenCalledWith({
+      data: {
+        ...validData,
+        userId,
+      },
+    });
+  });
 
-    await expect(createTransaction(userId, data)).rejects.toThrow(
-      'Amount must be positive'
-    )
-  })
+  it('should throw error for mismatched category type', async () => {
+    vi.mocked(prisma.category.findUnique).mockResolvedValue(null);
 
-  it('should throw error for invalid category', async () => {
-    const data = {
-      date: new Date(),
-      amount: 100,
-      description: 'Test',
-      type: 'EXPENSE',
-      category: 'InvalidCategory',
-    }
-
-    await expect(createTransaction(userId, data)).rejects.toThrow(
+    await expect(createTransaction(userId, validData)).rejects.toThrow(
       'Invalid category'
-    )
-  })
-})
+    );
+  });
+});
 ```
 
 ---
@@ -537,43 +527,40 @@ describe('createTransaction', () => {
 
 ```typescript
 // lib/validations/transaction.ts
-import { z } from 'zod'
+import { z } from 'zod';
+import { TransactionType, NecessityLevel, ValueAlignment } from '@/types';
 
+const minimumDate = new Date('2023-01-01T00:00:00Z');
 export const CreateTransactionSchema = z.object({
-  date: z.coerce.date(),
-  amount: z.number().positive('Amount must be positive'),
-  description: z.string().min(1, 'Description is required').max(500),
-  type: z.enum(['INCOME', 'EXPENSE', 'SAVING', 'TRANSFER']),
-  category: z.string().min(1, 'Category is required'),
-  necessityLevel: z.enum(['IMPORTANT', 'NEEDS', 'WANTS']).optional(),
-  valueAlignment: z
-    .enum([
-      'ALIGNED',
-      'DEFAULT',
-      'EXPERIENCE',
-      'MATERIAL',
-      'FREEDOM_ENABLING',
-      'FREEDOM_LIMITING',
-    ])
-    .optional(),
-})
+  amount: z.coerce.number().positive('O valor deve ser positivo'),
+  description: z.string().min(3, 'Descrição muito curta').max(500),
+  date: z.coerce
+    .date()
+    .min(minimumDate, { message: 'Date must be on or after January 1, 2023' })
+    .max(new Date(), { message: 'Date cannot be in the future' }),
+  type: z.enum(Object.values(TransactionType)),
+  categoryId: z.string().min(1, 'Category required'),
+  necessityLevel: z.enum(Object.values(NecessityLevel)).optional(),
+  valueAlignment: z.enum(Object.values(ValueAlignment)).optional(),
+  notes: z.string().max(1000).optional(),
+});
 
-export const UpdateTransactionSchema = CreateTransactionSchema.partial()
+export const UpdateTransactionSchema = CreateTransactionSchema.partial();
 
 export const ListTransactionsQuerySchema = z.object({
-  page: z.number().int().positive().default(1),
-  limit: z.number().int().positive().max(100).default(20),
-  type: z.enum(['INCOME', 'EXPENSE', 'SAVING', 'TRANSFER']).optional(),
-  category: z.string().optional(),
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().max(100).default(20),
+  type: z.enum(Object.values(TransactionType)).optional(),
+  categoryId: z.string().optional(),
   startDate: z.coerce.date().optional(),
   endDate: z.coerce.date().optional(),
   sortBy: z.enum(['date', 'amount', 'createdAt']).default('date'),
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
-})
+});
 
-export type CreateTransactionInput = z.infer<typeof CreateTransactionSchema>
-export type UpdateTransactionInput = z.infer<typeof UpdateTransactionSchema>
-export type ListTransactionsQuery = z.infer<typeof ListTransactionsQuerySchema>
+export type CreateTransactionInput = z.infer<typeof CreateTransactionSchema>;
+export type UpdateTransactionInput = z.infer<typeof UpdateTransactionSchema>;
+export type ListTransactionsQuery = z.infer<typeof ListTransactionsQuerySchema>;
 ```
 
 **Usage in API:**
@@ -1037,4 +1024,3 @@ export const getApiDocs = () => {
 
 ### For Scale (Long-term)
 - ✅ Can extract API to separate service later
-- ✅ Can ad
