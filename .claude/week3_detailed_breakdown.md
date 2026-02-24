@@ -277,9 +277,12 @@ Follow pattern in tests/integration/transactions-api.test.ts"
 
 ## 🗂️ Task 3.4: Recurring Transaction Notifications (Day 3)
 
-### Phase 3.4.1: Create Notification Service
+### Phase 3.4.1: Create Notification Service and corresponding unit test file
 
-**File**: `services/notifications/recurring-reminders.ts`
+**File**: 
+**Files**:
+- `services/notifications/recurring-reminders.test.ts` (unit test - TDD)
+- `services/notifications/recurring-reminders.ts` (service implementation)
 
 **Function**:
 ```typescript
@@ -303,7 +306,7 @@ export async function sendRecurringReminders(): Promise<{
 
 **Claude Code Prompt**:
 ```bash
-claude-code "Create recurring reminder notification service.
+claude-code "Create recurring reminder notification service and corresponding unit test file.
 File: services/notifications/recurring-reminders.ts
 
 Function: sendRecurringReminders()
@@ -330,11 +333,13 @@ model RecurringTransaction {
 ```
 
 **Acceptance Criteria**:
+- ✅ Finds recurring transactions due in 3 days (isActive=true)
 - ✅ Groups by user correctly
 - ✅ Sends one email per user
 - ✅ Email includes total amount and count
 - ✅ Doesn't send duplicates
 - ✅ Returns statistics
+- ✅ Unit test covers all the above and All tests pass
 
 ---
 
