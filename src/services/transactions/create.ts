@@ -12,7 +12,7 @@ export async function createTransaction(
   });
 
   if (!category) {
-    throw new Error('Category not found');
+    throw new Error('Invalid category');
   }
 
   // Create transaction

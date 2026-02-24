@@ -49,15 +49,6 @@ describe('createTransaction', () => {
       notes: null,
       createdAt: new Date(),
       updatedAt: new Date(),
-      // category: {
-      //   id: 'cat_food_123',
-      //   name: 'Alimentação',
-      //   type: 'EXPENSE',
-      //   isSystemDefault: true,
-      //   color: '#F97316',
-      //   icon: '🍔',
-      //   createdAt: new Date(),
-      // }
     });
 
     const result = await createTransaction(userId, validData);
@@ -74,19 +65,11 @@ describe('createTransaction', () => {
     });
   });
 
-  it('should throw error for invalid category', async () => {
-    vi.mocked(prisma.category.findUnique).mockResolvedValue(null);
-
-    await expect(createTransaction(userId, validData)).rejects.toThrow(
-      'Category not found'
-    );
-  });
-
   it('should throw error for mismatched category type', async () => {
     vi.mocked(prisma.category.findUnique).mockResolvedValue(null);
 
     await expect(createTransaction(userId, validData)).rejects.toThrow(
-      'Category not found'
+      'Invalid category'
     );
   });
 });

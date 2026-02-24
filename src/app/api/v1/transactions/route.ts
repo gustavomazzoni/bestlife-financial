@@ -28,13 +28,8 @@ export async function GET(request: NextRequest) {
     const allPresentParams = Object.fromEntries(searchParams);
     const validatedQuery = ListTransactionsQuerySchema.parse(allPresentParams);
 
-    const result = await listTransactions(userId, validatedQuery);
-    return apiResponse(result.data, 200, {
-      page: result.page,
-      limit: result.limit,
-      total: result.total,
-      totalPages: result.totalPages,
-    });
+    const { data, ...meta } = await listTransactions(userId, validatedQuery);
+    return apiResponse(data, 200, meta);
   } catch (error) {
     return apiError(error);
   }
