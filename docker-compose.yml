@@ -111,7 +111,6 @@ services:
     working_dir: /app
     environment:
       - CI=true
-      - PLAYWRIGHT_BASE_URL=http://app:3000
       - PLAYWRIGHT_HTML_HOST=0.0.0.0
     ports:
       - '9323:9323'

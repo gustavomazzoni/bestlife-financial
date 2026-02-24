@@ -1,9 +1,9 @@
 import prisma from '@/lib/db';
+import { CreateTransactionInput } from '@/lib/validations/transaction';
 import {
   TransactionType,
   NecessityLevel,
   ValueAlignment,
-  InferredTransaction,
   InferTransactionResult,
   InferredCategory,
 } from '@/types';
@@ -93,6 +93,9 @@ const CATEGORY_KEYWORDS: CategoryKeywords[] = [
       'acougue',
       'feira',
       'hortifruti',
+      'açai',
+      'acai',
+      'fruta',
       // English
       'coffee',
       'bread',
@@ -553,9 +556,7 @@ const VALUE_ALIGNMENT_BY_CATEGORY: Record<string, ValueAlignment> = {
  * Parse amount from natural language text
  * Supports formats: R$ 25, R$ 25,50, R$ 2.500,00, 25 reais, 25
  */
-function parseAmount(text: string): number | null {
-  const normalizedText = text.toLowerCase();
-
+function parseAmount(normalizedText: string): number | null {
   // Pattern 1: R$ followed by number (R$ 25, R$ 25,50, R$ 2.500,00)
   const rsPatternsWithCommaDecimal = /r\$\s*([\d.]+),(\d{1,2})/i;
   const rsPatternWithDotDecimal = /r\$\s*([\d,]+)\.(\d{1,2})/i;
@@ -627,9 +628,7 @@ function parseAmount(text: string): number | null {
 /**
  * Detect transaction type from text
  */
-function detectTransactionType(text: string): TransactionType {
-  const lowerText = text.toLowerCase();
-
+function detectTransactionType(lowerText: string): TransactionType {
   // Check for saving keywords first (more specific)
   for (const keyword of SAVING_KEYWORDS) {
     if (lowerText.includes(keyword)) {
@@ -659,11 +658,9 @@ function detectTransactionType(text: string): TransactionType {
  * Match category based on keywords
  */
 async function matchCategory(
-  text: string,
+  lowerText: string,
   transactionType: TransactionType
 ): Promise<InferredCategory | null> {
-  const lowerText = text.toLowerCase();
-
   // Get all categories from database
   const categories = await prisma.category.findMany({
     select: { id: true, name: true, type: true },
@@ -744,8 +741,7 @@ function inferValueAlignment(
 /**
  * Parse date from text
  */
-function parseDate(text: string): Date {
-  const lowerText = text.toLowerCase();
+function parseDate(lowerText: string): Date {
   const today = new Date();
   today.setHours(12, 0, 0, 0); // Set to noon to avoid timezone issues
 
@@ -894,8 +890,7 @@ function calculateConfidence(
 /**
  * Check if the text contains explicit type keywords
  */
-function hasExplicitTypeKeyword(text: string): boolean {
-  const lowerText = text.toLowerCase();
+function hasExplicitTypeKeyword(lowerText: string): boolean {
   const allKeywords = [
     ...EXPENSE_KEYWORDS,
     ...INCOME_KEYWORDS,
@@ -908,36 +903,38 @@ function hasExplicitTypeKeyword(text: string): boolean {
  * Main inference function
  */
 export async function inferTransaction(
-  text: string
+  text: string,
+  userId?: string
 ): Promise<InferTransactionResult> {
-  const trimmedText = text.trim();
+  const normalizedText = text.toLowerCase().trim();
+  const inferred: Partial<CreateTransactionInput> = {};
+  const missingFields: string[] = [];
 
   // Handle empty input
-  if (!trimmedText) {
+  if (!normalizedText) {
     return {
-      inferred: {
-        amount: null,
-        description: '',
-        date: new Date(),
-        type: TransactionType.EXPENSE,
-        category: null,
-        necessityLevel: null,
-        valueAlignment: null,
-      },
+      inferred,
       confidence: 0,
       rawInput: text,
+      missingFields,
     };
   }
 
+  // TODO: infer value alignment based on user core values
+  // userId
+
   // Parse all fields
-  const amount = parseAmount(trimmedText);
-  const type = detectTransactionType(trimmedText);
-  const category = await matchCategory(trimmedText, type);
-  const date = parseDate(trimmedText);
-  const description = generateDescription(trimmedText);
+  const amount = parseAmount(normalizedText);
+  if (amount) inferred.amount = amount;
+  const type = detectTransactionType(normalizedText);
+  if (type) inferred.type = type;
+  const category = await matchCategory(normalizedText, type);
+  if (type) inferred.type = type;
+  const date = parseDate(normalizedText);
+  const description = generateDescription(text);
   const necessityLevel = inferNecessityLevel(category?.name || null);
   const valueAlignment = inferValueAlignment(category?.name || null);
-  const hasExplicitType = hasExplicitTypeKeyword(trimmedText);
+  const hasExplicitType = hasExplicitTypeKeyword(normalizedText);
 
   const confidence = calculateConfidence(
     amount,
