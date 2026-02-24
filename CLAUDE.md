@@ -34,32 +34,47 @@
 ## Architecture
 
 ```
-┌─────────────────────────────────────┐
-│            Next.js Web App          │
-│  (Server Components + API Routes)   │
-└──────────────────┬──────────────────┘
-                   │ HTTP/JSON
-                   ▼
-┌─────────────────────────────────────┐
-│     REST API Layer (/api/v1/*)      │
-│  Auth · Validation · Error Handling │
-└──────────────────┬──────────────────┘
-                   │
-                   ▼
-┌─────────────────────────────────────┐
-│    Service Layer (Business Logic)   │
-│  Transactions · Calculations · User │
-└──────────────────┬──────────────────┘
-                   │
-                   ▼
-┌─────────────────────────────────────┐
-│   Data Access Layer (Prisma ORM)    │
-└──────────────────┬──────────────────┘
-                   │
-                   ▼
-┌─────────────────────────────────────┐
-│         PostgreSQL Database         │
-└─────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                        Clients                              │
+├──────────────────────┬──────────────────────────────────────┤
+│   Next.js Web App    │   React Native Mobile (Future)       │
+│   - Server Components│   - Native Screens                   │
+│   - Client Components│   - Navigation                       │
+│   - Forms/UI         │   - API Client                       │
+└──────────────────────┴──────────────────────────────────────┘
+           │                           │
+           └───────────┬───────────────┘
+                       │ HTTP/JSON
+                       ▼
+┌─────────────────────────────────────────────────────────────┐
+│              REST API Layer (/api/v1/*)                     │
+│  - Authentication & Authorization                           │
+│  - Request Validation (Zod)                                 │
+│  - Response Formatting                                      │
+│  - Error Handling                                           │
+└────────────────────────┬────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────┐
+│                  Service Layer (Business Logic)             │
+│  - Transaction Management                                   │
+│  - Financial Calculations                                   │
+│  - User Management                                          │
+│  - Notifications                                            │
+└────────────────────────┬────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   Data Access Layer                         │
+│  - Prisma ORM                                               │
+│  - Database Queries                                         │
+│  - Transactions                                             │
+└────────────────────────┬────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────┐
+│                PostgreSQL Database                          │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ### Design Principles
