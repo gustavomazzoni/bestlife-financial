@@ -609,6 +609,22 @@ ENABLE_EMAIL_NOTIFICATIONS="true"
 - **Commit convention**: Conventional Commits
 - **Deployment**: Vercel auto-deploy on merge to main · preview on every PR
 
+### Running Commands (Docker)
+
+All commands must be executed **inside the Docker containers**, not on the host machine.
+
+| Task                     | Command                                                         |
+| ------------------------ | --------------------------------------------------------------- |
+| Start dev environment    | `docker compose up`                                             |
+| Unit + integration tests | `docker compose exec app pnpm test`                             |
+| Type check               | `docker compose exec app pnpm type-check`                       |
+| Lint                     | `docker compose exec app pnpm lint`                             |
+| Build                    | `docker compose exec app pnpm build`                            |
+| Prisma migration         | `docker compose exec app pnpm prisma migrate dev`               |
+| E2E tests                | `docker compose --profile testing run playwright pnpm test:e2e` |
+
+**Email in dev**: All emails (e.g. magic links) are captured by Mailpit at `http://localhost:8025`. E2E tests can extract magic link URLs from the Mailpit HTTP API (`GET localhost:8025/api/v1/messages`) without needing real SMTP.
+
 ### Code Review Checklist
 
 - [ ] Tests pass (unit + integration)
