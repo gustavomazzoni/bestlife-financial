@@ -16,6 +16,7 @@
     "test:coverage": "vitest --coverage",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
+    "test:e2e:docker": "docker compose --profile testing run playwright pnpm test:e2e",
     "test:integration": "dotenv -e .env.test -- vitest run --config vitest.config.integration.ts",
     "test:integration:watch": "dotenv -e .env.test -- vitest --config vitest.config.integration.ts",
     "test:db:setup": "dotenv -e .env.test -- prisma migrate deploy",

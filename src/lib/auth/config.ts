@@ -1,18 +1,10 @@
-import NextAuth, { DefaultSession, NextAuthConfig } from 'next-auth';
+import NextAuth, { NextAuthConfig } from 'next-auth';
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import EmailProvider from 'next-auth/providers/email';
 import { prisma } from '@/lib/db';
 
 // reference: https://medium.com/@kamilmatejuk/how-to-setup-nextauth-v5-on-the-next-js-frontend-with-app-router-and-custom-forms-2ac408ba973d
-
-// Extend the built-in session types
-declare module 'next-auth' {
-  interface Session {
-    user: {
-      id: string;
-    } & DefaultSession['user'];
-  }
-}
+// Session/JWT type augmentations are in src/types/next-auth.d.ts
 
 export const authOptions: NextAuthConfig = {
   adapter: PrismaAdapter(prisma),
@@ -63,20 +55,45 @@ export const authOptions: NextAuthConfig = {
     error: '/error',
   },
   callbacks: {
-    async jwt({ token, user }) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    async jwt({ token, user, trigger, session }: any) {
       if (user) {
         token.id = user.id;
+        // Check DB on initial sign-in
+        const dbUser = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: { dreamLifestyleCost: true },
+        });
+        token.onboardingCompleted = !!dbUser?.dreamLifestyleCost;
+      }
+      if (trigger === 'update') {
+        if (session?.user?.onboardingCompleted !== undefined) {
+          // Value passed directly from the server-side update — no DB round-trip needed
+          token.onboardingCompleted = session.user.onboardingCompleted;
+        } else if (token.onboardingCompleted === false) {
+          // Fallback: re-check DB (used by legacy client-side update())
+          const dbUser = await prisma.user.findUnique({
+            where: { id: token.id as string },
+            select: { dreamLifestyleCost: true },
+          });
+          token.onboardingCompleted = !!dbUser?.dreamLifestyleCost;
+        }
       }
       return token;
     },
     async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.id as string;
-      }
-      return session;
+      return {
+        ...session,
+        user: {
+          ...session.user,
+          id: token.id as string,
+          onboardingCompleted: !!token.onboardingCompleted,
+        },
+      };
     },
   },
   debug: process.env.NODE_ENV === 'development',
 };
 
-export const { handlers, auth, signIn, signOut } = NextAuth(authOptions);
+export const { handlers, auth, signIn, signOut, unstable_update } =
+  NextAuth(authOptions);

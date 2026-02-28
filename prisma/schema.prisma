@@ -17,6 +17,7 @@ model User {
   updatedAt             DateTime  @updatedAt
   
   // Financial data
+  activeIncomeMonthly   Decimal   @default(0) @db.Decimal(12, 2)
   currentInvestments    Decimal   @default(0) @db.Decimal(12, 2)
   emergencyFund         Decimal   @default(0) @db.Decimal(12, 2)
   passiveIncomeMonthly  Decimal   @default(0) @db.Decimal(12, 2)

@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 export default auth(req => {
   const { pathname } = req.nextUrl;
   const isAuthenticated = !!req.auth;
+  const onboardingCompleted = req.auth?.user?.onboardingCompleted ?? false;
 
   // Public routes that don't require authentication
   const publicRoutes = ['/login', '/verify-request', '/error'];
@@ -21,6 +22,22 @@ export default auth(req => {
 
   // If authenticated and trying to access login, redirect to dashboard
   if (isAuthenticated && pathname === '/login') {
+    return NextResponse.redirect(new URL('/dashboard', req.url));
+  }
+
+  // If authenticated but onboarding not complete, redirect to /onboarding
+  // Allow /onboarding itself and API routes through
+  if (
+    isAuthenticated &&
+    !onboardingCompleted &&
+    !isApiRoute &&
+    pathname !== '/onboarding'
+  ) {
+    return NextResponse.redirect(new URL('/onboarding', req.url));
+  }
+
+  // If onboarding completed and trying to access onboarding, redirect to dashboard
+  if (onboardingCompleted && pathname === '/onboarding') {
     return NextResponse.redirect(new URL('/dashboard', req.url));
   }
 
