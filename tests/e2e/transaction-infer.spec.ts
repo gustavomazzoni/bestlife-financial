@@ -1,79 +1,55 @@
 import { test, expect, Page } from '@playwright/test';
 
-/**
- * E2E tests for the Natural Language Transaction Entry feature.
- *
- * NOTE: Full authentication tests require NEXTAUTH_URL to match the Docker network hostname.
- * When running in Docker, NEXTAUTH_URL env var should be set to http://app:3000 instead of http://localhost:3000
- * for the magic link callback redirects to work properly.
- *
- * For CI/Docker environments, either:
- * 1. Update NEXTAUTH_URL env var in the app container to http://app:3000
- * 2. Use authenticated fixtures with storageState
- * 3. Run these tests locally against localhost:3000
- */
+const MAILPIT_URL = process.env.MAILPIT_URL || 'http://localhost:8025';
 
-test.describe('Natural Language Transaction Entry', () => {
-  // Setup route to redirect localhost:3000 to app:3000 (for Docker network)
-  test.beforeEach(async ({ page }) => {
-    // Intercept ALL requests and rewrite localhost URLs
-    await page.route('**/*', async route => {
-      const url = route.request().url();
-      if (url.includes('localhost:3000')) {
-        const newUrl = url.replace(/localhost:3000/g, 'app:3000');
-        await route.continue({ url: newUrl });
-      } else {
-        await route.continue();
-      }
-    });
-  });
-
-  // Helper function to login via magic link
-  async function loginUser(page: Page, email: string) {
-    // 1. Clear Mailpit messages first
-    await page.request.fetch('http://mailpit:8025/api/v1/messages', {
-      method: 'DELETE',
-    });
-
-    // 2. Request magic link
-    await page.goto('/login');
-    await page.fill('input[type="email"]', email);
-
-    // 3. Click submit and wait for navigation together
-    await Promise.all([
-      page.waitForURL('**/verify-request**', { timeout: 30000 }),
-      page.click('button[type="submit"]'),
-    ]);
-
-    // 4. Wait a bit for the email to be sent
-    await page.waitForTimeout(1000);
-
-    // 5. Get magic link from Mailpit API
-    const mailpitResponse = await page.request.get(
-      'http://mailpit:8025/api/v1/messages'
+async function getMagicLink(page: Page, email: string): Promise<string> {
+  const endTime = Date.now() + 15000;
+  while (Date.now() < endTime) {
+    const response = await page.request.get(
+      `${MAILPIT_URL}/api/v1/search?query=${encodeURIComponent(`to:${email}`)}&limit=1`
     );
-    const messages = await mailpitResponse.json();
-    const latestMessage = messages.messages[0];
+    const data = await response.json();
+    if (data.messages?.length > 0) {
+      const msgResponse = await page.request.get(
+        `${MAILPIT_URL}/api/v1/message/${data.messages[0].ID}`
+      );
+      const msgData = await msgResponse.json();
+      const match = msgData.HTML?.match(/href="([^"]*callback[^"]*)"/i);
+      if (match) return match[1];
+    }
+    await new Promise(r => setTimeout(r, 500));
+  }
+  throw new Error(`No magic link email found for ${email}`);
+}
 
-    // 6. Extract link from email
-    const messageResponse = await page.request.get(
-      `http://mailpit:8025/api/v1/message/${latestMessage.ID}`
-    );
-    const messageData = await messageResponse.json();
-    const emailHtml = messageData.HTML;
-    const magicLinkMatch = emailHtml.match(/href="([^"]*callback[^"]*)"/i);
-    const magicLink = magicLinkMatch ? magicLinkMatch[1] : null;
+// Helper function to login via magic link and land on /dashboard.
+// New users are redirected to /onboarding first — this completes it automatically.
+async function loginUser(page: Page, email: string) {
+  await page.goto('/login');
+  await page.fill('input[type="email"]', email);
 
-    expect(magicLink).toBeTruthy();
+  await Promise.all([
+    page.waitForURL('**/verify-request**', { timeout: 30000 }),
+    page.click('button[type="submit"]'),
+  ]);
 
-    // 7. Click magic link to complete login (replace all localhost:3000 with app:3000)
-    const dockerMagicLink = magicLink!
-      .replace(/localhost:3000/g, 'app:3000')
-      .replace(/localhost%3A3000/g, 'app%3A3000');
-    await page.goto(dockerMagicLink);
+  const magicLink = await getMagicLink(page, email);
+  await page.goto(magicLink);
+  await page.waitForURL(/\/(dashboard|onboarding)/, { timeout: 30000 });
+
+  if (page.url().includes('/onboarding')) {
+    // New user — complete onboarding to reach /dashboard
+    await page.fill('#step-input', '8000');
+    await page.click('button:has-text("Próximo")');
+    await page.fill('#step-input', '15000');
+    await page.click('button:has-text("Próximo")');
+    await page.fill('#step-input', '50000');
+    await page.click('button:has-text("Concluir")');
     await page.waitForURL('**/dashboard**', { timeout: 30000 });
   }
+}
 
+test.describe('Natural Language Transaction Entry', () => {
   test.describe('UI Components (no auth required)', () => {
     test('login page shows expected elements', async ({ page }) => {
       await page.goto('/login');
@@ -88,12 +64,9 @@ test.describe('Natural Language Transaction Entry', () => {
     }) => {
       // Test the API endpoint directly (no auth required for basic parsing)
       // Note: In production this requires auth, but we're testing the inference logic
-      const response = await request.post(
-        'http://app:3000/api/v1/transactions/infer',
-        {
-          data: { text: 'Comprei café e pão na padaria, R$ 25' },
-        }
-      );
+      const response = await request.post('/api/v1/transactions/infer', {
+        data: { text: 'Comprei café e pão na padaria, R$ 25' },
+      });
 
       // Should return 401 if not authenticated, which is expected
       // This confirms the endpoint exists and responds
@@ -102,15 +75,7 @@ test.describe('Natural Language Transaction Entry', () => {
   });
 
   // Full flow tests - these require proper auth setup
-  // Skip in Docker environment due to NEXTAUTH_URL localhost redirect issue
   test.describe('Full Transaction Flow (requires auth)', () => {
-    // Skip these tests when NEXTAUTH_URL is set to localhost
-    // They can be run locally or when NEXTAUTH_URL is properly configured for Docker
-    test.skip(
-      () => !process.env.NEXTAUTH_URL?.includes('http://app:'),
-      'Skipping full auth tests since issues with NextAuth redirects going to localhost:3000 instead of app:3000 in Docker. Change NEXTAUTH_URL env to run it'
-    );
-
     test('should display transaction input on dashboard', async ({ page }) => {
       await loginUser(page, 'transaction-test@example.com');
 

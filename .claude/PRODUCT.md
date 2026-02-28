@@ -21,7 +21,7 @@ Society teaches us to pursue success based on money, material possessions, and s
 
 ### Step 1: Defining What's Truly Important
 - App presents a curated list of life goals/values (user selects up to 10)
-- Examples: Family, Energy & vitality, Adventure, Freedom (mandatory, always selected)
+- Examples: Family & Relationship, Energy & Vitality, New Experiences & Adventure, Growth, Freedom (mandatory, always selected)
 - User can add custom values/goals
 - Selections drive the rest of the journey
 
