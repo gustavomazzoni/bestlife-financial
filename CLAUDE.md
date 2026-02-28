@@ -613,15 +613,16 @@ ENABLE_EMAIL_NOTIFICATIONS="true"
 
 All commands must be executed **inside the Docker containers**, not on the host machine.
 
-| Task                     | Command                                                         |
-| ------------------------ | --------------------------------------------------------------- |
-| Start dev environment    | `docker compose up`                                             |
-| Unit + integration tests | `docker compose exec app pnpm test`                             |
-| Type check               | `docker compose exec app pnpm type-check`                       |
-| Lint                     | `docker compose exec app pnpm lint`                             |
-| Build                    | `docker compose exec app pnpm build`                            |
-| Prisma migration         | `docker compose exec app pnpm prisma migrate dev`               |
-| E2E tests                | `docker compose --profile testing run playwright pnpm test:e2e` |
+| Task                     | Command                                                                |
+| ------------------------ | ---------------------------------------------------------------------- |
+| Start dev environment    | `docker compose up`                                                    |
+| Unit + integration tests | `docker compose exec app pnpm test`                                    |
+| Type check               | `docker compose exec app pnpm type-check`                              |
+| Lint                     | `docker compose exec app pnpm lint`                                    |
+| Build                    | `docker compose exec app pnpm build`                                   |
+| Prisma migration         | `docker compose exec app pnpm prisma migrate dev`                      |
+| E2E tests (local/host)   | `pnpm test:e2e`                                                        |
+| E2E tests (Docker/CI)    | `docker compose --profile testing run playwright pnpm test:e2e:docker` |
 
 **Email in dev**: All emails (e.g. magic links) are captured by Mailpit at `http://localhost:8025`. E2E tests can extract magic link URLs from the Mailpit HTTP API (`GET localhost:8025/api/v1/messages`) without needing real SMTP.
 
