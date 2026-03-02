@@ -23,6 +23,7 @@ const mockMetrics = {
   savingsRate: 73.33,
   monthsToFI: 200,
   avgMonthlyExpenses: 4000,
+  dreamLifestyleCost: 10000,
 };
 
 describe('GET /api/v1/calculations/freedom-metrics', () => {

@@ -1,8 +1,30 @@
+import Link from 'next/link';
 import { auth, signOut } from '@/lib/auth/config';
+import { getUserId } from '@/lib/auth/session';
+import { calculateFreedomMetrics } from '@/services/calculations/freedom-metrics';
+import { getSpendingBreakdown } from '@/services/calculations/spending-analysis';
+import { listTransactions } from '@/services/transactions/list';
 import { TransactionQuickEntry } from '@/components/features/transactions';
+import { MetricsOverview } from '@/components/features/dashboard/metrics-overview';
+import { SpendingChart } from '@/components/features/dashboard/spending-chart';
+import { RecentTransactions } from '@/components/features/dashboard/recent-transactions';
 
 export default async function DashboardPage() {
-  const session = await auth();
+  const [session, userId] = await Promise.all([auth(), getUserId()]);
+
+  const [metrics, spending, recent] = await Promise.all([
+    calculateFreedomMetrics(userId),
+    getSpendingBreakdown(userId, 'month'),
+    listTransactions(userId, {
+      page: 1,
+      limit: 10,
+      sortBy: 'date',
+      sortOrder: 'desc',
+    }),
+  ]);
+
+  const name =
+    session?.user?.name || session?.user?.email?.split('@')[0] || 'você';
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -25,54 +47,55 @@ export default async function DashboardPage() {
         </div>
       </nav>
 
-      <div className="container mx-auto p-4 sm:p-8">
-        {/* Transaction Quick Entry - Primary Interface */}
-        <div className="mb-8">
-          <div className="mb-4 text-center">
-            <h2 className="text-lg font-semibold text-gray-900">
-              Qual é a sua transação?
-            </h2>
-            <p className="text-sm text-gray-500">
-              Digite em linguagem natural, ex: &ldquo;Comprei café e pão, R$
-              25&rdquo;
-            </p>
-          </div>
-          <TransactionQuickEntry className="mx-auto max-w-2xl" />
+      <div className="container mx-auto space-y-6 p-4 sm:p-8">
+        {/* Greeting */}
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Olá, {name}!</h2>
+          <p className="mt-1 text-sm text-gray-500">
+            Sua jornada para a liberdade financeira.
+          </p>
         </div>
 
-        {/* Welcome Section */}
-        <div className="rounded-xl border border-gray-200 bg-white p-6 sm:p-8 shadow-sm">
-          <h2 className="text-2xl font-bold text-gray-900">
-            Olá, {session?.user?.name || session?.user?.email?.split('@')[0]}!
-          </h2>
-          <p className="mt-2 text-gray-600">
-            Sua jornada para a liberdade financeira começa aqui.
+        {/* Transaction Quick Entry */}
+        <div>
+          <p className="mb-2 text-sm text-gray-500">
+            Digite em linguagem natural, ex: &ldquo;Comprei café e pão, R$
+            25&rdquo;
           </p>
+          <TransactionQuickEntry className="max-w-2xl" />
+        </div>
 
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="rounded-lg border border-gray-200 p-6">
-              <h3 className="font-semibold text-gray-900">Transações</h3>
-              <p className="mt-2 text-sm text-gray-500">
-                Use o campo acima para registrar suas transações
-              </p>
-            </div>
-            <div className="rounded-lg border border-gray-200 p-6">
-              <h3 className="font-semibold text-gray-900">
-                Métricas de Liberdade
+        {/* Financial Metrics */}
+        <section>
+          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-400">
+            Métricas
+          </h3>
+          <MetricsOverview metrics={metrics} spending={spending} />
+        </section>
+
+        {/* Spending Chart + Recent Transactions */}
+        <div className="grid gap-6 lg:grid-cols-2">
+          <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+            <h3 className="mb-4 text-sm font-semibold text-gray-700">
+              Gastos por Categoria — Este Mês
+            </h3>
+            <SpendingChart categories={spending.byCategory} />
+          </section>
+
+          <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-gray-700">
+                Últimas Transações
               </h3>
-              <p className="mt-2 text-sm text-gray-500">
-                Em breve: Acompanhe seu progresso
-              </p>
+              <Link
+                href="/transactions"
+                className="text-xs text-indigo-600 hover:underline"
+              >
+                Ver todas
+              </Link>
             </div>
-            <div className="rounded-lg border border-gray-200 p-6">
-              <h3 className="font-semibold text-gray-900">
-                Custo de Vida dos Sonhos
-              </h3>
-              <p className="mt-2 text-sm text-gray-500">
-                Em breve: Defina seu estilo de vida ideal
-              </p>
-            </div>
-          </div>
+            <RecentTransactions transactions={recent.data} />
+          </section>
         </div>
       </div>
     </div>

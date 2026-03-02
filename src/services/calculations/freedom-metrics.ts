@@ -51,5 +51,6 @@ export async function calculateFreedomMetrics(
     savingsRate,
     monthsToFI,
     avgMonthlyExpenses,
+    dreamLifestyleCost,
   };
 }

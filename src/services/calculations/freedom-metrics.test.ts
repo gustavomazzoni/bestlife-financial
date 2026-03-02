@@ -60,6 +60,7 @@ describe('calculateFreedomMetrics', () => {
     const result = await calculateFreedomMetrics(userId);
 
     expect(result.fiNumber).toBe(10000 * 12 * 25); // 3_000_000
+    expect(result.dreamLifestyleCost).toBe(10000);
   });
 
   it('calculates currentRunway as currentInvestments / dreamLifestyleCost', async () => {
@@ -153,5 +154,6 @@ describe('calculateFreedomMetrics', () => {
     expect(result.fiNumber).toBe(0);
     expect(result.fiProgress).toBe(0);
     expect(result.currentRunway).toBe(0);
+    expect(result.dreamLifestyleCost).toBe(0);
   });
 });
