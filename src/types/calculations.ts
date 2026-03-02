@@ -37,3 +37,27 @@ export interface CategoryBreakdown {
   totalExpenses: number;
   totalSavings: number;
 }
+
+export interface FreedomMetrics {
+  fiNumber: number;
+  fiProgress: number;
+  currentRunway: number;
+  savingsRate: number;
+  monthsToFI: number | null;
+  avgMonthlyExpenses: number;
+}
+
+export interface NecessityBreakdown {
+  NEEDS: number;
+  IMPORTANT: number;
+  WANTS: number;
+  unclassified: number;
+}
+
+export interface SpendingBreakdown {
+  totalExpenses: number;
+  byCategory: CategoryExpense[];
+  byNecessityLevel: NecessityBreakdown;
+  valueAlignedPercentage: number;
+  period: { startDate: Date; endDate: Date };
+}
