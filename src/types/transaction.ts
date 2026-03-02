@@ -1,5 +1,6 @@
 import {
   Transaction,
+  Category,
   TransactionType,
   NecessityLevel,
   ValueAlignment,
@@ -8,8 +9,13 @@ import {
 export type { Transaction };
 export { TransactionType, NecessityLevel, ValueAlignment };
 
+/** Transaction as returned by listTransactions (always includes category relation). */
+export type TransactionRow = Transaction & {
+  category: Category | null;
+};
+
 export interface TransactionListResult {
-  data: Transaction[];
+  data: TransactionRow[];
   total: number;
   page: number;
   limit: number;

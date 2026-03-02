@@ -45,6 +45,7 @@ export interface FreedomMetrics {
   savingsRate: number;
   monthsToFI: number | null;
   avgMonthlyExpenses: number;
+  dreamLifestyleCost: number;
 }
 
 export interface NecessityBreakdown {
