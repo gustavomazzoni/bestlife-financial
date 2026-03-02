@@ -51,7 +51,7 @@ export function TransactionQuickEntry({
           description: transaction.description,
           date: transaction.date,
           type: transaction.type,
-          category: transaction.category?.name ?? 'Outros',
+          categoryId: transaction.category?.id ?? '',
           necessityLevel: transaction.necessityLevel,
           valueAlignment: transaction.valueAlignment,
         }),

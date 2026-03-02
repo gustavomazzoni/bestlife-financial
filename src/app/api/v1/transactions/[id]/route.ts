@@ -9,12 +9,13 @@ import { apiResponse, apiError } from '@/lib/api/response';
 import { UpdateTransactionSchema } from '@/lib/validations/transaction';
 
 export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const userId = await getUserId();
-    const transaction = await getTransaction(userId, params.id);
+    const transaction = await getTransaction(userId, id);
     return apiResponse(transaction);
   } catch (error) {
     return apiError(error);
@@ -23,14 +24,15 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const userId = await getUserId();
     const body = await request.json();
 
     const validated = UpdateTransactionSchema.parse(body);
-    const transaction = await updateTransaction(userId, params.id, validated);
+    const transaction = await updateTransaction(userId, id, validated);
     return apiResponse(transaction);
   } catch (error) {
     return apiError(error);
@@ -38,12 +40,13 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const userId = await getUserId();
-    await deleteTransaction(userId, params.id);
+    await deleteTransaction(userId, id);
     return apiResponse(null, 204);
   } catch (error) {
     return apiError(error);

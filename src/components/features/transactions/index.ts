@@ -6,3 +6,11 @@ export type { InferredTransactionCardProps } from './inferred-transaction-card';
 
 export { TransactionQuickEntry } from './transaction-quick-entry';
 export type { TransactionQuickEntryProps } from './transaction-quick-entry';
+
+export { TransactionList } from './transaction-list';
+
+export { TransactionCard } from './transaction-card';
+export type {
+  TransactionCardProps,
+  TransactionWithCategory,
+} from './transaction-card';

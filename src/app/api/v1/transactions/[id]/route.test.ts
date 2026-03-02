@@ -38,7 +38,7 @@ describe('API v1 - Transactions [id] Operations', () => {
 
       const response = await GET(
         createMockRequest('/api/v1/transactions/:id'),
-        { params: { id: transactionId } }
+        { params: Promise.resolve({ id: transactionId }) }
       );
       expect(response.status).toBe(404);
     });
@@ -48,7 +48,7 @@ describe('API v1 - Transactions [id] Operations', () => {
 
       const response = await GET(
         createMockRequest('/api/v1/transactions/:id'),
-        { params: { id: transactionId } }
+        { params: Promise.resolve({ id: transactionId }) }
       );
       expect(response.status).toBe(401);
     });
@@ -61,7 +61,7 @@ describe('API v1 - Transactions [id] Operations', () => {
 
       const response = await GET(
         createMockRequest('/api/v1/transactions/:id'),
-        { params: { id: transactionId } }
+        { params: Promise.resolve({ id: transactionId }) }
       );
       expect(response.status).toBe(200);
       expect(getTransaction).toHaveBeenCalledWith(mockUserId, transactionId);
@@ -77,7 +77,9 @@ describe('API v1 - Transactions [id] Operations', () => {
         '/api/v1/transactions/:id',
         { amount: -50 } // Inválido
       );
-      const response = await PATCH(req, { params: { id: transactionId } });
+      const response = await PATCH(req, {
+        params: Promise.resolve({ id: transactionId }),
+      });
       const json = await parseResponse(response);
       expect(response.status).toBe(400);
       expect(updateTransaction).not.toHaveBeenCalled();
@@ -96,7 +98,9 @@ describe('API v1 - Transactions [id] Operations', () => {
         updateData
       );
 
-      const response = await PATCH(req, { params: { id: transactionId } });
+      const response = await PATCH(req, {
+        params: Promise.resolve({ id: transactionId }),
+      });
       const json = await parseResponse(response);
       expect(response.status).toBe(200);
       expect(updateTransaction).toHaveBeenCalledWith(
@@ -117,7 +121,7 @@ describe('API v1 - Transactions [id] Operations', () => {
 
       const response = await DELETE(
         createMockDeleteRequest('/api/v1/transactions/:id'),
-        { params: { id: transactionId } }
+        { params: Promise.resolve({ id: transactionId }) }
       );
       expect(response.status).toBe(404);
     });
@@ -127,7 +131,7 @@ describe('API v1 - Transactions [id] Operations', () => {
 
       const response = await DELETE(
         createMockDeleteRequest('/api/v1/transactions/:id'),
-        { params: { id: transactionId } }
+        { params: Promise.resolve({ id: transactionId }) }
       );
       expect(response.status).toBe(204);
       expect(deleteTransaction).toHaveBeenCalledWith(mockUserId, transactionId);
