@@ -548,7 +548,7 @@ Also remove duplicated inline nav from `dashboard/page.tsx` (layout provides it 
 
 **Status**: All required components are already installed. From git status and file inspection:
 `badge`, `dialog`, `progress`, `select`, `separator`, `tabs`, `textarea` are all present
-under `src/components/ui/`. The `form` component from shadcn/ui should no longer be used, but we should investigate whether to use the <Field /> component, adding schema validation using Zod, error handling, accessibility, and more (check https://ui.shadcn.com/docs/forms/react-hook-form).
+under `src/components/ui/`. The `form` component from shadcn/ui should no longer be used, but we should investigate whether to use the <Field /> component, adding schema validation using Zod, error handling, accessibility, and more (check https://ui.shadcn.com/docs/forms/react-hook-form). The goal is to create a coding standard on how to build better forms in React with Zod for schema validation.
 
 **Action**: Run verification only — no install needed.
 
