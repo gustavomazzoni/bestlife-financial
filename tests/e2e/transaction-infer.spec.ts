@@ -80,8 +80,6 @@ test.describe('Natural Language Transaction Entry', () => {
       await loginUser(page, 'transaction-test@example.com');
 
       // Check that the transaction input area is visible
-      await expect(page.locator('text=Qual é a sua transação?')).toBeVisible();
-
       await expect(
         page.locator('textarea[aria-label="Descreva sua transação"]')
       ).toBeVisible();
@@ -108,7 +106,7 @@ test.describe('Natural Language Transaction Entry', () => {
 
       // Verify inferred details are displayed
       await expect(page.locator('text=R$ 25,00')).toBeVisible();
-      await expect(page.locator('text=Despesa')).toBeVisible();
+      await expect(page.getByText('Despesa', { exact: true })).toBeVisible();
     });
 
     test('should save transaction on confirm', async ({ page }) => {

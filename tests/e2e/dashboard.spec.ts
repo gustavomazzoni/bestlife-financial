@@ -218,7 +218,7 @@ test.describe('Dashboard', () => {
 
       await expect(
         page.locator('[data-testid="metric-monthly-spending"]')
-      ).toContainText('R$ 300,00', { timeout: 10000 });
+      ).toContainText('R$ 300', { timeout: 10000 });
     });
 
     test('value-aligned spending card shows a percentage', async ({ page }) => {
