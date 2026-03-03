@@ -10,11 +10,13 @@ export async function updateUserProfile(
     where: { id: userId },
     data: {
       activeIncomeMonthly: data.activeIncomeMonthly,
+      passiveIncomeMonthly: data.passiveIncomeMonthly,
       dreamLifestyleCost: data.dreamLifestyleCost,
       currentInvestments: data.currentInvestments,
     },
     select: {
       activeIncomeMonthly: true,
+      passiveIncomeMonthly: true,
       dreamLifestyleCost: true,
       currentInvestments: true,
     },
@@ -22,6 +24,7 @@ export async function updateUserProfile(
 
   return {
     activeIncomeMonthly: Number(user.activeIncomeMonthly),
+    passiveIncomeMonthly: Number(user.passiveIncomeMonthly),
     dreamLifestyleCost: Number(user.dreamLifestyleCost),
     currentInvestments: Number(user.currentInvestments),
   };

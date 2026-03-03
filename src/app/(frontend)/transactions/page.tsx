@@ -1,8 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
 import { TransactionQuickEntry } from '@/components/features/transactions';
 import { TransactionList } from '@/components/features/transactions/transaction-list';
 export default function TransactionsPage() {
@@ -13,20 +11,7 @@ export default function TransactionsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="border-b bg-white shadow-sm">
-        <div className="container mx-auto flex items-center gap-4 px-4 py-4">
-          <Link
-            href="/dashboard"
-            className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900 transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Dashboard
-          </Link>
-          <h1 className="text-xl font-bold text-gray-900">Transações</h1>
-        </div>
-      </nav>
-
+    <div>
       <div className="container mx-auto space-y-8 p-4 sm:p-8">
         {/* Transaction Quick Entry */}
         <div>

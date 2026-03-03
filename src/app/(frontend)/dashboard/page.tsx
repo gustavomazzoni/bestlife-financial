@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { auth, signOut } from '@/lib/auth/config';
+import { auth } from '@/lib/auth/config';
 import { getUserId } from '@/lib/auth/session';
 import { calculateFreedomMetrics } from '@/services/calculations/freedom-metrics';
 import { getSpendingBreakdown } from '@/services/calculations/spending-analysis';
@@ -31,26 +31,7 @@ export default async function DashboardPage() {
     session?.user?.name || session?.user?.email?.split('@')[0] || 'você';
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="border-b bg-white shadow-sm">
-        <div className="container mx-auto flex items-center justify-between px-4 py-4">
-          <h1 className="text-xl font-bold text-gray-900">LifeOS</h1>
-          <form
-            action={async () => {
-              'use server';
-              await signOut({ redirectTo: '/login' });
-            }}
-          >
-            <button
-              type="submit"
-              className="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-200"
-            >
-              Sair
-            </button>
-          </form>
-        </div>
-      </nav>
-
+    <div>
       <div className="container mx-auto space-y-6 p-4 sm:p-8">
         {/* Greeting */}
         <div>
