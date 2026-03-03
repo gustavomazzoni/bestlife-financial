@@ -248,5 +248,71 @@ test.describe('Dashboard', () => {
         page.locator('[data-testid="metric-fi-progress"]')
       ).toContainText('Já FI!');
     });
+
+    // ── Phase 2.2: Necessity breakdown ───────────────────────────────────────────
+
+    test('necessity breakdown shows empty state when no expenses exist', async ({
+      page,
+    }) => {
+      const email = uniqueEmail('dash-necessity-empty');
+      await loginUser(page, email);
+
+      await expect(
+        page.locator('[data-testid="necessity-empty"]')
+      ).toBeVisible();
+      await expect(
+        page.locator('[data-testid="necessity-chart"]')
+      ).not.toBeVisible();
+    });
+
+    test('necessity breakdown chart renders after logging an expense', async ({
+      page,
+    }) => {
+      const email = uniqueEmail('dash-necessity-chart');
+      await loginUser(page, email);
+
+      await submitNLTransaction(page, 'Mercado R$ 200');
+      await page.reload();
+
+      await expect(page.locator('[data-testid="necessity-chart"]')).toBeVisible(
+        { timeout: 10000 }
+      );
+      await expect(
+        page.locator('[data-testid="necessity-empty"]')
+      ).not.toBeVisible();
+    });
+
+    // ── Phase 2.2: Monthly trend ──────────────────────────────────────────────────
+
+    test('monthly trend shows empty state when no transactions exist', async ({
+      page,
+    }) => {
+      const email = uniqueEmail('dash-trend-empty');
+      await loginUser(page, email);
+
+      await expect(
+        page.locator('[data-testid="monthly-trend-empty"]')
+      ).toBeVisible();
+      await expect(
+        page.locator('[data-testid="monthly-trend"]')
+      ).not.toBeVisible();
+    });
+
+    test('monthly trend chart renders after logging a transaction', async ({
+      page,
+    }) => {
+      const email = uniqueEmail('dash-trend-chart');
+      await loginUser(page, email);
+
+      await submitNLTransaction(page, 'Aluguel R$ 1500');
+      await page.reload();
+
+      await expect(page.locator('[data-testid="monthly-trend"]')).toBeVisible({
+        timeout: 10000,
+      });
+      await expect(
+        page.locator('[data-testid="monthly-trend-empty"]')
+      ).not.toBeVisible();
+    });
   });
 });

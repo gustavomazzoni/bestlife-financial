@@ -1,5 +1,4 @@
 import prisma from '@/lib/db';
-import { CreateTransactionInput } from '@/lib/validations/transaction';
 import {
   TransactionType,
   NecessityLevel,
@@ -903,33 +902,32 @@ function hasExplicitTypeKeyword(lowerText: string): boolean {
  * Main inference function
  */
 export async function inferTransaction(
-  text: string,
-  userId?: string
+  text: string
 ): Promise<InferTransactionResult> {
   const normalizedText = text.toLowerCase().trim();
-  const inferred: Partial<CreateTransactionInput> = {};
-  const missingFields: string[] = [];
 
   // Handle empty input
   if (!normalizedText) {
     return {
-      inferred,
+      inferred: {
+        amount: null,
+        description: '',
+        date: new Date(),
+        type: TransactionType.EXPENSE,
+        category: null,
+        necessityLevel: null,
+        valueAlignment: null,
+      },
       confidence: 0,
       rawInput: text,
-      missingFields,
+      missingFields: [],
     };
   }
 
-  // TODO: infer value alignment based on user core values
-  // userId
-
   // Parse all fields
   const amount = parseAmount(normalizedText);
-  if (amount) inferred.amount = amount;
   const type = detectTransactionType(normalizedText);
-  if (type) inferred.type = type;
   const category = await matchCategory(normalizedText, type);
-  if (type) inferred.type = type;
   const date = parseDate(normalizedText);
   const description = generateDescription(text);
   const necessityLevel = inferNecessityLevel(category?.name || null);
@@ -955,5 +953,6 @@ export async function inferTransaction(
     },
     confidence,
     rawInput: text,
+    missingFields: [],
   };
 }

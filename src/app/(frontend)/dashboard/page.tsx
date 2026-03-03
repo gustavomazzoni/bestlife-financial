@@ -3,16 +3,19 @@ import { auth, signOut } from '@/lib/auth/config';
 import { getUserId } from '@/lib/auth/session';
 import { calculateFreedomMetrics } from '@/services/calculations/freedom-metrics';
 import { getSpendingBreakdown } from '@/services/calculations/spending-analysis';
+import { getMonthlySummary } from '@/services/calculations/monthly-summary';
 import { listTransactions } from '@/services/transactions/list';
 import { TransactionQuickEntry } from '@/components/features/transactions';
 import { MetricsOverview } from '@/components/features/dashboard/metrics-overview';
 import { SpendingChart } from '@/components/features/dashboard/spending-chart';
 import { RecentTransactions } from '@/components/features/dashboard/recent-transactions';
+import { SpendingByNecessity } from '@/components/features/dashboard/spending-by-necessity';
+import { MonthlyTrend } from '@/components/features/dashboard/monthly-trend';
 
 export default async function DashboardPage() {
   const [session, userId] = await Promise.all([auth(), getUserId()]);
 
-  const [metrics, spending, recent] = await Promise.all([
+  const [metrics, spending, recent, monthlySummary] = await Promise.all([
     calculateFreedomMetrics(userId),
     getSpendingBreakdown(userId, 'month'),
     listTransactions(userId, {
@@ -21,6 +24,7 @@ export default async function DashboardPage() {
       sortBy: 'date',
       sortOrder: 'desc',
     }),
+    getMonthlySummary(userId, 3),
   ]);
 
   const name =
@@ -95,6 +99,26 @@ export default async function DashboardPage() {
               </Link>
             </div>
             <RecentTransactions transactions={recent.data} />
+          </section>
+        </div>
+
+        {/* Necessity Breakdown + Monthly Trend */}
+        <div className="grid gap-6 lg:grid-cols-2">
+          <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+            <h3 className="mb-4 text-sm font-semibold text-gray-700">
+              Gastos por Necessidade — Este Mês
+            </h3>
+            <SpendingByNecessity
+              byNecessityLevel={spending.byNecessityLevel}
+              totalExpenses={spending.totalExpenses}
+            />
+          </section>
+
+          <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+            <h3 className="mb-4 text-sm font-semibold text-gray-700">
+              Tendência Mensal — Últimos 3 Meses
+            </h3>
+            <MonthlyTrend data={monthlySummary} />
           </section>
         </div>
       </div>
