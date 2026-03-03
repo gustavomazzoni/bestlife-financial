@@ -26,14 +26,14 @@ function toDateInput(dateStr: string): string {
 function toFormData(recurring: RecurringWithCategory): RecurringFormData {
   return {
     description: recurring.description,
-    amount: String(parseFloat(recurring.amount)),
+    amount: parseFloat(String(recurring.amount)),
     type: recurring.type,
     categoryId: recurring.categoryId,
     frequency: recurring.frequency,
     startDate: toDateInput(recurring.startDate),
     endDate: recurring.endDate ? toDateInput(recurring.endDate) : '',
-    necessityLevel: recurring.necessityLevel ?? '',
-    valueAlignment: recurring.valueAlignment ?? '',
+    necessityLevel: recurring.necessityLevel ?? undefined,
+    valueAlignment: recurring.valueAlignment ?? undefined,
     notificationDaysBefore: recurring.notificationDaysBefore,
   };
 }
@@ -73,18 +73,19 @@ export default function RecurringEditPage() {
   }, [id, router]);
 
   const handleSubmit = async (data: RecurringFormData) => {
-    const body: Record<string, unknown> = {
-      amount: parseFloat(data.amount),
-      description: data.description,
-      type: data.type,
-      categoryId: data.categoryId,
-      frequency: data.frequency,
-      startDate: data.startDate,
-      notificationDaysBefore: data.notificationDaysBefore,
-    };
-    if (data.endDate) body.endDate = data.endDate;
-    if (data.necessityLevel) body.necessityLevel = data.necessityLevel;
-    if (data.valueAlignment) body.valueAlignment = data.valueAlignment;
+    const { endDate, necessityLevel, valueAlignment, ...requiredData } = data;
+    const body: Record<string, unknown> = { ...requiredData };
+    //   amount: data.amount,
+    //   description: data.description,
+    //   type: data.type,
+    //   categoryId: data.categoryId,
+    //   frequency: data.frequency,
+    //   startDate: data.startDate,
+    //   notificationDaysBefore: data.notificationDaysBefore,
+    // };
+    if (endDate) body.endDate = endDate;
+    if (necessityLevel) body.necessityLevel = necessityLevel;
+    if (valueAlignment) body.valueAlignment = valueAlignment;
 
     const res = await fetch(`/api/v1/recurring/${id}`, {
       method: 'PATCH',

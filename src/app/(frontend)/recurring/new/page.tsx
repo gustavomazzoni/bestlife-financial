@@ -11,7 +11,7 @@ export default function RecurringNewPage() {
 
   const handleSubmit = async (data: RecurringFormData) => {
     const body: Record<string, unknown> = {
-      amount: parseFloat(data.amount),
+      amount: data.amount,
       description: data.description,
       type: data.type,
       categoryId: data.categoryId,

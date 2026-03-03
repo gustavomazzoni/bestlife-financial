@@ -544,13 +544,11 @@ Also remove duplicated inline nav from `dashboard/page.tsx` (layout provides it 
 
 ---
 
-## Phase 2.4 — Missing shadcn/ui Components ✅ Effectively Complete
+## Phase 2.4 — Missing shadcn/ui Components and Build forms using React Hook Form and Zod
 
 **Status**: All required components are already installed. From git status and file inspection:
 `badge`, `dialog`, `progress`, `select`, `separator`, `tabs`, `textarea` are all present
-under `src/components/ui/`. The `form` component was in the original install list but is not
-needed — existing components use plain React state or react-hook-form directly, not the
-shadcn `Form` wrapper.
+under `src/components/ui/`. The `form` component from shadcn/ui should no longer be used, but we should investigate whether to use the <Field /> component, adding schema validation using Zod, error handling, accessibility, and more (check https://ui.shadcn.com/docs/forms/react-hook-form). The goal is to create a coding standard on how to build better forms in React with Zod for schema validation.
 
 **Action**: Run verification only — no install needed.
 
@@ -559,9 +557,9 @@ shadcn `Form` wrapper.
 | Check | Expected |
 |---|---|
 | All `src/components/ui/*.tsx` files present | ✅ already done |
-| `pnpm build` | No errors |
-| `pnpm type-check` | 0 TypeScript errors |
-| `pnpm lint` | 0 linting errors |
+| `docker compose exec app pnpm build` | No errors |
+| `docker compose exec app pnpm type-check` | 0 TypeScript errors |
+| `docker compose exec app pnpm lint` | 0 linting errors |
 
 ---
 

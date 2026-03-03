@@ -19,6 +19,11 @@ function getSubPageConfig(
     return { title: 'Editar Recorrência', backTo: '/recurring' };
   }
 
+  // /transactions/[id] — any segment under /transactions
+  if (/^\/transactions\/[^/]+$/.test(pathname)) {
+    return { title: 'Editar Transação', backTo: '/transactions' };
+  }
+
   return null;
 }
 

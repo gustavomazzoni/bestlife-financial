@@ -2,41 +2,50 @@
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Field } from '@/components/ui/field';
 
-interface ProfileFormState {
-  activeIncomeMonthly: string;
-  passiveIncomeMonthly: string;
-  dreamLifestyleCost: string;
-  currentInvestments: string;
-}
+const settingsSchema = z.object({
+  activeIncomeMonthly: z
+    .number()
+    .min(0, 'A renda mensal deve ser maior ou igual a 0'),
+  passiveIncomeMonthly: z
+    .number()
+    .min(0, 'A renda passiva deve ser maior ou igual a 0'),
+  dreamLifestyleCost: z
+    .number()
+    .positive('O custo de vida dos sonhos deve ser maior que 0'),
+  currentInvestments: z
+    .number()
+    .min(0, 'Os investimentos atuais devem ser maior ou igual a 0'),
+});
 
-interface FormErrors {
-  activeIncomeMonthly?: string;
-  passiveIncomeMonthly?: string;
-  dreamLifestyleCost?: string;
-  currentInvestments?: string;
-  general?: string;
-}
-
-function formatDecimal(value: number): string {
-  return value === 0 ? '' : String(value);
-}
+type FormValues = z.infer<typeof settingsSchema>;
 
 export default function SettingsProfilePage() {
   const router = useRouter();
-  const [form, setForm] = React.useState<ProfileFormState>({
-    activeIncomeMonthly: '',
-    passiveIncomeMonthly: '',
-    dreamLifestyleCost: '',
-    currentInvestments: '',
-  });
-  const [errors, setErrors] = React.useState<FormErrors>({});
   const [loading, setLoading] = React.useState(true);
-  const [saving, setSaving] = React.useState(false);
   const [success, setSuccess] = React.useState(false);
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm<FormValues>({
+    resolver: zodResolver(settingsSchema),
+    defaultValues: {
+      activeIncomeMonthly: 0,
+      passiveIncomeMonthly: 0,
+      dreamLifestyleCost: 0,
+      currentInvestments: 0,
+    },
+  });
 
   React.useEffect(() => {
     async function loadProfile() {
@@ -45,87 +54,43 @@ export default function SettingsProfilePage() {
         if (!res.ok) throw new Error('Erro ao carregar perfil');
         const json = await res.json();
         const data = json.data;
-        setForm({
-          activeIncomeMonthly: formatDecimal(data.activeIncomeMonthly),
-          passiveIncomeMonthly: formatDecimal(data.passiveIncomeMonthly),
-          dreamLifestyleCost: formatDecimal(data.dreamLifestyleCost ?? 0),
-          currentInvestments: formatDecimal(data.currentInvestments),
+        reset({
+          activeIncomeMonthly: data.activeIncomeMonthly ?? 0,
+          passiveIncomeMonthly: data.passiveIncomeMonthly ?? 0,
+          dreamLifestyleCost: data.dreamLifestyleCost ?? 0,
+          currentInvestments: data.currentInvestments ?? 0,
         });
       } catch {
-        setErrors({ general: 'Erro ao carregar perfil. Tente novamente.' });
+        setError('root', {
+          message: 'Erro ao carregar perfil. Tente novamente.',
+        });
       } finally {
         setLoading(false);
       }
     }
     loadProfile();
-  }, []);
+  }, [reset, setError]);
 
-  function validateForm(): FormErrors {
-    const errs: FormErrors = {};
-    const income = parseFloat(form.activeIncomeMonthly);
-    const passive = parseFloat(form.passiveIncomeMonthly || '0');
-    const dream = parseFloat(form.dreamLifestyleCost);
-    const investments = parseFloat(form.currentInvestments);
-
-    if (isNaN(income) || income < 0)
-      errs.activeIncomeMonthly = 'A renda mensal deve ser maior ou igual a 0';
-    if (isNaN(passive) || passive < 0)
-      errs.passiveIncomeMonthly = 'A renda passiva deve ser maior ou igual a 0';
-    if (isNaN(dream) || dream <= 0)
-      errs.dreamLifestyleCost =
-        'O custo de vida dos sonhos deve ser maior que 0';
-    if (isNaN(investments) || investments < 0)
-      errs.currentInvestments =
-        'Os investimentos atuais devem ser maior ou igual a 0';
-
-    return errs;
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const errs = validateForm();
-    if (Object.keys(errs).length > 0) {
-      setErrors(errs);
-      return;
-    }
-    setErrors({});
-    setSaving(true);
-
+  const onSubmit = async (data: FormValues) => {
     try {
       const res = await fetch('/api/v1/user/profile', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          activeIncomeMonthly: parseFloat(form.activeIncomeMonthly),
-          passiveIncomeMonthly: parseFloat(form.passiveIncomeMonthly || '0'),
-          dreamLifestyleCost: parseFloat(form.dreamLifestyleCost),
-          currentInvestments: parseFloat(form.currentInvestments),
-        }),
+        body: JSON.stringify(data),
       });
-
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json?.error?.message ?? 'Erro ao salvar perfil');
+        setError('root', {
+          message: json?.error?.message ?? 'Erro ao salvar perfil',
+        });
+        return;
       }
-
       setSuccess(true);
       setTimeout(() => router.push('/settings'), 1000);
-    } catch (err) {
-      setErrors({
-        general:
-          err instanceof Error
-            ? err.message
-            : 'Erro ao salvar. Tente novamente.',
-      });
-    } finally {
-      setSaving(false);
+    } catch {
+      setError('root', { message: 'Erro ao salvar. Tente novamente.' });
     }
-  }
-
-  function handleChange(field: keyof ProfileFormState, value: string) {
-    setForm(prev => ({ ...prev, [field]: value }));
-    if (errors[field]) setErrors(prev => ({ ...prev, [field]: undefined }));
-  }
+  };
 
   if (loading) {
     return (
@@ -137,9 +102,9 @@ export default function SettingsProfilePage() {
 
   return (
     <div className="container mx-auto max-w-2xl p-4 sm:p-8">
-      {errors.general && (
+      {errors.root && (
         <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">
-          {errors.general}
+          {errors.root.message}
         </div>
       )}
 
@@ -150,61 +115,45 @@ export default function SettingsProfilePage() {
       )}
 
       <form
-        onSubmit={handleSubmit}
+        onSubmit={handleSubmit(onSubmit)}
         className="space-y-6"
         data-testid="settings-profile-form"
       >
         <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
           <h2 className="mb-4 text-sm font-semibold text-gray-700">Renda</h2>
           <div className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="activeIncomeMonthly">
-                Renda Ativa Mensal (R$)
-              </Label>
+            <Field
+              label="Renda Ativa Mensal (R$)"
+              id="activeIncomeMonthly"
+              error={errors.activeIncomeMonthly?.message}
+            >
               <Input
                 id="activeIncomeMonthly"
                 type="number"
                 min="0"
                 step="0.01"
                 placeholder="Ex: 8000"
-                value={form.activeIncomeMonthly}
-                onChange={e =>
-                  handleChange('activeIncomeMonthly', e.target.value)
-                }
                 data-testid="settings-income-input"
+                {...register('activeIncomeMonthly', { valueAsNumber: true })}
               />
-              {errors.activeIncomeMonthly && (
-                <p className="text-xs text-red-600">
-                  {errors.activeIncomeMonthly}
-                </p>
-              )}
-            </div>
+            </Field>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="passiveIncomeMonthly">
-                Renda Passiva Mensal (R$)
-              </Label>
+            <Field
+              label="Renda Passiva Mensal (R$)"
+              id="passiveIncomeMonthly"
+              error={errors.passiveIncomeMonthly?.message}
+              hint="Dividendos, aluguéis ou outras fontes passivas"
+            >
               <Input
                 id="passiveIncomeMonthly"
                 type="number"
                 min="0"
                 step="0.01"
                 placeholder="Ex: 1500"
-                value={form.passiveIncomeMonthly}
-                onChange={e =>
-                  handleChange('passiveIncomeMonthly', e.target.value)
-                }
                 data-testid="settings-passive-income-input"
+                {...register('passiveIncomeMonthly', { valueAsNumber: true })}
               />
-              {errors.passiveIncomeMonthly && (
-                <p className="text-xs text-red-600">
-                  {errors.passiveIncomeMonthly}
-                </p>
-              )}
-              <p className="text-xs text-gray-400">
-                Dividendos, aluguéis ou outras fontes passivas
-              </p>
-            </div>
+            </Field>
           </div>
         </div>
 
@@ -212,61 +161,51 @@ export default function SettingsProfilePage() {
           <h2 className="mb-4 text-sm font-semibold text-gray-700">
             Meta de Liberdade
           </h2>
-          <div className="space-y-1.5">
-            <Label htmlFor="dreamLifestyleCost">
-              Custo de Vida dos Sonhos Mensal (R$)
-            </Label>
+          <Field
+            label="Custo de Vida dos Sonhos Mensal (R$)"
+            id="dreamLifestyleCost"
+            error={errors.dreamLifestyleCost?.message}
+          >
             <Input
               id="dreamLifestyleCost"
               type="number"
               min="0.01"
               step="0.01"
               placeholder="Ex: 15000"
-              value={form.dreamLifestyleCost}
-              onChange={e => handleChange('dreamLifestyleCost', e.target.value)}
               data-testid="settings-dream-cost-input"
+              {...register('dreamLifestyleCost', { valueAsNumber: true })}
             />
-            {errors.dreamLifestyleCost && (
-              <p className="text-xs text-red-600">
-                {errors.dreamLifestyleCost}
-              </p>
-            )}
-          </div>
+          </Field>
         </div>
 
         <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
           <h2 className="mb-4 text-sm font-semibold text-gray-700">
             Patrimônio
           </h2>
-          <div className="space-y-1.5">
-            <Label htmlFor="currentInvestments">
-              Investimentos Atuais (R$)
-            </Label>
+          <Field
+            label="Investimentos Atuais (R$)"
+            id="currentInvestments"
+            error={errors.currentInvestments?.message}
+          >
             <Input
               id="currentInvestments"
               type="number"
               min="0"
               step="0.01"
               placeholder="Ex: 50000"
-              value={form.currentInvestments}
-              onChange={e => handleChange('currentInvestments', e.target.value)}
               data-testid="settings-investments-input"
+              {...register('currentInvestments', { valueAsNumber: true })}
             />
-            {errors.currentInvestments && (
-              <p className="text-xs text-red-600">
-                {errors.currentInvestments}
-              </p>
-            )}
-          </div>
+          </Field>
         </div>
 
         <Button
           type="submit"
           className="w-full"
-          disabled={saving || success}
+          disabled={isSubmitting || success}
           data-testid="settings-profile-submit"
         >
-          {saving ? 'Salvando...' : 'Salvar'}
+          {isSubmitting ? 'Salvando...' : 'Salvar'}
         </Button>
       </form>
     </div>
