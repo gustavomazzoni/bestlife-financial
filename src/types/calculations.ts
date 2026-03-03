@@ -62,3 +62,9 @@ export interface SpendingBreakdown {
   valueAlignedPercentage: number;
   period: { startDate: Date; endDate: Date };
 }
+
+export interface MonthlySummary {
+  month: string; // 'YYYY-MM' format e.g. '2026-03'
+  income: number;
+  expenses: number;
+}

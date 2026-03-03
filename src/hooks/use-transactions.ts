@@ -6,7 +6,7 @@ import {
   ListTransactionsQuery,
 } from '@/lib/validations/transaction';
 import { Transaction, TransactionListResult } from '@/types/transaction';
-import { InferenceResult } from '@/services/transactions/infer';
+import { InferTransactionResult } from '@/types';
 import toast from 'react-hot-toast';
 
 const API_BASE = '/api/v1';
@@ -71,7 +71,7 @@ export function useCreateTransaction() {
 
 export function useInferTransaction() {
   return useMutation({
-    mutationFn: async (text: string): Promise<InferenceResult> => {
+    mutationFn: async (text: string): Promise<InferTransactionResult> => {
       const response = await fetch(`${API_BASE}/transactions/infer`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

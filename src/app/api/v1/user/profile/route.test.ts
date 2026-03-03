@@ -8,6 +8,11 @@ vi.mock('@/lib/auth/session', () => ({
   getUserId: vi.fn(),
 }));
 
+// Mock auth config to prevent next-auth from loading next/server
+vi.mock('@/lib/auth/config', () => ({
+  unstable_update: vi.fn(),
+}));
+
 // Mock user services
 vi.mock('@/services/user', () => ({
   getUserProfile: vi.fn(),
