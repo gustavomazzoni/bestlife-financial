@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db';
 
 export interface UserProfile {
   activeIncomeMonthly: number;
+  passiveIncomeMonthly: number;
   dreamLifestyleCost: number | null;
   currentInvestments: number;
 }
@@ -11,6 +12,7 @@ export async function getUserProfile(userId: string): Promise<UserProfile> {
     where: { id: userId },
     select: {
       activeIncomeMonthly: true,
+      passiveIncomeMonthly: true,
       dreamLifestyleCost: true,
       currentInvestments: true,
     },
@@ -18,6 +20,7 @@ export async function getUserProfile(userId: string): Promise<UserProfile> {
 
   return {
     activeIncomeMonthly: Number(user?.activeIncomeMonthly ?? 0),
+    passiveIncomeMonthly: Number(user?.passiveIncomeMonthly ?? 0),
     dreamLifestyleCost: user?.dreamLifestyleCost
       ? Number(user.dreamLifestyleCost)
       : null,

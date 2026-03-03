@@ -2,8 +2,7 @@
 
 import * as React from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { ArrowLeft, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -116,10 +115,8 @@ export default function RecurringEditPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="flex items-center justify-center py-24 text-gray-500">
-          Carregando...
-        </div>
+      <div className="flex items-center justify-center py-24 text-gray-500">
+        Carregando...
       </div>
     );
   }
@@ -129,22 +126,7 @@ export default function RecurringEditPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="border-b bg-white shadow-sm">
-        <div className="container mx-auto flex items-center gap-4 px-4 py-4">
-          <Link
-            href="/recurring"
-            className="flex items-center gap-1 text-sm text-gray-500 transition-colors hover:text-gray-900"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Recorrências
-          </Link>
-          <h1 className="text-xl font-bold text-gray-900">
-            Editar recorrência
-          </h1>
-        </div>
-      </nav>
-
+    <div>
       <div className="container mx-auto max-w-2xl p-4 sm:p-8">
         {error && (
           <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">

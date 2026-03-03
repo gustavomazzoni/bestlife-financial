@@ -26,6 +26,7 @@ const mockUserId = 'user-test-123';
 
 const mockProfile = {
   activeIncomeMonthly: 8000,
+  passiveIncomeMonthly: 0,
   dreamLifestyleCost: 15000,
   currentInvestments: 50000,
 };
@@ -60,6 +61,7 @@ describe('GET /api/v1/user/profile', () => {
     vi.mocked(getUserId).mockResolvedValue(mockUserId);
     vi.mocked(getUserProfile).mockResolvedValue({
       activeIncomeMonthly: 0,
+      passiveIncomeMonthly: 0,
       dreamLifestyleCost: null,
       currentInvestments: 0,
     });

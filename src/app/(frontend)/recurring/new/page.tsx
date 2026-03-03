@@ -1,8 +1,6 @@
 'use client';
 
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
 import {
   RecurringForm,
   RecurringFormData,
@@ -40,20 +38,7 @@ export default function RecurringNewPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="border-b bg-white shadow-sm">
-        <div className="container mx-auto flex items-center gap-4 px-4 py-4">
-          <Link
-            href="/recurring"
-            className="flex items-center gap-1 text-sm text-gray-500 transition-colors hover:text-gray-900"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Recorrências
-          </Link>
-          <h1 className="text-xl font-bold text-gray-900">Nova recorrência</h1>
-        </div>
-      </nav>
-
+    <div>
       <div className="container mx-auto max-w-2xl p-4 sm:p-8">
         <RecurringForm
           mode="create"
