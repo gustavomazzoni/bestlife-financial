@@ -2,12 +2,14 @@
 
 import * as React from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { ArrowLeft, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Field } from '@/components/ui/field';
 import {
   Select,
   SelectContent,
@@ -46,16 +48,20 @@ interface Transaction {
   notes: string | null;
 }
 
-interface FormState {
-  amount: string;
-  description: string;
-  date: string;
-  type: TransactionType;
-  categoryId: string;
-  necessityLevel: string;
-  valueAlignment: string;
-  notes: string;
-}
+const transactionEditSchema = z.object({
+  amount: z.number().positive('O valor deve ser positivo'),
+  description: z.string().min(3, 'Mínimo 3 caracteres').max(500),
+  date: z.string().min(1, 'Informe a data'),
+  type: z.enum(['INCOME', 'EXPENSE', 'SAVING', 'TRANSFER'] as const, {
+    message: 'Selecione o tipo',
+  }),
+  categoryId: z.string().min(1, 'Selecione a categoria'),
+  necessityLevel: z.string().optional(),
+  valueAlignment: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+type FormValues = z.infer<typeof transactionEditSchema>;
 
 const typeOptions: { value: TransactionType; label: string }[] = [
   { value: 'INCOME', label: 'Receita' },
@@ -88,16 +94,23 @@ export default function TransactionEditPage() {
   const router = useRouter();
   const id = params.id;
 
-  const [transaction, setTransaction] = React.useState<Transaction | null>(
-    null
-  );
   const [categories, setCategories] = React.useState<Category[]>([]);
-  const [form, setForm] = React.useState<FormState | null>(null);
   const [loading, setLoading] = React.useState(true);
-  const [saving, setSaving] = React.useState(false);
   const [deleting, setDeleting] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+
+  const {
+    register,
+    handleSubmit,
+    control,
+    watch,
+    setValue,
+    reset,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm<FormValues>({
+    resolver: zodResolver(transactionEditSchema),
+  });
 
   // Initial fetch
   React.useEffect(() => {
@@ -112,9 +125,8 @@ export default function TransactionEditPage() {
         if (!res.ok) throw new Error('Erro ao carregar transação');
         const json = await res.json();
         const txn: Transaction = json.data;
-        setTransaction(txn);
-        setForm({
-          amount: String(parseFloat(txn.amount)),
+        reset({
+          amount: parseFloat(txn.amount),
           description: txn.description,
           date: toDateInput(txn.date),
           type: txn.type,
@@ -124,16 +136,19 @@ export default function TransactionEditPage() {
           notes: txn.notes ?? '',
         });
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Erro desconhecido');
+        setError('root', {
+          message:
+            err instanceof Error ? err.message : 'Erro ao carregar transação',
+        });
       } finally {
         setLoading(false);
       }
     }
     load();
-  }, [id, router]);
+  }, [id, router, reset, setError]);
 
   // Fetch categories when type changes
-  const currentType = form?.type;
+  const currentType = watch('type');
   React.useEffect(() => {
     if (!currentType) return;
     async function loadCategories() {
@@ -145,25 +160,18 @@ export default function TransactionEditPage() {
     loadCategories();
   }, [currentType]);
 
-  const handleTypeChange = (type: TransactionType) => {
-    setForm(prev => (prev ? { ...prev, type, categoryId: '' } : prev));
-  };
-
-  const handleSave = async () => {
-    if (!form) return;
-    setSaving(true);
-    setError(null);
+  const onSubmit = async (data: FormValues) => {
     try {
       const body: Record<string, unknown> = {
-        amount: parseFloat(form.amount),
-        description: form.description,
-        date: form.date,
-        type: form.type,
-        categoryId: form.categoryId,
+        amount: data.amount,
+        description: data.description,
+        date: data.date,
+        type: data.type,
+        categoryId: data.categoryId,
       };
-      if (form.necessityLevel) body.necessityLevel = form.necessityLevel;
-      if (form.valueAlignment) body.valueAlignment = form.valueAlignment;
-      if (form.notes) body.notes = form.notes;
+      if (data.necessityLevel) body.necessityLevel = data.necessityLevel;
+      if (data.valueAlignment) body.valueAlignment = data.valueAlignment;
+      if (data.notes) body.notes = data.notes;
 
       const res = await fetch(`/api/v1/transactions/${id}`, {
         method: 'PATCH',
@@ -172,13 +180,16 @@ export default function TransactionEditPage() {
       });
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json?.error?.message || 'Erro ao salvar transação');
+        setError('root', {
+          message: json?.error?.message || 'Erro ao salvar transação',
+        });
+        return;
       }
       router.push('/transactions');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao salvar');
-    } finally {
-      setSaving(false);
+      setError('root', {
+        message: err instanceof Error ? err.message : 'Erro ao salvar',
+      });
     }
   };
 
@@ -191,7 +202,9 @@ export default function TransactionEditPage() {
       if (!res.ok) throw new Error('Erro ao excluir transação');
       router.push('/transactions');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao excluir');
+      setError('root', {
+        message: err instanceof Error ? err.message : 'Erro ao excluir',
+      });
       setDeleting(false);
       setDeleteDialogOpen(false);
     }
@@ -199,204 +212,180 @@ export default function TransactionEditPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="flex items-center justify-center py-24 text-gray-500">
-          Carregando...
-        </div>
+      <div className="flex items-center justify-center py-24 text-gray-500">
+        Carregando...
       </div>
     );
   }
 
-  if (!transaction || !form) {
-    return null;
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="border-b bg-white shadow-sm">
-        <div className="container mx-auto flex items-center gap-4 px-4 py-4">
-          <Link
-            href="/transactions"
-            className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900 transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Transações
-          </Link>
-          <h1 className="text-xl font-bold text-gray-900">Editar transação</h1>
-        </div>
-      </nav>
-
-      <div className="container mx-auto max-w-2xl p-4 sm:p-8">
-        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-          {error && (
-            <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">
-              {error}
-            </div>
-          )}
-
-          <div className="space-y-5">
-            {/* Amount */}
-            <div className="space-y-1.5">
-              <Label htmlFor="amount">Valor (R$)</Label>
-              <Input
-                id="amount"
-                type="number"
-                step="0.01"
-                min="0"
-                value={form.amount}
-                onChange={e =>
-                  setForm(prev =>
-                    prev ? { ...prev, amount: e.target.value } : prev
-                  )
-                }
-                placeholder="0,00"
-              />
-            </div>
-
-            {/* Description */}
-            <div className="space-y-1.5">
-              <Label htmlFor="description">Descrição</Label>
-              <Input
-                id="description"
-                value={form.description}
-                onChange={e =>
-                  setForm(prev =>
-                    prev ? { ...prev, description: e.target.value } : prev
-                  )
-                }
-                placeholder="Ex: Compras no mercado"
-              />
-            </div>
-
-            {/* Date */}
-            <div className="space-y-1.5">
-              <Label htmlFor="date">Data</Label>
-              <Input
-                id="date"
-                type="date"
-                value={form.date}
-                onChange={e =>
-                  setForm(prev =>
-                    prev ? { ...prev, date: e.target.value } : prev
-                  )
-                }
-              />
-            </div>
-
-            {/* Type */}
-            <div className="space-y-1.5">
-              <Label>Tipo</Label>
-              <Select
-                value={form.type}
-                onValueChange={(val: string) =>
-                  handleTypeChange(val as TransactionType)
-                }
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Selecione o tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  {typeOptions.map(opt => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Category */}
-            <div className="space-y-1.5">
-              <Label>Categoria</Label>
-              <Select
-                value={form.categoryId}
-                onValueChange={(val: string) =>
-                  setForm(prev => (prev ? { ...prev, categoryId: val } : prev))
-                }
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Selecione a categoria" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map(cat => (
-                    <SelectItem key={cat.id} value={cat.id}>
-                      {cat.icon} {cat.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Necessity Level */}
-            <div className="space-y-1.5">
-              <Label>Nível de necessidade (opcional)</Label>
-              <Select
-                value={form.necessityLevel}
-                onValueChange={(val: string) =>
-                  setForm(prev =>
-                    prev ? { ...prev, necessityLevel: val } : prev
-                  )
-                }
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Selecione..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {necessityOptions.map(opt => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Value Alignment */}
-            <div className="space-y-1.5">
-              <Label>Alinhamento de valores (opcional)</Label>
-              <Select
-                value={form.valueAlignment}
-                onValueChange={(val: string) =>
-                  setForm(prev =>
-                    prev ? { ...prev, valueAlignment: val } : prev
-                  )
-                }
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Selecione..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {alignmentOptions.map(opt => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Notes */}
-            <div className="space-y-1.5">
-              <Label htmlFor="notes">Notas (opcional)</Label>
-              <Textarea
-                id="notes"
-                value={form.notes}
-                onChange={e =>
-                  setForm(prev =>
-                    prev ? { ...prev, notes: e.target.value } : prev
-                  )
-                }
-                placeholder="Observações adicionais..."
-                rows={3}
-              />
-            </div>
+    <div className="container mx-auto max-w-2xl p-4 sm:p-8">
+      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        {errors.root && (
+          <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+            {errors.root.message}
           </div>
+        )}
+
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+          {/* Amount */}
+          <Field label="Valor (R$)" id="amount" error={errors.amount?.message}>
+            <Input
+              id="amount"
+              type="number"
+              step="0.01"
+              min="0"
+              {...register('amount', { valueAsNumber: true })}
+              placeholder="0,00"
+            />
+          </Field>
+
+          {/* Description */}
+          <Field
+            label="Descrição"
+            id="description"
+            error={errors.description?.message}
+          >
+            <Input
+              id="description"
+              {...register('description')}
+              placeholder="Ex: Compras no mercado"
+            />
+          </Field>
+
+          {/* Date */}
+          <Field label="Data" id="date" error={errors.date?.message}>
+            <Input id="date" type="date" {...register('date')} />
+          </Field>
+
+          {/* Type */}
+          <Field label="Tipo" error={errors.type?.message}>
+            <Controller
+              name="type"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  value={field.value ?? ''}
+                  onValueChange={val => {
+                    field.onChange(val);
+                    setValue('categoryId', '');
+                  }}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecione o tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {typeOptions.map(opt => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          </Field>
+
+          {/* Category */}
+          <Field label="Categoria" error={errors.categoryId?.message}>
+            <Controller
+              name="categoryId"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  value={field.value ?? ''}
+                  onValueChange={field.onChange}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecione a categoria" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map(cat => (
+                      <SelectItem key={cat.id} value={cat.id}>
+                        {cat.icon} {cat.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          </Field>
+
+          {/* Necessity Level */}
+          <Field
+            label="Nível de necessidade (opcional)"
+            error={errors.necessityLevel?.message}
+          >
+            <Controller
+              name="necessityLevel"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  value={field.value ?? ''}
+                  onValueChange={field.onChange}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {necessityOptions.map(opt => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          </Field>
+
+          {/* Value Alignment */}
+          <Field
+            label="Alinhamento de valores (opcional)"
+            error={errors.valueAlignment?.message}
+          >
+            <Controller
+              name="valueAlignment"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  value={field.value ?? ''}
+                  onValueChange={field.onChange}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {alignmentOptions.map(opt => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          </Field>
+
+          {/* Notes */}
+          <Field
+            label="Notas (opcional)"
+            id="notes"
+            error={errors.notes?.message}
+          >
+            <Textarea
+              id="notes"
+              {...register('notes')}
+              placeholder="Observações adicionais..."
+              rows={3}
+            />
+          </Field>
 
           {/* Actions */}
-          <div className="mt-6 flex items-center justify-between gap-3">
+          <div className="flex items-center justify-between gap-3 pt-1">
             <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
               <DialogTrigger asChild>
-                <Button variant="destructive" size="sm">
+                <Button variant="destructive" size="sm" type="button">
                   <Trash2 className="h-4 w-4" />
                   Excluir
                 </Button>
@@ -431,17 +420,18 @@ export default function TransactionEditPage() {
             <div className="flex gap-3">
               <Button
                 variant="outline"
+                type="button"
                 onClick={() => router.push('/transactions')}
-                disabled={saving}
+                disabled={isSubmitting}
               >
                 Cancelar
               </Button>
-              <Button onClick={handleSave} disabled={saving}>
-                {saving ? 'Salvando...' : 'Salvar'}
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? 'Salvando...' : 'Salvar'}
               </Button>
             </div>
           </div>
-        </div>
+        </form>
       </div>
     </div>
   );

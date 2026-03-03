@@ -1,52 +1,37 @@
 'use client';
 
 import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
 type Step = 1 | 2 | 3;
 
-interface FormData {
-  activeIncomeMonthly: string;
-  dreamLifestyleCost: string;
-  currentInvestments: string;
-}
+const onboardingSchema = z.object({
+  activeIncomeMonthly: z
+    .number()
+    .min(0, 'A renda mensal deve ser maior ou igual a 0'),
+  dreamLifestyleCost: z
+    .number()
+    .positive('O custo de vida dos sonhos deve ser maior que 0'),
+  currentInvestments: z
+    .number()
+    .min(0, 'Os investimentos atuais devem ser maior ou igual a 0'),
+});
 
-const stepSchemas = {
-  1: z.object({
-    activeIncomeMonthly: z.coerce
-      .number()
-      .min(0, 'A renda mensal deve ser maior ou igual a 0'),
-  }),
-  2: z.object({
-    dreamLifestyleCost: z.coerce
-      .number()
-      .positive('O custo de vida dos sonhos deve ser maior que 0'),
-  }),
-  3: z.object({
-    currentInvestments: z.coerce
-      .number()
-      .min(0, 'Os investimentos atuais devem ser maior ou igual a 0'),
-  }),
-};
+type FormValues = z.infer<typeof onboardingSchema>;
 
-function formatCurrency(value: string) {
-  const num = parseFloat(value.replace(',', '.'));
-  if (isNaN(num)) return '';
+function formatCurrency(value: number) {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL',
-  }).format(num);
+  }).format(value);
 }
 
 export default function OnboardingPage() {
   const [step, setStep] = useState<Step>(1);
-  const [formData, setFormData] = useState<FormData>({
-    activeIncomeMonthly: '',
-    dreamLifestyleCost: '',
-    currentInvestments: '',
-  });
-  const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
 
   const stepTitles: Record<Step, string> = {
     1: 'Qual é sua renda mensal líquida?',
@@ -60,7 +45,7 @@ export default function OnboardingPage() {
     3: 'Total em investimentos e poupança atual. Este valor determina seu progresso rumo à independência financeira.',
   };
 
-  const stepFields: Record<Step, keyof FormData> = {
+  const stepFields: Record<Step, keyof FormValues> = {
     1: 'activeIncomeMonthly',
     2: 'dreamLifestyleCost',
     3: 'currentInvestments',
@@ -72,73 +57,65 @@ export default function OnboardingPage() {
     3: 'Ex: 50000',
   };
 
-  function validateStep(): boolean {
-    const field = stepFields[step];
-    const schema = stepSchemas[step];
-    const result = schema.safeParse({ [field]: formData[field] });
+  const {
+    register,
+    trigger,
+    watch,
+    getValues,
+    formState: { errors },
+  } = useForm<FormValues>({
+    resolver: zodResolver(onboardingSchema),
+    mode: 'onSubmit',
+  });
 
-    if (!result.success) {
-      const firstError = result.error.issues[0];
-      setError(firstError.message);
-      return false;
-    }
+  const currentField = stepFields[step];
+  const numValue = watch(currentField);
+  const preview =
+    typeof numValue === 'number' && !isNaN(numValue)
+      ? formatCurrency(numValue)
+      : null;
+  const fieldError = errors[currentField]?.message ?? apiError;
 
-    setError(null);
-    return true;
+  async function handleNext() {
+    const valid = await trigger(currentField);
+    if (!valid) return;
+    setApiError(null);
+    setStep(s => (s + 1) as Step);
   }
 
-  function handleNext() {
-    if (!validateStep()) return;
-    if (step < 3) setStep((s => (s + 1) as Step)(step));
-  }
-
-  async function handleSubmit() {
-    if (!validateStep()) return;
+  async function handleConcluir() {
+    const valid = await trigger(currentField);
+    if (!valid) return;
 
     setIsSubmitting(true);
-    setError(null);
+    setApiError(null);
 
     try {
+      const values = getValues();
       const response = await fetch('/api/v1/user/profile', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          activeIncomeMonthly: parseFloat(
-            formData.activeIncomeMonthly.replace(',', '.')
-          ),
-          dreamLifestyleCost: parseFloat(
-            formData.dreamLifestyleCost.replace(',', '.')
-          ),
-          currentInvestments: parseFloat(
-            formData.currentInvestments.replace(',', '.')
-          ),
+          activeIncomeMonthly: values.activeIncomeMonthly,
+          dreamLifestyleCost: values.dreamLifestyleCost,
+          currentInvestments: values.currentInvestments,
         }),
       });
 
       if (!response.ok) {
         const json = await response.json();
-        setError(json.error?.message ?? 'Erro ao salvar. Tente novamente.');
+        setApiError(json.error?.message ?? 'Erro ao salvar. Tente novamente.');
         return;
       }
 
-      // The PATCH handler called unstable_update() server-side, so the
-      // response already carries a refreshed session cookie with
-      // onboardingCompleted=true. Hard-navigate to let the proxy see it.
+      // Hard-navigate so NextAuth session cookie (onboardingCompleted=true) is picked up
       window.location.href = '/dashboard';
     } catch {
-      setError('Erro de conexão. Tente novamente.');
+      setApiError('Erro de conexão. Tente novamente.');
     } finally {
       setIsSubmitting(false);
     }
   }
-
-  const field = stepFields[step];
-  const currentValue = formData[field];
-  const parsedValue = parseFloat(currentValue.replace(',', '.'));
-  const preview =
-    !isNaN(parsedValue) && currentValue !== ''
-      ? formatCurrency(currentValue)
-      : null;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
@@ -180,7 +157,7 @@ export default function OnboardingPage() {
               Valor em R$
             </label>
             <div className="relative">
-              <span className="absolute inset-y-0 left-3 flex items-center text-gray-400 text-sm">
+              <span className="absolute inset-y-0 left-3 flex items-center text-sm text-gray-400">
                 R$
               </span>
               <input
@@ -189,14 +166,11 @@ export default function OnboardingPage() {
                 min="0"
                 step="0.01"
                 placeholder={stepPlaceholders[step]}
-                value={currentValue}
-                onChange={e => {
-                  setError(null);
-                  setFormData(prev => ({ ...prev, [field]: e.target.value }));
-                }}
+                {...register(currentField, { valueAsNumber: true })}
                 onKeyDown={e => {
                   if (e.key === 'Enter') {
-                    step < 3 ? handleNext() : handleSubmit();
+                    if (step < 3) handleNext();
+                    else handleConcluir();
                   }
                 }}
                 className="w-full rounded-lg border border-gray-300 py-2.5 pl-10 pr-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -206,7 +180,9 @@ export default function OnboardingPage() {
             {preview && (
               <p className="mt-1.5 text-sm text-gray-500">{preview}</p>
             )}
-            {error && <p className="mt-1.5 text-sm text-red-600">{error}</p>}
+            {fieldError && (
+              <p className="mt-1.5 text-sm text-red-600">{fieldError}</p>
+            )}
           </div>
         </div>
 
@@ -232,7 +208,7 @@ export default function OnboardingPage() {
           ) : (
             <button
               type="button"
-              onClick={handleSubmit}
+              onClick={handleConcluir}
               disabled={isSubmitting}
               className="flex-1 rounded-lg bg-blue-600 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:opacity-60"
             >
