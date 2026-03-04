@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, DollarSign, Plus, RefreshCw, Settings } from 'lucide-react';
+import { Home, DollarSign, Plus, CalendarDays, Settings } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -29,10 +29,10 @@ const LEFT_NAV_ITEMS = [
 
 const RIGHT_NAV_ITEMS = [
   {
-    href: '/recurring',
-    icon: RefreshCw,
-    label: 'Recorrências',
-    testId: 'nav-recurring',
+    href: '/calendar',
+    icon: CalendarDays,
+    label: 'Agenda',
+    testId: 'nav-calendar',
   },
   {
     href: '/settings',
