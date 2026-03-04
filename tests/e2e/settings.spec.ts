@@ -74,8 +74,8 @@ test.describe('Settings', () => {
       await page.getByTestId('nav-transactions').click();
       await expect(page).toHaveURL(/\/transactions/);
 
-      await page.getByTestId('nav-recurring').click();
-      await expect(page).toHaveURL(/\/recurring/);
+      await page.getByTestId('nav-calendar').click();
+      await expect(page).toHaveURL(/\/calendar/);
 
       await page.getByTestId('nav-settings').click();
       await expect(page).toHaveURL(/\/settings/);
