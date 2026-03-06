@@ -4,7 +4,7 @@ import * as React from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useRouter } from 'next/navigation';
-import { Trash2, RefreshCw } from 'lucide-react';
+import { Trash2, RefreshCw, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -15,7 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { TransactionType, NecessityLevel } from '@/types';
+import { TransactionType, TransactionStatus, NecessityLevel } from '@/types';
 
 export interface TransactionWithCategory {
   id: string;
@@ -23,6 +23,7 @@ export interface TransactionWithCategory {
   description: string;
   date: string;
   type: TransactionType;
+  status: TransactionStatus;
   categoryId: string;
   category: { id: string; name: string; color: string; icon: string } | null;
   necessityLevel: NecessityLevel | null;
@@ -36,6 +37,7 @@ export interface TransactionWithCategory {
 export interface TransactionCardProps {
   transaction: TransactionWithCategory;
   onDelete: (id: string) => void;
+  onExecute?: (id: string) => void;
 }
 
 const typeConfig: Record<
@@ -80,10 +82,31 @@ function formatCurrency(value: string): string {
 export function TransactionCard({
   transaction,
   onDelete,
+  onExecute,
 }: TransactionCardProps) {
   const router = useRouter();
   const [isDeleting, setIsDeleting] = React.useState(false);
+  const [isExecuting, setIsExecuting] = React.useState(false);
   const [dialogOpen, setDialogOpen] = React.useState(false);
+
+  const isPending = transaction.status === 'PENDING';
+
+  const handleExecute = async () => {
+    setIsExecuting(true);
+    try {
+      const response = await fetch(
+        `/api/v1/transactions/${transaction.id}/execute`,
+        { method: 'POST' }
+      );
+      if (!response.ok) throw new Error('Erro ao executar transação');
+      onExecute?.(transaction.id);
+      router.refresh();
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsExecuting(false);
+    }
+  };
 
   const typeInfo = typeConfig[transaction.type];
 
@@ -120,6 +143,11 @@ export function TransactionCard({
             >
               {typeInfo.label}
             </span>
+            {isPending && (
+              <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
+                PENDENTE
+              </span>
+            )}
             {transaction.necessityLevel && (
               <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
                 {necessityLabels[transaction.necessityLevel]}
@@ -146,6 +174,19 @@ export function TransactionCard({
           {formatCurrency(transaction.amount)}
         </span>
       </button>
+
+      {isPending && (
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={handleExecute}
+          disabled={isExecuting}
+          aria-label="Executar transação"
+          className="shrink-0 text-gray-400 hover:text-green-600"
+        >
+          <CheckCircle className="h-4 w-4" />
+        </Button>
+      )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogTrigger asChild>

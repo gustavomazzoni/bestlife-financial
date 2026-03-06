@@ -1,3 +1,4 @@
+import { startOfDay } from 'date-fns';
 import { prisma } from '@/lib/db';
 import { CreateTransactionInput } from '@/lib/validations/transaction';
 import { Transaction } from '@/types/transaction';
@@ -15,10 +16,16 @@ export async function createTransaction(
     throw new Error('Invalid category');
   }
 
+  // Auto-derive status if not provided: future dates → PENDING, today/past → EXECUTED
+  const status =
+    data.status ??
+    (data.date > startOfDay(new Date()) ? 'PENDING' : 'EXECUTED');
+
   // Create transaction
   const transaction = await prisma.transaction.create({
     data: {
       ...data,
+      status,
       userId,
     },
   });

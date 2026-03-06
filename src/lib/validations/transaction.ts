@@ -1,5 +1,10 @@
 import { z } from 'zod';
-import { TransactionType, NecessityLevel, ValueAlignment } from '@/types';
+import {
+  TransactionType,
+  TransactionStatus,
+  NecessityLevel,
+  ValueAlignment,
+} from '@/types';
 
 const minimumDate = new Date('2023-01-01T00:00:00Z');
 export const CreateTransactionSchema = z.object({
@@ -7,9 +12,9 @@ export const CreateTransactionSchema = z.object({
   description: z.string().min(3, 'Descrição muito curta').max(500),
   date: z.coerce
     .date()
-    .min(minimumDate, { message: 'Date must be on or after January 1, 2023' })
-    .max(new Date(), { message: 'Date cannot be in the future' }),
+    .min(minimumDate, { message: 'Date must be on or after January 1, 2023' }),
   type: z.enum(Object.values(TransactionType)),
+  status: z.enum(Object.values(TransactionStatus)).optional(),
   categoryId: z.string().min(1, 'Category required'),
   necessityLevel: z.enum(Object.values(NecessityLevel)).optional(),
   valueAlignment: z.enum(Object.values(ValueAlignment)).optional(),
@@ -22,6 +27,7 @@ export const ListTransactionsQuerySchema = z.object({
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(20),
   type: z.enum(Object.values(TransactionType)).optional(),
+  status: z.enum(Object.values(TransactionStatus)).optional(),
   categoryId: z.string().optional(),
   startDate: z.coerce.date().optional(),
   endDate: z.coerce.date().optional(),

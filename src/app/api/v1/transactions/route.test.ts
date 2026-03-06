@@ -100,23 +100,21 @@ describe('API v1 - Transactions POST', () => {
     expect(createTransaction).not.toHaveBeenCalled();
   });
 
-  it('should throw error for future date', async () => {
+  it('should accept future dates (scheduled transactions auto-set to PENDING)', async () => {
     vi.mocked(getUserId).mockResolvedValue(mockUserId);
+    vi.mocked(createTransaction as Mock).mockResolvedValue({
+      id: 'trans-future',
+      amount: 500,
+    });
 
-    // Cenário: Data no Futuro (Regra Estática do Zod)
-    const invalidPayload = { ...validPayload, date: '2030-01-15T10:00:00Z' };
+    // Future dates are now valid — they create PENDING (scheduled) transactions
+    const futurePayload = { ...validPayload, date: '2030-01-15T10:00:00Z' };
 
-    const req = createPostRequest(invalidPayload);
+    const req = createPostRequest(futurePayload);
     const response = await POST(req);
-    const json = await parseResponse(response);
 
-    expect(response.status).toBe(400);
-    // Verificamos se foi erro de validação e se veio do campo date
-    expect(json.error.code).toBe('VALIDATION_ERROR');
-    expect(JSON.stringify(json)).toContain('Date cannot be in the future');
-
-    // GARANTIA: O Service NÃO deve ter sido chamado
-    expect(createTransaction).not.toHaveBeenCalled();
+    expect(response.status).toBe(201);
+    expect(createTransaction).toHaveBeenCalled();
   });
 
   it('deve retornar 201 e chamar o service com os dados corretos se o payload for válido', async () => {
