@@ -1,41 +1,42 @@
 import { describe, it, expect } from 'vitest';
 import {
-  projectRecurringOccurrences,
+  projectScheduledOccurrences,
   transactionsToCalendarEvents,
   getCalendarGridDates,
   groupEventsByDate,
 } from './calendar';
-import type { RecurringWithCategory } from '@/components/features/recurring';
+import type { ScheduledWithCategory } from '@/components/features/scheduled';
 import type { TransactionRow, CalendarEvent } from '@/types';
 
-function makeRecurring(
-  overrides: Partial<RecurringWithCategory> = {}
-): RecurringWithCategory {
+function makeScheduled(
+  overrides: Partial<ScheduledWithCategory> = {}
+): ScheduledWithCategory {
   return {
-    id: 'rec_1',
+    id: 'sched_1',
     amount: '1000',
-    description: 'Test recurring',
+    description: 'Test scheduled',
     type: 'EXPENSE',
     categoryId: 'cat_1',
     category: { id: 'cat_1', name: 'Test', icon: '📊', color: '#000' },
     frequency: 'MONTHLY',
     startDate: '2026-01-01',
     endDate: null,
-    nextDueDate: '2026-03-15',
-    lastCreatedDate: null,
+    nextOccurrence: '2026-03-15',
+    lastExecutedDate: null,
     notificationDaysBefore: 3,
     isActive: true,
     necessityLevel: null,
     valueAlignment: null,
+    notes: null,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
     ...overrides,
   };
 }
 
-describe('projectRecurringOccurrences', () => {
+describe('projectScheduledOccurrences', () => {
   it('returns empty array for empty input', () => {
-    const result = projectRecurringOccurrences(
+    const result = projectScheduledOccurrences(
       [],
       new Date('2026-03-01'),
       new Date('2026-03-31')
@@ -43,10 +44,23 @@ describe('projectRecurringOccurrences', () => {
     expect(result).toHaveLength(0);
   });
 
-  it('projects a MONTHLY recurring within the window', () => {
-    const recurring = makeRecurring({ nextDueDate: '2026-03-15' });
-    const result = projectRecurringOccurrences(
-      [recurring],
+  it('skips ONCE frequency items (no projection needed)', () => {
+    const scheduled = makeScheduled({
+      frequency: 'ONCE',
+      nextOccurrence: '2026-03-15',
+    });
+    const result = projectScheduledOccurrences(
+      [scheduled],
+      new Date('2026-03-01'),
+      new Date('2026-03-31')
+    );
+    expect(result).toHaveLength(0);
+  });
+
+  it('projects a MONTHLY scheduled within the window', () => {
+    const scheduled = makeScheduled({ nextOccurrence: '2026-03-15' });
+    const result = projectScheduledOccurrences(
+      [scheduled],
       new Date('2026-03-01'),
       new Date('2026-03-31')
     );
@@ -57,13 +71,13 @@ describe('projectRecurringOccurrences', () => {
     expect(result[0].type).toBe('EXPENSE');
   });
 
-  it('projects WEEKLY recurring with multiple occurrences', () => {
-    const recurring = makeRecurring({
+  it('projects WEEKLY scheduled with multiple occurrences', () => {
+    const scheduled = makeScheduled({
       frequency: 'WEEKLY',
-      nextDueDate: '2026-03-02',
+      nextOccurrence: '2026-03-02',
     });
-    const result = projectRecurringOccurrences(
-      [recurring],
+    const result = projectScheduledOccurrences(
+      [scheduled],
       new Date('2026-03-01'),
       new Date('2026-03-31')
     );
@@ -73,40 +87,40 @@ describe('projectRecurringOccurrences', () => {
     expect(result[4].date).toBe('2026-03-30');
   });
 
-  it('skips YEARLY recurring outside the current month window', () => {
-    const recurring = makeRecurring({
+  it('skips YEARLY scheduled outside the current month window', () => {
+    const scheduled = makeScheduled({
       frequency: 'YEARLY',
-      nextDueDate: '2026-12-15',
+      nextOccurrence: '2026-12-15',
     });
-    const result = projectRecurringOccurrences(
-      [recurring],
+    const result = projectScheduledOccurrences(
+      [scheduled],
       new Date('2026-03-01'),
       new Date('2026-03-31')
     );
     expect(result).toHaveLength(0);
   });
 
-  it('skips recurring whose endDate is before startDate', () => {
-    const recurring = makeRecurring({
+  it('skips scheduled whose endDate is before startDate', () => {
+    const scheduled = makeScheduled({
       endDate: '2026-02-28',
-      nextDueDate: '2026-02-15',
+      nextOccurrence: '2026-02-15',
     });
-    const result = projectRecurringOccurrences(
-      [recurring],
+    const result = projectScheduledOccurrences(
+      [scheduled],
       new Date('2026-03-01'),
       new Date('2026-03-31')
     );
     expect(result).toHaveLength(0);
   });
 
-  it('stops projections at recurring endDate', () => {
-    const recurring = makeRecurring({
+  it('stops projections at scheduled endDate', () => {
+    const scheduled = makeScheduled({
       frequency: 'WEEKLY',
-      nextDueDate: '2026-03-02',
+      nextOccurrence: '2026-03-02',
       endDate: '2026-03-16',
     });
-    const result = projectRecurringOccurrences(
-      [recurring],
+    const result = projectScheduledOccurrences(
+      [scheduled],
       new Date('2026-03-01'),
       new Date('2026-03-31')
     );
@@ -116,12 +130,12 @@ describe('projectRecurringOccurrences', () => {
   });
 
   it('handles MONTHLY Feb edge case (addMonths handles last day of month)', () => {
-    const recurring = makeRecurring({
+    const scheduled = makeScheduled({
       frequency: 'MONTHLY',
-      nextDueDate: '2026-01-31',
+      nextOccurrence: '2026-01-31',
     });
-    const result = projectRecurringOccurrences(
-      [recurring],
+    const result = projectScheduledOccurrences(
+      [scheduled],
       new Date('2026-02-01'),
       new Date('2026-02-28')
     );
@@ -152,8 +166,7 @@ describe('transactionsToCalendarEvents', () => {
       userId: 'user_1',
       necessityLevel: null,
       valueAlignment: null,
-      isRecurring: false,
-      recurringId: null,
+      scheduledId: null,
       notes: null,
       createdAt: new Date(),
       updatedAt: new Date(),

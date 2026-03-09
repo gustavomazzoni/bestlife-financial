@@ -231,7 +231,7 @@ export async function truncateTables(): Promise<void> {
   await prisma.$executeRawUnsafe(`
     TRUNCATE TABLE
       "Transaction",
-      "RecurringTransaction",
+      "ScheduledTransaction",
       "PurchaseConsideration",
       "Badge",
       "Session",
@@ -252,7 +252,7 @@ export async function resetDatabase(): Promise<void> {
   await prisma.$executeRawUnsafe(`
     TRUNCATE TABLE
       "Transaction",
-      "RecurringTransaction",
+      "ScheduledTransaction",
       "PurchaseConsideration",
       "Badge",
       "Session",

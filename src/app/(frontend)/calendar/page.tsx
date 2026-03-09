@@ -13,16 +13,16 @@ import {
 import { ptBR } from 'date-fns/locale';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { RecurringList } from '@/components/features/recurring';
+import { ScheduledList } from '@/components/features/scheduled';
 import { CalendarGrid, DayAgenda } from '@/components/features/calendar';
 import {
-  projectRecurringOccurrences,
+  projectScheduledOccurrences,
   transactionsToCalendarEvents,
   groupEventsByDate,
   getCalendarGridDates,
 } from '@/lib/utils/calendar';
 import type { CalendarEvent, TransactionRow } from '@/types';
-import type { RecurringWithCategory } from '@/components/features/recurring';
+import type { ScheduledWithCategory } from '@/components/features/scheduled';
 
 export default function CalendarPage() {
   const [selectedMonth, setSelectedMonth] = React.useState(() =>
@@ -44,23 +44,23 @@ export default function CalendarPage() {
         const startStr = format(start, 'yyyy-MM-dd');
         const endStr = format(end, 'yyyy-MM-dd');
 
-        const [recurringRes, transactionsRes] = await Promise.all([
-          fetch('/api/v1/recurring?isActive=true&limit=100'),
+        const [scheduledRes, transactionsRes] = await Promise.all([
+          fetch('/api/v1/scheduled?isActive=true&limit=100'),
           fetch(
             `/api/v1/transactions?startDate=${startStr}&endDate=${endStr}&limit=100`
           ),
         ]);
 
-        if (!recurringRes.ok) throw new Error('Erro ao carregar recorrências');
+        if (!scheduledRes.ok) throw new Error('Erro ao carregar agendadas');
         if (!transactionsRes.ok) throw new Error('Erro ao carregar transações');
 
-        const recurringJson = await recurringRes.json();
+        const scheduledJson = await scheduledRes.json();
         const transactionsJson = await transactionsRes.json();
 
-        const recurrings: RecurringWithCategory[] = recurringJson.data ?? [];
+        const scheduleds: ScheduledWithCategory[] = scheduledJson.data ?? [];
         const transactions: TransactionRow[] = transactionsJson.data ?? [];
 
-        const projections = projectRecurringOccurrences(recurrings, start, end);
+        const projections = projectScheduledOccurrences(scheduleds, start, end);
         const actuals = transactionsToCalendarEvents(transactions);
 
         setEvents([...projections, ...actuals]);
@@ -164,14 +164,14 @@ export default function CalendarPage() {
 
         <TabsContent value="list">
           <div className="mb-4 flex items-center justify-end">
-            <Link href="/recurring/new">
+            <Link href="/scheduled/new">
               <Button size="sm">
                 <Plus className="mr-1 h-4 w-4" />
                 Nova
               </Button>
             </Link>
           </div>
-          <RecurringList />
+          <ScheduledList />
         </TabsContent>
       </Tabs>
     </div>

@@ -27,8 +27,7 @@ export interface TransactionWithCategory {
   category: { id: string; name: string; color: string; icon: string } | null;
   necessityLevel: NecessityLevel | null;
   valueAlignment: string | null;
-  isRecurring: boolean;
-  recurringId: string | null;
+  scheduledId: string | null;
   notes: string | null;
   createdAt: string;
 }
@@ -83,7 +82,7 @@ export function TransactionCard({
 }: TransactionCardProps) {
   const router = useRouter();
   const [isDeleting, setIsDeleting] = React.useState(false);
-  const [dialogOpen, setDialogOpen] = React.useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
 
   const typeInfo = typeConfig[transaction.type];
 
@@ -94,7 +93,7 @@ export function TransactionCard({
         method: 'DELETE',
       });
       if (!response.ok) throw new Error('Erro ao excluir transação');
-      setDialogOpen(false);
+      setDeleteDialogOpen(false);
       onDelete(transaction.id);
     } catch (error) {
       console.error(error);
@@ -125,7 +124,7 @@ export function TransactionCard({
                 {necessityLabels[transaction.necessityLevel]}
               </span>
             )}
-            {transaction.recurringId && (
+            {transaction.scheduledId && (
               <RefreshCw className="h-3 w-3 text-gray-400" />
             )}
           </div>
@@ -147,7 +146,7 @@ export function TransactionCard({
         </span>
       </button>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogTrigger asChild>
           <Button
             variant="ghost"
@@ -169,7 +168,7 @@ export function TransactionCard({
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setDialogOpen(false)}
+              onClick={() => setDeleteDialogOpen(false)}
               disabled={isDeleting}
             >
               Cancelar

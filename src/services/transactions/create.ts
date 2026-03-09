@@ -15,7 +15,6 @@ export async function createTransaction(
     throw new Error('Invalid category');
   }
 
-  // Create transaction
   const transaction = await prisma.transaction.create({
     data: {
       ...data,

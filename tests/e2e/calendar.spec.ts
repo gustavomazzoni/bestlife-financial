@@ -48,7 +48,7 @@ async function loginUser(page: Page, email: string) {
   }
 }
 
-async function createRecurring(
+async function createScheduled(
   page: Page,
   {
     description = 'Aluguel mensal',
@@ -60,7 +60,7 @@ async function createRecurring(
     frequencyLabel?: string;
   } = {}
 ) {
-  await page.goto('/recurring/new');
+  await page.goto('/scheduled/new');
 
   await page.fill('#description', description);
   await page.fill('#amount', amount);
@@ -75,8 +75,8 @@ async function createRecurring(
   await page.getByRole('combobox').nth(2).click();
   await page.getByRole('option', { name: frequencyLabel }).click();
 
-  await page.click('button:has-text("Criar recorrência")');
-  await page.waitForURL(/\/recurring$/, { timeout: 10000 });
+  await page.click('button:has-text("Criar agendamento")');
+  await page.waitForURL(/\/scheduled$/, { timeout: 10000 });
 }
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
@@ -152,7 +152,9 @@ test.describe('Calendar / Agenda', () => {
       await expect(page.getByTestId('month-title')).toHaveText(initialTitle!);
     });
 
-    test('"Lista" sub-tab shows recurring list', async ({ page }) => {
+    test('"Lista" sub-tab shows scheduled list with type filters', async ({
+      page,
+    }) => {
       const email = uniqueEmail('cal-lista');
       await loginUser(page, email);
       await page.goto('/calendar');
@@ -160,7 +162,7 @@ test.describe('Calendar / Agenda', () => {
       // Switch to Lista tab
       await page.getByRole('tab', { name: 'Lista' }).click();
 
-      // RecurringList renders (type filter buttons visible)
+      // ScheduledList renders (type filter buttons visible)
       await expect(page.locator('button:has-text("Todos")')).toBeVisible({
         timeout: 5000,
       });
@@ -177,15 +179,15 @@ test.describe('Calendar / Agenda', () => {
       await expect(page.getByTestId('nav-calendar')).toBeVisible();
     });
 
-    test('recurring event shows "Projetado" badge after creating monthly recurring', async ({
+    test('monthly recurring event shows "Projetado" badge in calendar after creation', async ({
       page,
     }) => {
       test.slow();
       const email = uniqueEmail('cal-projection');
       await loginUser(page, email);
 
-      // Create a monthly recurring (nextDueDate = startDate + 1 month)
-      await createRecurring(page, {
+      // Create a monthly scheduled transaction (nextOccurrence = startDate + 1 month)
+      await createScheduled(page, {
         description: 'Projeção teste calendário',
         amount: '777',
         frequencyLabel: 'Mensal',
@@ -197,7 +199,7 @@ test.describe('Calendar / Agenda', () => {
         timeout: 10000,
       });
 
-      // Navigate to next month (where nextDueDate falls)
+      // Navigate to next month (where nextOccurrence falls)
       await page.getByTestId('month-next').click();
 
       // Wait for grid to reload
@@ -224,7 +226,7 @@ test.describe('Calendar / Agenda', () => {
       });
     });
 
-    test('"Nova" button in Lista tab navigates to /recurring/new', async ({
+    test('"Nova" button in Lista tab navigates to /scheduled/new', async ({
       page,
     }) => {
       const email = uniqueEmail('cal-nova');
@@ -233,7 +235,7 @@ test.describe('Calendar / Agenda', () => {
 
       await page.getByRole('tab', { name: 'Lista' }).click();
       await page.click('button:has-text("Nova")');
-      await expect(page).toHaveURL(/\/recurring\/new/, { timeout: 5000 });
+      await expect(page).toHaveURL(/\/scheduled\/new/, { timeout: 5000 });
     });
   });
 });

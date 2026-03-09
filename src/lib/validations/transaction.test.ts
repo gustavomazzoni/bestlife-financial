@@ -75,10 +75,10 @@ describe('Transaction Validation', () => {
       );
     });
 
-    it('should reject future date', () => {
+    it('should accept future dates (scheduled/PENDING transactions)', () => {
       const futureDate = new Date();
       futureDate.setDate(futureDate.getDate() + 1); // Set to tomorrow
-      const invalidData = {
+      const futureData = {
         date: futureDate,
         amount: 100,
         description: 'Test transaction',
@@ -86,9 +86,7 @@ describe('Transaction Validation', () => {
         categoryId: 'cat_123',
       };
 
-      expect(() => CreateTransactionSchema.parse(invalidData)).toThrow(
-        /Date cannot be in the future/
-      );
+      expect(() => CreateTransactionSchema.parse(futureData)).not.toThrow();
     });
 
     describe('CreateTransactionSchema', () => {

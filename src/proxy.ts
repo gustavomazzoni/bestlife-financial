@@ -20,8 +20,8 @@ export default auth(req => {
     return NextResponse.redirect(loginUrl);
   }
 
-  // If authenticated and trying to access login, redirect to dashboard
-  if (isAuthenticated && pathname === '/login') {
+  // If authenticated and trying to access root or login, redirect to dashboard
+  if (isAuthenticated && ['/', '/login'].includes(pathname)) {
     return NextResponse.redirect(new URL('/dashboard', req.url));
   }
 

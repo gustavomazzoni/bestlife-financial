@@ -7,8 +7,7 @@ export const CreateTransactionSchema = z.object({
   description: z.string().min(3, 'Descrição muito curta').max(500),
   date: z.coerce
     .date()
-    .min(minimumDate, { message: 'Date must be on or after January 1, 2023' })
-    .max(new Date(), { message: 'Date cannot be in the future' }),
+    .min(minimumDate, { message: 'Date must be on or after January 1, 2023' }),
   type: z.enum(Object.values(TransactionType)),
   categoryId: z.string().min(1, 'Category required'),
   necessityLevel: z.enum(Object.values(NecessityLevel)).optional(),
