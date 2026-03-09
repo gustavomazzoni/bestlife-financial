@@ -4,13 +4,15 @@ import { executeTransaction } from '@/services/transactions';
 import { apiResponse, apiError } from '@/lib/api/response';
 
 export async function POST(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const userId = await getUserId();
     const { id } = await params;
-    const transaction = await executeTransaction(userId, id);
+    const body = await request.json().catch(() => ({}));
+    const executionDate = body.date ? new Date(body.date) : undefined;
+    const transaction = await executeTransaction(userId, id, executionDate);
     return apiResponse(transaction, 200);
   } catch (error) {
     return apiError(error);

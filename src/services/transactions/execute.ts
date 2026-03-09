@@ -8,7 +8,8 @@ import { Transaction } from '@/types/transaction';
  */
 export async function executeTransaction(
   userId: string,
-  transactionId: string
+  transactionId: string,
+  executionDate?: Date
 ): Promise<Transaction> {
   const transaction = await prisma.transaction.findFirst({
     where: { id: transactionId, userId },
@@ -22,13 +23,15 @@ export async function executeTransaction(
     throw new Error('Transaction is already executed');
   }
 
-  const today = startOfDay(new Date());
+  const date = executionDate
+    ? startOfDay(executionDate)
+    : startOfDay(new Date());
 
   const updated = await prisma.transaction.update({
     where: { id: transactionId },
     data: {
       status: 'EXECUTED',
-      date: today,
+      date,
     },
   });
 

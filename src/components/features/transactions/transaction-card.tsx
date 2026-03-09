@@ -15,6 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { ExecuteTransactionDialog } from './execute-transaction-dialog';
 import { TransactionType, TransactionStatus, NecessityLevel } from '@/types';
 
 export interface TransactionWithCategory {
@@ -86,27 +87,10 @@ export function TransactionCard({
 }: TransactionCardProps) {
   const router = useRouter();
   const [isDeleting, setIsDeleting] = React.useState(false);
-  const [isExecuting, setIsExecuting] = React.useState(false);
-  const [dialogOpen, setDialogOpen] = React.useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [executeDialogOpen, setExecuteDialogOpen] = React.useState(false);
 
   const isPending = transaction.status === 'PENDING';
-
-  const handleExecute = async () => {
-    setIsExecuting(true);
-    try {
-      const response = await fetch(
-        `/api/v1/transactions/${transaction.id}/execute`,
-        { method: 'POST' }
-      );
-      if (!response.ok) throw new Error('Erro ao executar transação');
-      onExecute?.(transaction.id);
-      router.refresh();
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsExecuting(false);
-    }
-  };
 
   const typeInfo = typeConfig[transaction.type];
 
@@ -117,7 +101,7 @@ export function TransactionCard({
         method: 'DELETE',
       });
       if (!response.ok) throw new Error('Erro ao excluir transação');
-      setDialogOpen(false);
+      setDeleteDialogOpen(false);
       onDelete(transaction.id);
     } catch (error) {
       console.error(error);
@@ -177,18 +161,18 @@ export function TransactionCard({
 
       {isPending && (
         <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={handleExecute}
-          disabled={isExecuting}
+          variant="outline"
+          size="sm"
+          onClick={() => setExecuteDialogOpen(true)}
           aria-label="Executar transação"
-          className="shrink-0 text-gray-400 hover:text-green-600"
+          className="shrink-0 border-green-600 text-green-700 hover:bg-green-50"
         >
-          <CheckCircle className="h-4 w-4" />
+          <CheckCircle className="mr-1.5 h-3.5 w-3.5" />
+          Executar
         </Button>
       )}
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogTrigger asChild>
           <Button
             variant="ghost"
@@ -210,7 +194,7 @@ export function TransactionCard({
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setDialogOpen(false)}
+              onClick={() => setDeleteDialogOpen(false)}
               disabled={isDeleting}
             >
               Cancelar
@@ -225,6 +209,18 @@ export function TransactionCard({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ExecuteTransactionDialog
+        open={executeDialogOpen}
+        onClose={() => setExecuteDialogOpen(false)}
+        kind="scheduled"
+        transactionId={transaction.id}
+        description={transaction.description}
+        onSuccess={() => {
+          onExecute?.(transaction.id);
+          router.refresh();
+        }}
+      />
     </div>
   );
 }

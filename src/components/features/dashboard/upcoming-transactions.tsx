@@ -124,6 +124,7 @@ export function UpcomingTransactions({ items }: UpcomingTransactionsProps) {
               <UpcomingExecuteButton
                 itemId={item.id}
                 kind={item.kind}
+                description={item.description}
                 transactionId={item.transactionId}
                 recurringId={item.recurringId}
               />

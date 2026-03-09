@@ -36,9 +36,11 @@ function calculateNextDueDate(
  */
 export async function executeRecurringTransaction(
   userId: string,
-  recurringId: string
+  recurringId: string,
+  executionDate?: Date
 ): Promise<Transaction> {
   const today = startOfDay(new Date());
+  const transactionDate = executionDate ? startOfDay(executionDate) : today;
 
   // Use a transaction to ensure atomicity
   return prisma.$transaction(async tx => {
@@ -56,8 +58,9 @@ export async function executeRecurringTransaction(
       throw new Error('Recurring transaction is not active');
     }
 
-    // 3. Verify nextDueDate <= today
-    if (startOfDay(recurring.nextDueDate) > today) {
+    // 3. Verify nextDueDate <= today (skip when executionDate is explicitly provided,
+    //    to allow early execution from the upcoming dashboard widget)
+    if (!executionDate && startOfDay(recurring.nextDueDate) > today) {
       throw new Error('Recurring transaction is not due yet');
     }
 
@@ -65,7 +68,7 @@ export async function executeRecurringTransaction(
     const transaction = await tx.transaction.create({
       data: {
         userId,
-        date: today,
+        date: transactionDate,
         amount: recurring.amount,
         description: recurring.description,
         type: recurring.type,

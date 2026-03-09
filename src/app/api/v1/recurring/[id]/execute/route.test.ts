@@ -73,7 +73,8 @@ describe('API v1 - Recurring Execute POST', () => {
     expect(json.data.isRecurring).toBe(true);
     expect(executeRecurringTransaction).toHaveBeenCalledWith(
       mockUserId,
-      mockRecurringId
+      mockRecurringId,
+      undefined
     );
   });
 

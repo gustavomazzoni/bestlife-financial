@@ -4,59 +4,48 @@ import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ExecuteTransactionDialog } from '@/components/features/transactions/execute-transaction-dialog';
 
 interface UpcomingExecuteButtonProps {
   itemId: string;
   kind: 'scheduled' | 'recurring';
+  description: string;
   transactionId?: string;
   recurringId?: string;
 }
 
 export function UpcomingExecuteButton({
-  itemId,
+  itemId: _itemId,
   kind,
+  description,
   transactionId,
   recurringId,
 }: UpcomingExecuteButtonProps) {
   const router = useRouter();
-  const [isPending, setIsPending] = React.useState(false);
-
-  const handleExecute = async () => {
-    setIsPending(true);
-    try {
-      let url: string;
-      if (kind === 'scheduled' && transactionId) {
-        url = `/api/v1/transactions/${transactionId}/execute`;
-      } else if (kind === 'recurring' && recurringId) {
-        url = `/api/v1/recurring/${recurringId}/execute`;
-      } else {
-        return;
-      }
-
-      const response = await fetch(url, { method: 'POST' });
-      if (!response.ok) {
-        const json = await response.json().catch(() => ({}));
-        throw new Error(json?.error?.message ?? 'Erro ao executar');
-      }
-      router.refresh();
-    } catch (err) {
-      console.error('Failed to execute item', itemId, err);
-    } finally {
-      setIsPending(false);
-    }
-  };
+  const [dialogOpen, setDialogOpen] = React.useState(false);
 
   return (
-    <Button
-      variant="ghost"
-      size="icon-sm"
-      onClick={handleExecute}
-      disabled={isPending}
-      aria-label="Marcar como executado"
-      data-testid="upcoming-execute-btn"
-      className="shrink-0 text-gray-400 hover:text-green-600"
-    >
-      <CheckCircle className="h-4 w-4" />
-    </Button>
+    <>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setDialogOpen(true)}
+        data-testid="upcoming-execute-btn"
+        className="shrink-0 border-green-600 text-green-700 hover:bg-green-50"
+      >
+        <CheckCircle className="mr-1.5 h-3.5 w-3.5" />
+        Executar
+      </Button>
+
+      <ExecuteTransactionDialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        kind={kind}
+        description={description}
+        transactionId={transactionId}
+        recurringId={recurringId}
+        onSuccess={() => router.refresh()}
+      />
+    </>
   );
 }
