@@ -1109,3 +1109,237 @@ Since the dashboard is RSC but execute requires client interactivity, the execut
    - Click Execute on a dashboard item → item disappears from upcoming, appears in recent transactions
    - Navigate to Calendar → scheduled item appears on correct date
 5. **Backwards compatibility**: All existing transactions have `status = EXECUTED` via DB default — no data migration needed
+
+---
+
+---
+
+## Phase 2.7.1 Revision — Unify Scheduled & Recurring into `ScheduledTransaction`
+
+### Context
+
+Phase 2.7 added `TransactionStatus { PENDING | EXECUTED }` to the `Transaction` model to represent one-time future commitments. This was pragmatic but created a semantic problem: **Transaction should mean "something that happened"** — it is the financial ledger, the source of truth for metrics. Mixing future commitments into that table forces every calculation to filter by `status`, and corrupts the historical record with entries that may never materialise.
+
+The deeper insight: **a recurring transaction IS a scheduled transaction that repeats**. There should be one concept — `ScheduledTransaction` — covering both one-time future commitments and repeating ones. The current split between `RecurringTransaction` (separate model) and PENDING `Transaction` rows (inline) is an accidental inconsistency.
+
+This revision:
+1. Removes `TransactionStatus` / `status` from `Transaction` — ledger is pure again
+2. Renames `RecurringTransaction` → `ScheduledTransaction` with a `frequency` field that includes `ONCE`
+3. Migrates PENDING transactions → `ScheduledTransaction(ONCE)`
+4. Renames the UI section "Recorrente" → "Agendadas" to reflect the unified concept
+
+---
+
+### New Unified Model
+
+```
+Transaction           ← historical ledger (only executed facts, no future items)
+ScheduledTransaction  ← all future commitments, one-time or repeating
+  frequency: ONCE | WEEKLY | MONTHLY | YEARLY
+```
+
+```prisma
+enum ScheduleFrequency {
+  ONCE       # replaces the PENDING Transaction concept
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+model ScheduledTransaction {
+  id                     String            @id @default(cuid())
+  userId                 String
+  amount                 Decimal           @db.Decimal(12, 2)
+  description            String
+  type                   TransactionType
+  categoryId             String
+  necessityLevel         NecessityLevel?
+  valueAlignment         ValueAlignment?
+  frequency              ScheduleFrequency
+  startDate              DateTime          # ONCE: the scheduled date; RECURRING: start of recurrence
+  endDate                DateTime?         # RECURRING only — null = indefinite
+  nextOccurrence         DateTime          # ONCE: the date; RECURRING: next due date
+  notificationDaysBefore Int               @default(3)
+  isActive               Boolean           @default(true)
+  lastExecutedDate       DateTime?
+  notes                  String?
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
+  user                   User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category               Category          @relation(fields: [categoryId], references: [id])
+  transactions           Transaction[]
+  @@index([userId, nextOccurrence])
+  @@index([userId, frequency, isActive])
+}
+
+model Transaction {
+  # Remove: status, isRecurring, recurringId
+  # Add:    scheduledId String? (FK → ScheduledTransaction, replaces recurringId)
+  ...
+  scheduledId  String?
+  scheduled    ScheduledTransaction? @relation(fields: [scheduledId], references: [id])
+  @@index([userId, date])
+  @@index([userId, type])
+  @@index([userId, categoryId])
+}
+
+# Delete: TransactionStatus enum, RecurringTransaction model, RecurringFrequency enum (folded into ScheduleFrequency)
+```
+
+---
+
+### Execution Logic
+
+**ONCE on execute:**
+- Create `Transaction` row (date = executionDate ?? today)
+- Set `ScheduledTransaction.isActive = false`, `lastExecutedDate = executionDate`
+
+**RECURRING on execute:**
+- Create `Transaction` row (same as today)
+- Advance `nextOccurrence` using current `calculateNextDueDate` logic
+- If `nextOccurrence > endDate`: set `isActive = false`
+
+**Upcoming dashboard widget** simplifies to a single query:
+```typescript
+prisma.scheduledTransaction.findMany({
+  where: { userId, isActive: true, nextOccurrence: { gte: today, lt: cutoff } },
+  include: { category: true }
+})
+```
+
+---
+
+### Migration Plan
+
+#### Step 1 — Schema & Prisma migration
+- Add `ScheduledTransaction` model with `ScheduleFrequency` enum
+- Add `scheduledId` to `Transaction`; keep `isRecurring`+`recurringId`+`status` temporarily (for migration SQL)
+- Write custom migration SQL:
+  1. INSERT RecurringTransaction → ScheduledTransaction (map `nextDueDate` → `nextOccurrence`, `RecurringFrequency` values unchanged)
+  2. INSERT PENDING Transactions → ScheduledTransaction (frequency=ONCE, date → startDate & nextOccurrence)
+  3. UPDATE Transaction.scheduledId from recurringId (for executed recurring transactions)
+  4. DELETE PENDING Transaction rows
+  5. DROP RecurringTransaction, DROP Transaction.{status, isRecurring, recurringId}
+- Run: `docker compose exec app pnpm prisma migrate dev --name unify-scheduled-transaction`
+
+#### Step 2 — Types
+- Add `src/types/scheduled.ts` — export `ScheduledTransaction`, `ScheduleFrequency`
+- Update `src/types/transaction.ts` — remove `TransactionStatus`, update `TransactionRow` (remove isRecurring, add scheduledId)
+- Update `src/types/index.ts` — export from scheduled.ts; deprecate recurring.ts exports
+
+#### Step 3 — Service layer (`src/services/scheduled/`)
+Create new directory, replacing `src/services/recurring/`:
+
+| New file | Based on | Key changes |
+|---|---|---|
+| `create.ts` | recurring/create.ts | Add ONCE path (no frequency validation, startDate = nextOccurrence) |
+| `execute.ts` | recurring/execute.ts + transactions/execute.ts | Branch on frequency: ONCE sets isActive=false, RECURRING advances nextOccurrence. Accept optional `executionDate`. Remove "not due yet" check for ONCE. |
+| `list.ts` | recurring/list.ts | Add `frequency` filter; default shows all active |
+| `get.ts` | recurring/get.ts | Field rename only |
+| `update.ts` | recurring/update.ts | ONCE: only allow amount/description/date/category; RECURRING: existing logic |
+| `delete.ts` | recurring/delete.ts | ONCE: hard delete (no history); RECURRING: soft delete (isActive=false) |
+| `index.ts` | — | Re-export all |
+
+Update `src/services/transactions/execute.ts` — remove (merged into scheduled/execute.ts).
+Update `src/services/dashboard/upcoming.ts` — single query to ScheduledTransaction (remove two-query merge).
+Update `src/services/transactions/list.ts` — remove `status` filter; `isRecurring` → `scheduledId != null`.
+
+#### Step 4 — Validation (`src/lib/validations/scheduled.ts`)
+```typescript
+// Discriminated union
+const CreateScheduledSchema = z.discriminatedUnion('frequency', [
+  z.object({ frequency: z.literal('ONCE'), date: z.coerce.date().min(tomorrow), ... }),
+  z.object({ frequency: z.enum(['WEEKLY','MONTHLY','YEARLY']), startDate: ..., endDate: optional, ... }),
+])
+```
+Remove `status` from `CreateTransactionSchema` and `UpdateTransactionSchema`.
+Remove `status` from `ListTransactionsQuerySchema`.
+
+#### Step 5 — API routes
+- `src/app/api/v1/scheduled/route.ts` (GET list, POST create) — replaces `/recurring/route.ts`
+- `src/app/api/v1/scheduled/[id]/route.ts` (GET, PATCH, DELETE)
+- `src/app/api/v1/scheduled/[id]/execute/route.ts` (POST) — handles both ONCE and RECURRING
+- Delete `src/app/api/v1/recurring/` directory
+- Delete `src/app/api/v1/transactions/[id]/execute/route.ts` (merged into scheduled execute)
+- Delete `src/app/api/v1/dashboard/upcoming/route.ts` internal changes only (service updated)
+
+#### Step 6 — UI (rename Recorrente → Agendadas)
+**Pages:**
+- `src/app/(frontend)/recurring/` → `src/app/(frontend)/scheduled/`
+  - `page.tsx` — title "Agendadas", fetch `/api/v1/scheduled`, show both ONCE and RECURRING with frequency badge
+  - `new/page.tsx` — form for creating any scheduled transaction
+  - `[id]/page.tsx` — edit/view; "Desativar" only for RECURRING; "Excluir" for ONCE
+
+**Components (`src/components/features/scheduled/`):**
+- `scheduled-card.tsx` (replaces recurring-card.tsx) — conditional rendering by frequency
+- `scheduled-list.tsx` (replaces recurring-list.tsx)
+- `scheduled-form.tsx` (replaces recurring-form.tsx) — frequency selector drives conditional fields:
+  - ONCE: date picker (future only)
+  - RECURRING: startDate, endDate (optional), frequency dropdown
+
+**Navigation (`src/components/shared/nav.tsx`):**
+- Update route href `/recurring` → `/scheduled`
+- Update label "Recorrente" → "Agendadas"
+- Update icon (calendar-clock or similar fits better)
+
+**Transaction card (`src/components/features/transactions/transaction-card.tsx`):**
+- Remove PENDENTE badge and execute button (PENDING transactions no longer exist in Transaction table)
+- `isRecurring` → `scheduledId != null` for recurring indicator icon
+
+**Transaction list (`src/app/(frontend)/transactions/`):**
+- Remove PENDING filter/handling entirely
+
+**Dashboard (`src/components/features/dashboard/upcoming-transactions.tsx` + `upcoming-execute-button.tsx`):**
+- Update `UpcomingItem.kind` from `'scheduled'|'recurring'` → `'ONCE'|recurring-frequency`
+- Or simplify: `UpcomingItem.isRecurring: boolean` is sufficient for UI
+
+#### Step 7 — Tests
+- `src/services/scheduled/*.test.ts` — port from recurring tests, add ONCE-specific cases
+- `src/app/api/v1/scheduled/*.test.ts` — port from recurring route tests
+- Delete: `src/services/recurring/*.test.ts`, `src/app/api/v1/recurring/*.test.ts`
+- Update: `src/services/dashboard/upcoming.test.ts` — single-query mock
+- Update: `src/lib/validations/transaction.test.ts` — remove status/future-date tests
+- `tests/e2e/upcoming.spec.ts` — update API calls from `/transactions` (PENDING creation) to `/scheduled` (ONCE creation)
+
+---
+
+### Critical Files
+
+| File | Action |
+|---|---|
+| `prisma/schema.prisma` | Add ScheduledTransaction, ScheduleFrequency; remove TransactionStatus, RecurringTransaction |
+| `src/types/scheduled.ts` | New — ScheduledTransaction, ScheduleFrequency exports |
+| `src/types/transaction.ts` | Remove TransactionStatus; update TransactionRow |
+| `src/lib/validations/scheduled.ts` | New — discriminated union schema |
+| `src/lib/validations/transaction.ts` | Remove status field |
+| `src/services/scheduled/` | New directory (6 files), replaces recurring/ |
+| `src/services/dashboard/upcoming.ts` | Single-query simplification |
+| `src/services/transactions/list.ts` | Remove status filter |
+| `src/app/api/v1/scheduled/` | New directory (3 route files) |
+| `src/app/(frontend)/scheduled/` | Renamed from recurring/ (3 pages) |
+| `src/components/features/scheduled/` | New directory (3 components) |
+| `src/components/shared/nav.tsx` | Update label + route |
+| `src/components/features/transactions/transaction-card.tsx` | Remove PENDING/execute UX |
+| `tests/e2e/upcoming.spec.ts` | Update to use /scheduled for ONCE creation |
+
+### Reusable Existing Code
+- `src/services/recurring/execute.ts` → `calculateNextDueDate()` function — copy as-is
+- `src/services/recurring/create.ts` → category validation + nextDueDate calc — reuse directly
+- `src/components/features/recurring/recurring-card.tsx` → structure, execute dialog pattern
+- `src/components/features/recurring/recurring-form.tsx` → field layout, RHF+Zod patterns
+- `src/components/features/transactions/execute-transaction-dialog.tsx` — reuse unchanged for scheduled execute
+
+---
+
+### Verification
+1. `docker compose exec app pnpm prisma migrate dev` → migration applies cleanly; no PENDING rows in Transaction, no RecurringTransaction table
+2. `docker compose exec app pnpm type-check` → 0 errors
+3. `docker compose exec app pnpm test` → all pass
+4. Manual smoke test:
+   - Create one-time scheduled transaction ("Pagamento consultor sexta R$500") → appears in /scheduled and upcoming widget
+   - Create recurring transaction (monthly rent) → appears in /scheduled with MENSAL badge
+   - Execute one-time → disappears from /scheduled, appears in /transactions history
+   - Execute recurring → appears in /transactions history, nextOccurrence advances
+   - Dashboard upcoming widget shows both kinds in "Esta Semana"
+   - Financial calculations (freedom metrics, spending breakdown) unchanged — no PENDING pollution
+5. `pnpm test:e2e` → E2E suite passes including upcoming.spec.ts
