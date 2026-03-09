@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Trash2, CalendarClock } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -26,7 +26,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { ExecuteTransactionDialog } from '@/components/features/transactions/execute-transaction-dialog';
 import { TransactionType, NecessityLevel, ValueAlignment } from '@/types';
 
 interface Category {
@@ -43,7 +42,6 @@ interface Transaction {
   description: string;
   date: string;
   type: TransactionType;
-  status: 'PENDING' | 'EXECUTED';
   categoryId: string;
   necessityLevel: NecessityLevel | null;
   valueAlignment: ValueAlignment | null;
@@ -100,12 +98,6 @@ export default function TransactionEditPage() {
   const [loading, setLoading] = React.useState(true);
   const [deleting, setDeleting] = React.useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
-  const [executeDialogOpen, setExecuteDialogOpen] = React.useState(false);
-  const [transactionStatus, setTransactionStatus] = React.useState<
-    'PENDING' | 'EXECUTED' | null
-  >(null);
-  const [transactionDescription, setTransactionDescription] =
-    React.useState('');
 
   const {
     register,
@@ -133,8 +125,6 @@ export default function TransactionEditPage() {
         if (!res.ok) throw new Error('Erro ao carregar transação');
         const json = await res.json();
         const txn: Transaction = json.data;
-        setTransactionStatus(txn.status);
-        setTransactionDescription(txn.description);
         reset({
           amount: parseFloat(txn.amount),
           description: txn.description,
@@ -230,30 +220,6 @@ export default function TransactionEditPage() {
 
   return (
     <div className="container mx-auto max-w-2xl p-4 sm:p-8">
-      {/* Pending execution banner */}
-      {transactionStatus === 'PENDING' && (
-        <div className="mb-4 flex items-start justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
-          <div className="flex items-start gap-3">
-            <CalendarClock className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
-            <div>
-              <p className="text-sm font-semibold text-amber-800">
-                Transação agendada
-              </p>
-              <p className="mt-0.5 text-sm text-amber-700">
-                Esta transação ainda não foi executada. Já aconteceu?
-              </p>
-            </div>
-          </div>
-          <Button
-            size="sm"
-            onClick={() => setExecuteDialogOpen(true)}
-            className="shrink-0 bg-green-600 text-white hover:bg-green-700"
-          >
-            Marcar como Executada
-          </Button>
-        </div>
-      )}
-
       <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
         {errors.root && (
           <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">
@@ -467,15 +433,6 @@ export default function TransactionEditPage() {
           </div>
         </form>
       </div>
-
-      <ExecuteTransactionDialog
-        open={executeDialogOpen}
-        onClose={() => setExecuteDialogOpen(false)}
-        kind="scheduled"
-        transactionId={id}
-        description={transactionDescription}
-        onSuccess={() => router.push('/transactions')}
-      />
     </div>
   );
 }

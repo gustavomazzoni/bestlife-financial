@@ -4,7 +4,7 @@ import * as React from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useRouter } from 'next/navigation';
-import { Trash2, RefreshCw, CheckCircle } from 'lucide-react';
+import { Trash2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -15,8 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { ExecuteTransactionDialog } from './execute-transaction-dialog';
-import { TransactionType, TransactionStatus, NecessityLevel } from '@/types';
+import { TransactionType, NecessityLevel } from '@/types';
 
 export interface TransactionWithCategory {
   id: string;
@@ -24,13 +23,11 @@ export interface TransactionWithCategory {
   description: string;
   date: string;
   type: TransactionType;
-  status: TransactionStatus;
   categoryId: string;
   category: { id: string; name: string; color: string; icon: string } | null;
   necessityLevel: NecessityLevel | null;
   valueAlignment: string | null;
-  isRecurring: boolean;
-  recurringId: string | null;
+  scheduledId: string | null;
   notes: string | null;
   createdAt: string;
 }
@@ -38,7 +35,6 @@ export interface TransactionWithCategory {
 export interface TransactionCardProps {
   transaction: TransactionWithCategory;
   onDelete: (id: string) => void;
-  onExecute?: (id: string) => void;
 }
 
 const typeConfig: Record<
@@ -83,14 +79,10 @@ function formatCurrency(value: string): string {
 export function TransactionCard({
   transaction,
   onDelete,
-  onExecute,
 }: TransactionCardProps) {
   const router = useRouter();
   const [isDeleting, setIsDeleting] = React.useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
-  const [executeDialogOpen, setExecuteDialogOpen] = React.useState(false);
-
-  const isPending = transaction.status === 'PENDING';
 
   const typeInfo = typeConfig[transaction.type];
 
@@ -127,17 +119,12 @@ export function TransactionCard({
             >
               {typeInfo.label}
             </span>
-            {isPending && (
-              <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
-                PENDENTE
-              </span>
-            )}
             {transaction.necessityLevel && (
               <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
                 {necessityLabels[transaction.necessityLevel]}
               </span>
             )}
-            {transaction.recurringId && (
+            {transaction.scheduledId && (
               <RefreshCw className="h-3 w-3 text-gray-400" />
             )}
           </div>
@@ -158,19 +145,6 @@ export function TransactionCard({
           {formatCurrency(transaction.amount)}
         </span>
       </button>
-
-      {isPending && (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setExecuteDialogOpen(true)}
-          aria-label="Executar transação"
-          className="shrink-0 border-green-600 text-green-700 hover:bg-green-50"
-        >
-          <CheckCircle className="mr-1.5 h-3.5 w-3.5" />
-          Executar
-        </Button>
-      )}
 
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogTrigger asChild>
@@ -209,18 +183,6 @@ export function TransactionCard({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <ExecuteTransactionDialog
-        open={executeDialogOpen}
-        onClose={() => setExecuteDialogOpen(false)}
-        kind="scheduled"
-        transactionId={transaction.id}
-        description={transaction.description}
-        onSuccess={() => {
-          onExecute?.(transaction.id);
-          router.refresh();
-        }}
-      />
     </div>
   );
 }

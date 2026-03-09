@@ -1,8 +1,7 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { prisma } from '@/lib/db';
 import { Prisma } from '@/types';
 import { createTransaction } from './create';
-import { startOfDay } from 'date-fns';
 
 vi.mock('@/lib/db', () => ({
   prisma: {
@@ -13,7 +12,6 @@ vi.mock('@/lib/db', () => ({
 
 describe('createTransaction', () => {
   const userId = 'user_test_123';
-  const today = startOfDay(new Date());
 
   const validData = {
     date: new Date('2024-01-15'),
@@ -33,34 +31,31 @@ describe('createTransaction', () => {
     color: '#F97316',
     icon: '🍔',
     createdAt: new Date(),
+    userId: null,
+  };
+
+  const mockCreatedTransaction = {
+    id: 'txn_1',
+    userId,
+    ...validData,
+    amount: new Prisma.Decimal(validData.amount),
+    necessityLevel: null,
+    valueAlignment: null,
+    scheduledId: null,
+    notes: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.useFakeTimers();
-    vi.setSystemTime(today);
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
   });
 
   it('should create transaction with valid data', async () => {
     vi.mocked(prisma.category.findUnique).mockResolvedValue(mockCategory);
-    vi.mocked(prisma.transaction.create).mockResolvedValue({
-      id: 'txn_1',
-      userId,
-      ...validData,
-      amount: new Prisma.Decimal(validData.amount),
-      status: 'EXECUTED',
-      necessityLevel: null,
-      valueAlignment: null,
-      isRecurring: false,
-      recurringId: null,
-      notes: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+    vi.mocked(prisma.transaction.create).mockResolvedValue(
+      mockCreatedTransaction
+    );
 
     const result = await createTransaction(userId, validData);
 
@@ -70,98 +65,43 @@ describe('createTransaction', () => {
     expect(result.categoryId).toBe('cat_food_123');
   });
 
-  it('should auto-set status to EXECUTED for past/today dates', async () => {
-    const pastData = { ...validData, date: new Date('2024-01-15') };
-    vi.mocked(prisma.category.findUnique).mockResolvedValue(mockCategory);
-    vi.mocked(prisma.transaction.create).mockResolvedValue({
-      id: 'txn_1',
-      userId,
-      ...pastData,
-      amount: new Prisma.Decimal(pastData.amount),
-      status: 'EXECUTED',
-      necessityLevel: null,
-      valueAlignment: null,
-      isRecurring: false,
-      recurringId: null,
-      notes: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
-
-    await createTransaction(userId, pastData);
-
-    expect(prisma.transaction.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({ status: 'EXECUTED' }),
-      })
-    );
-  });
-
-  it('should auto-set status to PENDING for future dates', async () => {
-    const futureDate = new Date(today.getTime() + 2 * 86400000); // 2 days ahead
-    const futureData = { ...validData, date: futureDate };
-
-    vi.mocked(prisma.category.findUnique).mockResolvedValue(mockCategory);
-    vi.mocked(prisma.transaction.create).mockResolvedValue({
-      id: 'txn_future',
-      userId,
-      ...futureData,
-      amount: new Prisma.Decimal(futureData.amount),
-      status: 'PENDING',
-      necessityLevel: null,
-      valueAlignment: null,
-      isRecurring: false,
-      recurringId: null,
-      notes: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
-
-    await createTransaction(userId, futureData);
-
-    expect(prisma.transaction.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({ status: 'PENDING' }),
-      })
-    );
-  });
-
-  it('should respect explicitly provided status', async () => {
-    const pastData = {
+  it('should create transaction with optional fields', async () => {
+    const dataWithExtras = {
       ...validData,
-      date: new Date('2024-01-15'),
-      status: 'PENDING' as const,
+      necessityLevel: 'NEEDS' as const,
+      notes: 'Some notes',
     };
     vi.mocked(prisma.category.findUnique).mockResolvedValue(mockCategory);
     vi.mocked(prisma.transaction.create).mockResolvedValue({
-      id: 'txn_1',
-      userId,
-      ...pastData,
-      amount: new Prisma.Decimal(pastData.amount),
-      status: 'PENDING',
-      necessityLevel: null,
-      valueAlignment: null,
-      isRecurring: false,
-      recurringId: null,
-      notes: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      ...mockCreatedTransaction,
+      necessityLevel: 'NEEDS' as const,
+      notes: 'Some notes',
     });
 
-    await createTransaction(userId, pastData);
+    await createTransaction(userId, dataWithExtras);
 
     expect(prisma.transaction.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ status: 'PENDING' }),
+        data: expect.objectContaining({
+          necessityLevel: 'NEEDS',
+          notes: 'Some notes',
+        }),
       })
     );
   });
 
-  it('should throw error for mismatched category type', async () => {
+  it('should throw error for invalid category (not found)', async () => {
     vi.mocked(prisma.category.findUnique).mockResolvedValue(null);
 
     await expect(createTransaction(userId, validData)).rejects.toThrow(
       'Invalid category'
     );
+  });
+
+  it('should not call transaction.create when category validation fails', async () => {
+    vi.mocked(prisma.category.findUnique).mockResolvedValue(null);
+
+    await expect(createTransaction(userId, validData)).rejects.toThrow();
+    expect(prisma.transaction.create).not.toHaveBeenCalled();
   });
 });

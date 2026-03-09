@@ -102,7 +102,7 @@ export function UpcomingTransactions({ items }: UpcomingTransactionsProps) {
                       HOJE
                     </span>
                   )}
-                  {item.kind === 'recurring' && (
+                  {item.isRecurring && (
                     <RefreshCw className="h-3 w-3 shrink-0 text-gray-400" />
                   )}
                 </div>
@@ -122,11 +122,8 @@ export function UpcomingTransactions({ items }: UpcomingTransactionsProps) {
 
               {/* Execute button */}
               <UpcomingExecuteButton
-                itemId={item.id}
-                kind={item.kind}
+                scheduledId={item.scheduledId}
                 description={item.description}
-                transactionId={item.transactionId}
-                recurringId={item.recurringId}
               />
             </div>
           ))}

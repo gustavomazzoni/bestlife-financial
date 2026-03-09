@@ -6,8 +6,7 @@ import { addDays, startOfDay } from 'date-fns';
 
 vi.mock('@/lib/db', () => ({
   prisma: {
-    transaction: { findMany: vi.fn() },
-    recurringTransaction: { findMany: vi.fn() },
+    scheduledTransaction: { findMany: vi.fn() },
   },
 }));
 
@@ -23,44 +22,49 @@ describe('getUpcomingItems', () => {
     color: '#EF4444',
     icon: '📄',
     createdAt: new Date(),
+    userId: null,
   };
 
-  const mockPendingTransaction = {
-    id: 'txn_pending_1',
+  const mockOnceScheduled = {
+    id: 'sched_once_1',
     userId,
-    date: addDays(today, 2),
+    nextOccurrence: addDays(today, 2),
     amount: new Prisma.Decimal(500),
     description: 'Aluguel',
     type: 'EXPENSE' as const,
-    status: 'PENDING' as const,
+    frequency: 'ONCE' as const,
     categoryId: 'cat_1',
     category: mockCategory,
     necessityLevel: 'NEEDS' as const,
     valueAlignment: null,
-    isRecurring: false,
-    recurringId: null,
+    startDate: addDays(today, 2),
+    endDate: null,
+    notificationDaysBefore: 3,
+    isActive: true,
+    lastExecutedDate: null,
     notes: null,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
 
-  const mockRecurring = {
-    id: 'rec_1',
+  const mockMonthlyScheduled = {
+    id: 'sched_monthly_1',
     userId,
+    nextOccurrence: today,
     amount: new Prisma.Decimal(200),
     description: 'Streaming',
     type: 'EXPENSE' as const,
+    frequency: 'MONTHLY' as const,
     categoryId: 'cat_1',
     category: mockCategory,
-    frequency: 'MONTHLY' as const,
-    startDate: addDays(today, -30),
-    endDate: null,
-    nextDueDate: today, // due today
-    notificationDaysBefore: 3,
-    isActive: true,
-    lastCreatedDate: addDays(today, -30),
     necessityLevel: null,
     valueAlignment: null,
+    startDate: addDays(today, -30),
+    endDate: null,
+    notificationDaysBefore: 3,
+    isActive: true,
+    lastExecutedDate: addDays(today, -30),
+    notes: null,
     createdAt: addDays(today, -30),
     updatedAt: today,
   };
@@ -75,26 +79,23 @@ describe('getUpcomingItems', () => {
     vi.useRealTimers();
   });
 
-  it('should combine scheduled and recurring items', async () => {
-    vi.mocked(prisma.transaction.findMany).mockResolvedValue([
-      mockPendingTransaction,
-    ]);
-    vi.mocked(prisma.recurringTransaction.findMany).mockResolvedValue([
-      mockRecurring,
+  it('should return both ONCE and recurring scheduled items', async () => {
+    vi.mocked(prisma.scheduledTransaction.findMany).mockResolvedValue([
+      mockOnceScheduled,
+      mockMonthlyScheduled,
     ]);
 
     const result = await getUpcomingItems(userId);
 
     expect(result).toHaveLength(2);
-    const kinds = result.map(i => i.kind);
-    expect(kinds).toContain('scheduled');
-    expect(kinds).toContain('recurring');
+    const isRecurringValues = result.map(i => i.isRecurring);
+    expect(isRecurringValues).toContain(false); // ONCE → not recurring
+    expect(isRecurringValues).toContain(true); // MONTHLY → recurring
   });
 
   it('should mark today items with isToday=true', async () => {
-    vi.mocked(prisma.transaction.findMany).mockResolvedValue([]);
-    vi.mocked(prisma.recurringTransaction.findMany).mockResolvedValue([
-      mockRecurring,
+    vi.mocked(prisma.scheduledTransaction.findMany).mockResolvedValue([
+      mockMonthlyScheduled, // nextOccurrence = today
     ]);
 
     const result = await getUpcomingItems(userId);
@@ -103,74 +104,46 @@ describe('getUpcomingItems', () => {
   });
 
   it('should mark future items with isToday=false', async () => {
-    vi.mocked(prisma.transaction.findMany).mockResolvedValue([
-      mockPendingTransaction,
+    vi.mocked(prisma.scheduledTransaction.findMany).mockResolvedValue([
+      mockOnceScheduled, // nextOccurrence = today + 2
     ]);
-    vi.mocked(prisma.recurringTransaction.findMany).mockResolvedValue([]);
 
     const result = await getUpcomingItems(userId);
 
     expect(result[0].isToday).toBe(false);
   });
 
-  it('should sort items by date ascending', async () => {
-    const laterPending = {
-      ...mockPendingTransaction,
-      id: 'txn_later',
-      date: addDays(today, 5),
-    };
-    vi.mocked(prisma.transaction.findMany).mockResolvedValue([
-      laterPending,
-      mockPendingTransaction,
-    ]);
-    vi.mocked(prisma.recurringTransaction.findMany).mockResolvedValue([]);
-
-    const result = await getUpcomingItems(userId);
-
-    expect(result[0].transactionId).toBe('txn_pending_1');
-    expect(result[1].transactionId).toBe('txn_later');
-  });
-
   it('should return empty array when no upcoming items', async () => {
-    vi.mocked(prisma.transaction.findMany).mockResolvedValue([]);
-    vi.mocked(prisma.recurringTransaction.findMany).mockResolvedValue([]);
+    vi.mocked(prisma.scheduledTransaction.findMany).mockResolvedValue([]);
 
     const result = await getUpcomingItems(userId);
 
     expect(result).toHaveLength(0);
   });
 
-  it('should use correct ids for item identification', async () => {
-    vi.mocked(prisma.transaction.findMany).mockResolvedValue([
-      mockPendingTransaction,
-    ]);
-    vi.mocked(prisma.recurringTransaction.findMany).mockResolvedValue([
-      mockRecurring,
+  it('should use correct scheduledId for item identification', async () => {
+    vi.mocked(prisma.scheduledTransaction.findMany).mockResolvedValue([
+      mockOnceScheduled,
+      mockMonthlyScheduled,
     ]);
 
     const result = await getUpcomingItems(userId);
 
-    const scheduled = result.find(i => i.kind === 'scheduled');
-    const recurring = result.find(i => i.kind === 'recurring');
+    const once = result.find(i => i.frequency === 'ONCE');
+    const monthly = result.find(i => i.frequency === 'MONTHLY');
 
-    expect(scheduled?.transactionId).toBe('txn_pending_1');
-    expect(scheduled?.id).toBe('scheduled-txn_pending_1');
-    expect(recurring?.recurringId).toBe('rec_1');
-    expect(recurring?.id).toBe('recurring-rec_1');
+    expect(once?.scheduledId).toBe('sched_once_1');
+    expect(once?.id).toBe('scheduled-sched_once_1');
+    expect(monthly?.scheduledId).toBe('sched_monthly_1');
+    expect(monthly?.id).toBe('scheduled-sched_monthly_1');
   });
 
-  it('should pass userId and date range to both queries', async () => {
-    vi.mocked(prisma.transaction.findMany).mockResolvedValue([]);
-    vi.mocked(prisma.recurringTransaction.findMany).mockResolvedValue([]);
+  it('should pass userId and date range to query', async () => {
+    vi.mocked(prisma.scheduledTransaction.findMany).mockResolvedValue([]);
 
     await getUpcomingItems(userId, 7);
 
-    expect(prisma.transaction.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({ userId, status: 'PENDING' }),
-      })
-    );
-    expect(prisma.recurringTransaction.findMany).toHaveBeenCalledWith(
+    expect(prisma.scheduledTransaction.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({ userId, isActive: true }),
       })

@@ -5,7 +5,7 @@ import { useSession, signOut } from 'next-auth/react';
 import { ArrowLeft, LogOut } from 'lucide-react';
 
 const SUB_PAGE_CONFIG: Record<string, { title: string; backTo: string }> = {
-  '/recurring/new': { title: 'Nova Recorrência', backTo: '/calendar' },
+  '/scheduled/new': { title: 'Novo Agendamento', backTo: '/scheduled' },
   '/settings/profile': { title: 'Perfil', backTo: '/settings' },
 };
 
@@ -14,9 +14,9 @@ function getSubPageConfig(
 ): { title: string; backTo: string } | null {
   if (SUB_PAGE_CONFIG[pathname]) return SUB_PAGE_CONFIG[pathname];
 
-  // /recurring/[id] — any segment under /recurring that isn't /new
-  if (/^\/recurring\/[^/]+$/.test(pathname) && pathname !== '/recurring/new') {
-    return { title: 'Editar Recorrência', backTo: '/calendar' };
+  // /scheduled/[id] — any segment under /scheduled that isn't /new
+  if (/^\/scheduled\/[^/]+$/.test(pathname) && pathname !== '/scheduled/new') {
+    return { title: 'Editar Agendamento', backTo: '/scheduled' };
   }
 
   // /transactions/[id] — any segment under /transactions

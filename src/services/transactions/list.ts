@@ -10,7 +10,6 @@ export async function listTransactions(
     page,
     limit,
     type,
-    status,
     categoryId,
     startDate,
     endDate,
@@ -19,7 +18,7 @@ export async function listTransactions(
   } = query;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const where: any = { userId, type, status, categoryId };
+  const where: any = { userId, type, categoryId };
   if (startDate || endDate) {
     where.date = { gte: startDate, lte: endDate };
   }

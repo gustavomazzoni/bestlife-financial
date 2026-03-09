@@ -1,43 +1,46 @@
 import { addDays, addMonths, addYears, startOfDay, format } from 'date-fns';
-import type { RecurringWithCategory } from '@/components/features/recurring';
+import type { ScheduledWithCategory } from '@/components/features/scheduled';
 import type { TransactionRow, CalendarEvent } from '@/types';
 
-export function projectRecurringOccurrences(
-  recurrings: RecurringWithCategory[],
+export function projectScheduledOccurrences(
+  scheduleds: ScheduledWithCategory[],
   startDate: Date,
   endDate: Date
 ): CalendarEvent[] {
   const events: CalendarEvent[] = [];
 
-  for (const recurring of recurrings) {
-    // Skip if recurring.endDate is before startDate
-    if (recurring.endDate) {
-      const recurringEnd = startOfDay(new Date(recurring.endDate));
-      if (recurringEnd < startDate) continue;
+  for (const scheduled of scheduleds) {
+    // ONCE items are not recurring projections — skip frequency expansion
+    if (scheduled.frequency === 'ONCE') continue;
+
+    // Skip if scheduled.endDate is before startDate
+    if (scheduled.endDate) {
+      const scheduledEnd = startOfDay(new Date(scheduled.endDate));
+      if (scheduledEnd < startDate) continue;
     }
 
-    // Start cursor at startOfDay(nextDueDate)
-    let cursor = startOfDay(new Date(recurring.nextDueDate));
-    const recurringEnd = recurring.endDate
-      ? startOfDay(new Date(recurring.endDate))
+    // Start cursor at startOfDay(nextOccurrence)
+    let cursor = startOfDay(new Date(scheduled.nextOccurrence));
+    const scheduledEnd = scheduled.endDate
+      ? startOfDay(new Date(scheduled.endDate))
       : null;
 
     while (cursor <= endDate) {
       if (cursor >= startDate) {
         events.push({
           date: format(cursor, 'yyyy-MM-dd'),
-          description: recurring.description,
-          amount: recurring.amount,
-          type: recurring.type,
+          description: scheduled.description,
+          amount: scheduled.amount,
+          type: scheduled.type,
           kind: 'recurring_projection',
-          sourceId: recurring.id,
-          categoryIcon: recurring.category?.icon ?? undefined,
-          categoryName: recurring.category?.name ?? undefined,
+          sourceId: scheduled.id,
+          categoryIcon: scheduled.category?.icon ?? undefined,
+          categoryName: scheduled.category?.name ?? undefined,
         });
       }
 
       // Advance cursor
-      switch (recurring.frequency) {
+      switch (scheduled.frequency) {
         case 'WEEKLY':
           cursor = addDays(cursor, 7);
           break;
@@ -49,8 +52,8 @@ export function projectRecurringOccurrences(
           break;
       }
 
-      // Break if cursor > recurring.endDate
-      if (recurringEnd && cursor > recurringEnd) break;
+      // Break if cursor > scheduled.endDate
+      if (scheduledEnd && cursor > scheduledEnd) break;
     }
   }
 

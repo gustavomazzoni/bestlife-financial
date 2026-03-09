@@ -17,9 +17,7 @@ import {
 interface ExecuteTransactionDialogProps {
   open: boolean;
   onClose: () => void;
-  kind: 'scheduled' | 'recurring';
-  transactionId?: string;
-  recurringId?: string;
+  scheduledId: string;
   description: string;
   onSuccess: () => void;
 }
@@ -31,9 +29,7 @@ function todayDateInput(): string {
 export function ExecuteTransactionDialog({
   open,
   onClose,
-  kind,
-  transactionId,
-  recurringId,
+  scheduledId,
   description,
   onSuccess,
 }: ExecuteTransactionDialogProps) {
@@ -52,16 +48,7 @@ export function ExecuteTransactionDialog({
     setIsLoading(true);
     setError(null);
     try {
-      let url: string;
-      if (kind === 'scheduled' && transactionId) {
-        url = `/api/v1/transactions/${transactionId}/execute`;
-      } else if (kind === 'recurring' && recurringId) {
-        url = `/api/v1/recurring/${recurringId}/execute`;
-      } else {
-        throw new Error('ID inválido');
-      }
-
-      const response = await fetch(url, {
+      const response = await fetch(`/api/v1/scheduled/${scheduledId}/execute`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ date }),

@@ -68,12 +68,6 @@ export function TransactionList() {
     setTransactions(prev => prev.filter(t => t.id !== id));
   };
 
-  const handleExecute = (id: string) => {
-    setTransactions(prev =>
-      prev.map(t => (t.id === id ? { ...t, status: 'EXECUTED' as const } : t))
-    );
-  };
-
   const handleFilterChange = (patch: Partial<Filters>) => {
     setPage(1);
     setFilters(prev => ({ ...prev, ...patch }));
@@ -144,7 +138,6 @@ export function TransactionList() {
               key={transaction.id}
               transaction={transaction}
               onDelete={handleDelete}
-              onExecute={handleExecute}
             />
           ))}
         </div>

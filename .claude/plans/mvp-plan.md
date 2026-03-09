@@ -619,3 +619,493 @@ docker compose exec app pnpm build
 docker compose exec app pnpm test
 docker compose --profile testing run playwright pnpm test:e2e
 ```
+---
+
+---
+
+## Phase 2.6 — Calendar / Agenda View
+
+### Context
+
+Phases 1.1–2.4 are complete. Users can log and manage transactions and recurring transactions, but have no way to see upcoming financial events in a time-based view. This phase adds a calendar page so users can visually see upcoming recurring transactions (projected by frequency) and logged transactions by day/month, enabling them to prepare for upcoming expenses, incomes, and investments.
+
+---
+
+### Navigation Change
+
+Replace the "Recorrências" bottom nav tab with "Agenda" (calendar). The recurring list moves inside the new `/calendar` page as a sub-tab ("Lista"). The `/recurring`, `/recurring/new`, and `/recurring/[id]` routes remain unchanged.
+
+**`src/components/shared/nav.tsx`** — change `RIGHT_NAV_ITEMS[0]`:
+```diff
+- { href: '/recurring', icon: RefreshCw, label: 'Recorrências', testId: 'nav-recurring' }
++ { href: '/calendar', icon: CalendarDays, label: 'Agenda', testId: 'nav-calendar' }
+```
+Add `CalendarDays` to the `lucide-react` import. Remove `RefreshCw`.
+
+Note: The `isActive()` helper uses `pathname.startsWith(href)`. Sub-pages `/recurring/new` and `/recurring/[id]` will not highlight the Agenda tab (those are accessed from within the page), which is acceptable.
+
+---
+
+### New Type
+
+**`src/types/calendar.ts`** — unified event type for projections + actuals:
+
+```typescript
+import { TransactionType } from '@/types';
+
+export type CalendarEventKind = 'recurring_projection' | 'actual';
+
+export interface CalendarEvent {
+  date: string;              // 'YYYY-MM-DD' (no timezone shift)
+  description: string;
+  amount: string;            // decimal string, pass to formatCurrency()
+  type: TransactionType;
+  kind: CalendarEventKind;
+  sourceId: string;          // recurringId for projections, transactionId for actuals
+  categoryIcon?: string;
+  categoryName?: string;
+}
+```
+
+Update **`src/types/index.ts`** — add `export * from './calendar';`
+
+---
+
+### Utility Functions
+
+**`src/lib/utils/calendar.ts`** — pure functions, no I/O:
+
+```typescript
+// Reuse same frequency logic as src/services/recurring/execute.ts
+import { addDays, addMonths, addYears, startOfDay, format } from 'date-fns';
+
+export function projectRecurringOccurrences(
+  recurrings: RecurringWithCategory[],
+  startDate: Date,
+  endDate: Date
+): CalendarEvent[]
+// For each active recurring:
+//   1. Skip if recurring.endDate < startDate
+//   2. Start cursor at startOfDay(nextDueDate)
+//   3. While cursor <= endDate:
+//      - If cursor >= startDate: push CalendarEvent (kind: 'recurring_projection')
+//      - Advance cursor: WEEKLY → addDays(7), MONTHLY → addMonths(1), YEARLY → addYears(1)
+//      - Break if cursor > recurring.endDate
+
+export function transactionsToCalendarEvents(
+  transactions: TransactionRow[]
+): CalendarEvent[]
+// Maps each transaction to CalendarEvent (kind: 'actual')
+// date: format(new Date(t.date), 'yyyy-MM-dd')
+
+export function groupEventsByDate(events: CalendarEvent[]): Map<string, CalendarEvent[]>
+// Groups events by their date string key
+
+export function getCalendarGridDates(year: number, month: number): Date[]
+// Returns 42 dates (6 rows × 7 cols) for the month grid,
+// padded with prev/next month days to fill the grid
+// Week starts on Monday (Brazilian locale)
+```
+
+**`src/lib/utils/calendar.test.ts`** — pure unit tests, no mocks needed:
+- `projectRecurringOccurrences`: empty input, MONTHLY in-window, WEEKLY multiple occurrences, YEARLY out-of-window, skip expired, stop at endDate, MONTHLY Feb edge case
+- `transactionsToCalendarEvents`: correct field mapping, kind='actual', date format
+- `getCalendarGridDates`: returns exactly 42 dates, first date is Monday
+- `groupEventsByDate`: groups same-date events, handles empty array
+
+---
+
+### Page & Components
+
+#### `src/app/(frontend)/calendar/page.tsx` — Client component
+
+State:
+- `selectedMonth: Date` — initialized to `startOfMonth(new Date())`
+- `selectedDay: string | null` — null on load
+- `events: CalendarEvent[]` — merged from both APIs
+- `loading: boolean`, `error: string | null`
+
+On `selectedMonth` change: parallel fetch of:
+1. `GET /api/v1/recurring?isActive=true&limit=100`
+2. `GET /api/v1/transactions?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD&limit=100`
+
+Merge using `projectRecurringOccurrences` + `transactionsToCalendarEvents` + `groupEventsByDate`.
+
+Layout:
+```
+Header (existing, sticky)
+  Tabs: [Calendário] [Lista]        ← shadcn Tabs
+    [Calendário tab]:
+      MonthNav: < Março 2026 >      ← ChevronLeft/Right + month title
+      CalendarGrid                  ← 7×6 grid
+      DayAgenda                     ← selected day event list
+    [Lista tab]:
+      <RecurringList />             ← imported unchanged from features/recurring
+      <Link href="/recurring/new">Nova</Link>
+BottomNav (existing, fixed)
+```
+
+#### `src/components/features/calendar/calendar-grid.tsx` — Client component
+Props: `gridDates: Date[], currentMonth: Date, eventsByDate: Map<string, CalendarEvent[]>, selectedDay: string | null, onDaySelect: (d: string) => void`
+
+CSS grid: `grid grid-cols-7`. Day headers (Seg–Dom) in first row. 42 cells below via `CalendarDayCell`.
+
+data-testid: `calendar-grid`
+
+#### `src/components/features/calendar/calendar-day-cell.tsx` — Pure render
+Props: `date: Date, isCurrentMonth, isToday, isSelected, events: CalendarEvent[], onSelect`
+
+- Day number with `bg-indigo-600 text-white` when selected, `ring-2 ring-indigo-200` when today
+- Outside-current-month days: `opacity-40`
+- Up to 2 colored dots: INCOME=green, EXPENSE=red, SAVING=blue, TRANSFER=gray
+- Projection dots: `opacity-50`
+- Overflow: "+N" label when > 2 events
+
+data-testid: `calendar-day-{YYYY-MM-DD}`
+
+#### `src/components/features/calendar/day-agenda.tsx` — Client component
+Props: `date: string | null, events: CalendarEvent[]`
+
+- null date: "Selecione um dia para ver os eventos"  (data-testid: `day-agenda-empty`)
+- date with 0 events: "Nenhum evento neste dia"
+- Events: list of `CalendarEventRow`
+
+data-testid: `day-agenda`
+
+#### `src/components/features/calendar/calendar-event-row.tsx` — Pure render
+Props: `event: CalendarEvent`
+
+- Category icon + description + category name + formatted amount
+- `kind === 'recurring_projection'`: dashed border + "Projetado" badge (data-testid: `event-projected-badge`) + amount in muted color
+- `kind === 'actual'`: solid border + amount in green (INCOME) or red (EXPENSE)
+
+#### `src/components/features/calendar/index.ts` — barrel exports
+
+---
+
+### Files to Modify
+
+| File | Change |
+|---|---|
+| `src/components/shared/nav.tsx` | Replace Recurring tab with Calendar tab (href, icon, label, testId) |
+| `src/components/shared/header.tsx` | Update backTo for `/recurring/new` and `/recurring/[id]` → `'/calendar'`; add `'/calendar'` as top-level page title "Agenda" |
+| `src/types/index.ts` | Add `export * from './calendar'` |
+| `tests/e2e/settings.spec.ts` | Change `nav-recurring` → `nav-calendar`, URL check `/recurring` → `/calendar` |
+
+---
+
+### Happy Path Flows
+
+1. **First open**: Tap "Agenda" tab → `/calendar` loads current month → grid renders with dots on days that have recurring transactions projected → today highlighted → no day selected yet
+
+2. **Select a day with events**: Tap a day cell with a dot → `selectedDay` updates → agenda section shows event rows with amounts and categories; projected events show "Projetado" badge; actual transactions show confirmed style
+
+3. **Navigate to next month**: Tap `>` chevron → month advances → `selectedDay` resets → two new API fetches fire → grid re-renders with next month's projections (MONTHLY recurrings appear on their recurring day-of-month)
+
+4. **Switch to Lista tab**: Tap "Lista" tab → existing `RecurringList` component renders unchanged → user can manage recurring transactions as before
+
+---
+
+### Edge Cases
+
+| Scenario | Expected |
+|---|---|
+| Empty month (no events) | Grid renders normally; agenda shows "Nenhum evento" |
+| YEARLY recurring outside current month | 0 projections (cursor starts at nextDueDate, advances 1yr past endDate immediately) |
+| Recurring already executed this month | Only actual transaction appears (kind: actual) on execution date; nextDueDate moved to next month so no double dot |
+| Past month navigation | 0 projections (all nextDueDates are future); actual transactions show as kind: actual |
+| Network error | Error message + retry button; no crash |
+| > 2 events on same day | Cell shows 2 dots + "+N"; agenda shows full list |
+| MONTHLY recurring on day 31 in a 28-day month | `addMonths` from date-fns handles this correctly (moves to last day of month) |
+
+---
+
+### Tests
+
+**Unit** (`src/lib/utils/calendar.test.ts`) — pure functions, no mocks:
+- All projection scenarios listed above
+- `getCalendarGridDates` returns 42 dates
+- `groupEventsByDate` groups correctly
+
+**E2E** (`tests/e2e/calendar.spec.ts`) — follow pattern from `tests/e2e/recurring.spec.ts`:
+- Unauthenticated user is redirected to `/login`
+- Calendar grid renders with 7 day-of-week headers
+- Tapping a day shows agenda section
+- Recurring event appears as projection dot after creating a monthly recurring
+- "Projetado" badge visible on projected event
+- Month navigation updates heading
+- "Lista" sub-tab shows recurring list
+- "Agenda" nav tab is active on `/calendar`
+
+Update `tests/e2e/settings.spec.ts`: change `nav-recurring` testId and `/recurring` URL assertion.
+
+---
+
+### Reuse
+
+- `src/services/recurring/execute.ts:8-22` — `calculateNextDueDate` logic to replicate in `projectRecurringOccurrences`
+- `src/components/features/recurring/recurring-list.tsx` — import unchanged in "Lista" tab
+- `src/components/features/recurring/recurring-card.tsx` — `typeConfig` colors/labels pattern to mirror in `CalendarEventRow`
+- `src/lib/api/response.ts` — `apiError`/`apiResponse` (no new API routes, but pattern reference)
+- shadcn `Tabs`, `Badge` components already installed
+
+---
+
+### Verification
+
+```bash
+docker compose exec app pnpm test           # unit tests for calendar utility
+docker compose exec app pnpm type-check     # 0 errors
+docker compose exec app pnpm lint           # 0 errors
+docker compose exec app pnpm build          # succeeds
+pnpm test:e2e                               # calendar.spec.ts passes
+```
+
+Manual smoke test:
+1. Open app → tap Agenda tab → confirm calendar grid renders
+2. Create a monthly recurring → navigate to calendar → confirm dot on nextDueDate day
+3. Tap that day → confirm event shows "Projetado" badge
+4. Navigate to next month → confirm recurring projects on same day of month
+5. Switch to "Lista" tab → confirm recurring list is usable
+
+---
+
+---
+
+## Phase 2.7 — Scheduled Transactions & Upcoming Dashboard Widget
+
+### Context
+
+The app currently only captures *executed* transactions (past or present). But financial life is about *commitments*: when you hire someone, you've committed to pay them before the money moves. When you know rent is due in 5 days, you need to see that. The app is missing the planning dimension — it's a ledger, not a financial co-pilot.
+
+This phase makes the app forward-looking by:
+1. Allowing transactions to be scheduled (one-time, future-dated, committed but not yet executed)
+2. Adding a "This Week" dashboard widget combining both scheduled one-time and recurring upcoming items
+3. Letting users quickly mark items as executed directly from the dashboard
+
+---
+
+### Key Design Decisions
+
+#### Decision 1: Model for Scheduled One-Time Transactions
+
+**Chosen: Add `TransactionStatus` enum + `status` field to the existing `Transaction` model**
+
+Rationale:
+- A scheduled payment IS a transaction — just not yet confirmed. Same amount, category, type.
+- Unified model means a single query surface, reused components, no duplication.
+- Fully backward-compatible: default `EXECUTED` means all existing transactions are unaffected.
+- Avoids a `ScheduledTransaction` model that would duplicate fields and bifurcate the codebase.
+
+```prisma
+enum TransactionStatus {
+  PENDING   // Committed but not yet executed (future-dated)
+  EXECUTED  // Confirmed as happened (default — all existing transactions)
+}
+
+model Transaction {
+  ...
+  status TransactionStatus @default(EXECUTED)  // ← new field
+}
+```
+
+#### Decision 2: Auto-status Derivation
+
+When creating a transaction:
+- `date` in the future → default `status = PENDING`
+- `date` today or in the past → default `status = EXECUTED`
+
+User can always override (e.g., log a past missed payment as PENDING to confirm later).
+
+#### Decision 3: Dashboard Upcoming Widget Data Sources
+
+Two unified sources for "This Week" (next 7 days):
+1. `Transaction WHERE status = PENDING AND date BETWEEN today AND today+7`
+2. `RecurringTransaction WHERE isActive = true AND nextDueDate BETWEEN today AND today+7`
+
+Today's items (date = today or nextDueDate = today) are visually highlighted as urgent.
+
+#### Decision 4: Early Execution Allowed
+
+Both one-time PENDING transactions and recurring projections can be executed before their due date. Users pay things early — the app should support that. The existing `execute` service for recurring requires `nextDueDate <= today`; we'll relax that for dashboard-triggered execution.
+
+---
+
+### Implementation Plan
+
+#### Step 1: Schema Migration
+**File**: `prisma/schema.prisma`
+
+- Add `TransactionStatus { PENDING EXECUTED }` enum
+- Add `status TransactionStatus @default(EXECUTED)` to `Transaction`
+- Add `@@index([userId, status, date])` for upcoming query performance
+- Run: `docker compose exec app pnpm prisma migrate dev --name add-transaction-status`
+
+#### Step 2: Type Exports
+**File**: `src/types/transaction.ts`
+
+- Export `TransactionStatus` from `@/types` (following existing re-export pattern)
+
+#### Step 3: Validation Updates
+**File**: `src/lib/validations/transaction.ts`
+
+- Remove `max(new Date())` constraint from `date` (allow future dates)
+- Add `status: z.enum(['PENDING', 'EXECUTED']).optional()` to `CreateTransactionSchema` and `UpdateTransactionSchema`
+- Keep minimum date constraint (`2023-01-01`)
+
+#### Step 4: Service Layer
+
+##### 4a. Update `createTransaction`
+**File**: `src/services/transactions/create.ts`
+
+Auto-derive status if not provided:
+```typescript
+const status = data.status ?? (data.date > new Date() ? 'PENDING' : 'EXECUTED');
+```
+
+##### 4b. New `executeTransaction`
+**File**: `src/services/transactions/execute.ts` (new)
+
+```typescript
+// PENDING → EXECUTED
+// Updates status, optionally updates date to today
+executeTransaction(userId, transactionId): Promise<Transaction>
+```
+
+##### 4c. New `getUpcomingItems`
+**File**: `src/services/dashboard/upcoming.ts` (new)
+
+```typescript
+interface UpcomingItem {
+  id: string;
+  kind: 'scheduled' | 'recurring';  // 'scheduled' = PENDING Transaction, 'recurring' = RecurringTransaction projection
+  date: string;           // YYYY-MM-DD — the due date
+  isToday: boolean;       // date === today
+  description: string;
+  amount: Decimal;
+  type: TransactionType;
+  categoryIcon?: string;
+  categoryName?: string;
+  recurringId?: string;   // if kind='recurring', the RecurringTransaction id
+  transactionId?: string; // if kind='scheduled', the Transaction id
+}
+
+getUpcomingItems(userId: string, days?: number): Promise<UpcomingItem[]>
+```
+
+Implementation:
+- Query 1: `prisma.transaction.findMany` WHERE `status=PENDING AND date BETWEEN today AND today+N AND userId`
+- Query 2: `prisma.recurringTransaction.findMany` WHERE `isActive=true AND nextDueDate BETWEEN today AND today+N AND userId`
+- Merge and sort by date ASC
+- Run both queries in parallel (Promise.all)
+
+#### Step 5: API Endpoints
+
+##### 5a. New execute endpoint
+**File**: `src/app/api/v1/transactions/[id]/execute/route.ts` (new)
+
+```
+POST /api/v1/transactions/:id/execute
+→ 200: { data: Transaction }
+→ 404: transaction not found
+→ 400: already executed
+```
+
+##### 5b. Update list endpoint
+**File**: `src/app/api/v1/transactions/route.ts` (update GET handler)
+
+- Add `status` query param to `ListTransactionsQuerySchema`
+
+##### 5c. Upcoming items endpoint
+**File**: `src/app/api/v1/dashboard/upcoming/route.ts` (new)
+
+```
+GET /api/v1/dashboard/upcoming?days=7
+→ 200: { data: UpcomingItem[] }
+```
+
+(Primarily for future mobile client; dashboard RSC calls service directly)
+
+#### Step 6: Dashboard RSC Update
+**File**: `src/app/(frontend)/dashboard/page.tsx`
+
+- Add `getUpcomingItems(userId, 7)` to the `Promise.all` data fetch block
+- Pass `upcomingItems` to new `UpcomingTransactions` component
+- Place widget **between Quick Entry and MetricsOverview** (urgent items deserve top placement)
+
+#### Step 7: `UpcomingTransactions` Component
+**File**: `src/components/features/dashboard/upcoming-transactions.tsx` (new, RSC)
+
+Visual design:
+- Section header: "Esta Semana" with a calendar icon + count badge
+- Empty state: "Nenhum compromisso nos próximos 7 dias" with a checkmark icon
+- Today's items: amber/orange left border + "HOJE" badge
+- Future items: normal card
+- Each row shows: category icon, description, due date (relative: "Hoje", "Amanhã", "Sex, 14/03"), amount (color-coded by type), kind badge ("Recorrente" or nothing for one-time)
+- Execute button (chevron/check icon): calls execute API, refreshes via `router.refresh()`
+- Max 5 items shown, "Ver todos no Calendário →" link
+
+Since the dashboard is RSC but execute requires client interactivity, the execute button should be a small Client Component wrapper (`UpcomingExecuteButton`).
+
+**data-testid attrs**: `upcoming-transactions`, `upcoming-transactions-empty`, `upcoming-item`, `upcoming-item-today`, `upcoming-execute-btn`
+
+#### Step 8: Transaction List & Form Updates
+**File**: `src/app/(frontend)/transactions/page.tsx` (update list)
+**File**: `src/components/features/transactions/transaction-form.tsx` (update form)
+
+- Transaction list: show "PENDENTE" badge on PENDING items
+- Transaction list: add "Executar" action button for PENDING items
+- Transaction form: remove max-date validation from date input
+- Transaction form: add optional status selector (auto-derived, but user can override)
+
+#### Step 9: Tests (TDD)
+
+**Unit tests**:
+- `src/services/transactions/execute.test.ts` — PENDING→EXECUTED, already executed error, not found error
+- `src/services/dashboard/upcoming.test.ts` — combines both sources, sorts by date, today flag
+
+**Integration tests**:
+- `tests/integration/transactions-execute.test.ts` — POST /api/v1/transactions/:id/execute
+- `tests/integration/dashboard-upcoming.test.ts` — GET /api/v1/dashboard/upcoming
+
+**E2E tests**:
+- `tests/e2e/upcoming.spec.ts` — create scheduled transaction → appears on dashboard → execute → disappears from upcoming, appears in recent
+
+---
+
+### Critical Files
+
+| File | Action |
+|------|--------|
+| `prisma/schema.prisma` | Add `TransactionStatus` enum + `status` field to Transaction |
+| `src/types/transaction.ts` | Re-export `TransactionStatus` |
+| `src/lib/validations/transaction.ts` | Remove max-date, add status field |
+| `src/services/transactions/create.ts` | Auto-derive status |
+| `src/services/transactions/execute.ts` | New — PENDING → EXECUTED |
+| `src/services/dashboard/upcoming.ts` | New — unified upcoming items |
+| `src/app/api/v1/transactions/[id]/execute/route.ts` | New endpoint |
+| `src/app/api/v1/dashboard/upcoming/route.ts` | New endpoint |
+| `src/app/(frontend)/dashboard/page.tsx` | Add getUpcomingItems to Promise.all |
+| `src/components/features/dashboard/upcoming-transactions.tsx` | New component |
+
+### Reusable Existing Code
+
+- `src/lib/utils/calendar.ts` → `projectRecurringOccurrences()` concept (port logic to service layer)
+- `src/services/recurring/execute.ts` → reference for how recurring execution advances `nextDueDate`
+- `src/lib/api/response.ts` → `apiResponse()`, `apiError()` (follow existing pattern)
+- `src/lib/auth/session.ts` → `getUserId()` (auth pattern)
+- `src/app/api/v1/recurring/[id]/execute/route.ts` → model for the new execute endpoint
+
+---
+
+### Verification
+
+1. **Schema**: `docker compose exec app pnpm prisma migrate dev` → migration applies cleanly
+2. **Types**: `docker compose exec app pnpm type-check` → 0 errors
+3. **Tests**: `docker compose exec app pnpm test` → all pass (including new test files)
+4. **E2E**:
+   - Create a transaction with tomorrow's date → appears in "Esta Semana" on dashboard with PENDENTE badge
+   - Create a recurring transaction due today → appears in "Esta Semana" with "HOJE" highlight
+   - Click Execute on a dashboard item → item disappears from upcoming, appears in recent transactions
+   - Navigate to Calendar → scheduled item appears on correct date
+5. **Backwards compatibility**: All existing transactions have `status = EXECUTED` via DB default — no data migration needed

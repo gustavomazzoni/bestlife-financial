@@ -2,13 +2,12 @@ import {
   Transaction,
   Category,
   TransactionType,
-  TransactionStatus,
   NecessityLevel,
   ValueAlignment,
 } from '@/generated/prisma/client';
 
 export type { Transaction };
-export { TransactionType, TransactionStatus, NecessityLevel, ValueAlignment };
+export { TransactionType, NecessityLevel, ValueAlignment };
 
 /** Transaction as returned by listTransactions (always includes category relation). */
 export type TransactionRow = Transaction & {

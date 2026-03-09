@@ -60,7 +60,7 @@ export function RecentTransactions({ transactions }: RecentTransactionsProps) {
             <p className="text-xs text-gray-400">
               {t.category?.name ?? 'Sem categoria'} ·{' '}
               {format(t.date, 'dd MMM', { locale: ptBR })}
-              {t.recurringId && (
+              {t.scheduledId && (
                 <RefreshCw className="ml-1 inline h-3 w-3 text-gray-300" />
               )}
             </p>

@@ -7,30 +7,25 @@ import { Button } from '@/components/ui/button';
 import { ExecuteTransactionDialog } from '@/components/features/transactions/execute-transaction-dialog';
 
 interface UpcomingExecuteButtonProps {
-  itemId: string;
-  kind: 'scheduled' | 'recurring';
+  scheduledId: string;
   description: string;
-  transactionId?: string;
-  recurringId?: string;
 }
 
 export function UpcomingExecuteButton({
-  itemId: _itemId,
-  kind,
+  scheduledId,
   description,
-  transactionId,
-  recurringId,
 }: UpcomingExecuteButtonProps) {
   const router = useRouter();
-  const [dialogOpen, setDialogOpen] = React.useState(false);
+  const [open, setOpen] = React.useState(false);
 
   return (
     <>
       <Button
         variant="outline"
         size="sm"
-        onClick={() => setDialogOpen(true)}
+        onClick={() => setOpen(true)}
         data-testid="upcoming-execute-btn"
+        aria-label={`Executar ${description}`}
         className="shrink-0 border-green-600 text-green-700 hover:bg-green-50"
       >
         <CheckCircle className="mr-1.5 h-3.5 w-3.5" />
@@ -38,13 +33,14 @@ export function UpcomingExecuteButton({
       </Button>
 
       <ExecuteTransactionDialog
-        open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
-        kind={kind}
+        open={open}
+        onClose={() => setOpen(false)}
+        scheduledId={scheduledId}
         description={description}
-        transactionId={transactionId}
-        recurringId={recurringId}
-        onSuccess={() => router.refresh()}
+        onSuccess={() => {
+          setOpen(false);
+          router.refresh();
+        }}
       />
     </>
   );

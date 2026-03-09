@@ -49,10 +49,10 @@ async function loginUser(page: Page, email: string) {
 }
 
 /**
- * Create a future-dated transaction directly via API using the authenticated session.
- * Returns the created transaction ID.
+ * Create a ONCE scheduled transaction via API so it appears in the upcoming widget.
+ * Returns the created scheduled transaction ID.
  */
-async function createScheduledTransaction(
+async function createScheduledOnce(
   page: Page,
   description: string,
   amount: number
@@ -74,20 +74,21 @@ async function createScheduledTransaction(
   futureDate.setDate(futureDate.getDate() + 3);
   futureDate.setHours(12, 0, 0, 0);
 
-  const response = await page.request.post('/api/v1/transactions', {
+  const response = await page.request.post('/api/v1/scheduled', {
     data: {
       description,
       amount,
-      date: futureDate.toISOString(),
       type: 'EXPENSE',
       categoryId,
+      frequency: 'ONCE',
+      startDate: futureDate.toISOString(),
     },
   });
 
   if (!response.ok()) {
     const body = await response.text();
     throw new Error(
-      `Failed to create transaction: ${response.status()} — ${body}`
+      `Failed to create scheduled transaction: ${response.status()} — ${body}`
     );
   }
 
@@ -129,7 +130,7 @@ test.describe('Upcoming Transactions Widget — Esta Semana', () => {
     const email = uniqueEmail('upcoming-appear');
     await loginUser(page, email);
 
-    await createScheduledTransaction(page, 'Pagamento Futuro', 750);
+    await createScheduledOnce(page, 'Pagamento Futuro', 750);
 
     // Reload to get fresh RSC data
     await page.reload();
@@ -145,21 +146,6 @@ test.describe('Upcoming Transactions Widget — Esta Semana', () => {
     ).not.toBeVisible();
   });
 
-  test('scheduled transaction shows PENDENTE badge in transaction list', async ({
-    page,
-  }) => {
-    const email = uniqueEmail('upcoming-pending-badge');
-    await loginUser(page, email);
-
-    await createScheduledTransaction(page, 'Conta Agendada', 300);
-
-    await page.goto('/transactions');
-
-    await expect(page.locator('text=PENDENTE').first()).toBeVisible({
-      timeout: 10000,
-    });
-  });
-
   test('executing a scheduled transaction removes it from the widget', async ({
     page,
   }) => {
@@ -167,7 +153,7 @@ test.describe('Upcoming Transactions Widget — Esta Semana', () => {
     const email = uniqueEmail('upcoming-execute');
     await loginUser(page, email);
 
-    await createScheduledTransaction(page, 'Despesa Para Executar', 500);
+    await createScheduledOnce(page, 'Despesa Para Executar', 500);
 
     // Reload dashboard to see the item in the widget
     await page.reload();
@@ -177,11 +163,15 @@ test.describe('Upcoming Transactions Widget — Esta Semana', () => {
       timeout: 10000,
     });
 
-    // Click the execute (checkmark) button on the upcoming item
-    const executeBtn = page
-      .locator('[data-testid="upcoming-execute-btn"]')
-      .first();
-    await executeBtn.click();
+    // Click the execute button — date picker dialog opens
+    await page.locator('[data-testid="upcoming-execute-btn"]').first().click();
+    await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5000 });
+
+    // Confirm with default date (today)
+    await page
+      .getByRole('dialog')
+      .getByRole('button', { name: 'Confirmar' })
+      .click();
 
     // After router.refresh(), the RSC re-renders — item should disappear
     await expect(widget).not.toContainText('Despesa Para Executar', {
@@ -196,7 +186,7 @@ test.describe('Upcoming Transactions Widget — Esta Semana', () => {
     const email = uniqueEmail('upcoming-in-recent');
     await loginUser(page, email);
 
-    await createScheduledTransaction(page, 'Transação Executada', 999);
+    await createScheduledOnce(page, 'Transação Executada', 999);
 
     await page.reload();
 
@@ -205,8 +195,13 @@ test.describe('Upcoming Transactions Widget — Esta Semana', () => {
       page.locator('[data-testid="upcoming-transactions"]')
     ).toContainText('Transação Executada', { timeout: 10000 });
 
-    // Execute it from the widget
+    // Execute it from the widget — dialog opens, confirm with default date
     await page.locator('[data-testid="upcoming-execute-btn"]').first().click();
+    await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5000 });
+    await page
+      .getByRole('dialog')
+      .getByRole('button', { name: 'Confirmar' })
+      .click();
 
     // Now the executed transaction should appear in the recent transactions section
     const recentSection = page.locator('[data-testid="recent-transactions"]');
@@ -223,7 +218,7 @@ test.describe('Upcoming Transactions Widget — Esta Semana', () => {
     const email = uniqueEmail('upcoming-structure');
     await loginUser(page, email);
 
-    await createScheduledTransaction(page, 'Aluguel Agendado', 2000);
+    await createScheduledOnce(page, 'Aluguel Agendado', 2000);
     await page.reload();
 
     const item = page
@@ -234,33 +229,5 @@ test.describe('Upcoming Transactions Widget — Esta Semana', () => {
     await expect(item).toBeVisible({ timeout: 10000 });
     await expect(item).toContainText('Aluguel Agendado');
     await expect(item).toContainText('R$ 2.000,00');
-  });
-
-  test('executing via transaction list removes PENDENTE badge', async ({
-    page,
-  }) => {
-    test.slow();
-    const email = uniqueEmail('upcoming-list-execute');
-    await loginUser(page, email);
-
-    await createScheduledTransaction(page, 'Conta A Executar', 150);
-
-    await page.goto('/transactions');
-
-    // PENDENTE badge should appear
-    await expect(page.locator('text=PENDENTE').first()).toBeVisible({
-      timeout: 10000,
-    });
-
-    // Click the execute (CheckCircle) button on the card
-    await page
-      .locator('button[aria-label="Executar transação"]')
-      .first()
-      .click();
-
-    // PENDENTE badge should disappear after execution
-    await expect(page.locator('text=PENDENTE')).not.toBeVisible({
-      timeout: 10000,
-    });
   });
 });
