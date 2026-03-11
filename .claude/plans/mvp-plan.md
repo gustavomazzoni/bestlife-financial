@@ -1343,3 +1343,8 @@ Remove `status` from `ListTransactionsQuerySchema`.
    - Dashboard upcoming widget shows both kinds in "Esta Semana"
    - Financial calculations (freedom metrics, spending breakdown) unchanged — no PENDING pollution
 5. `pnpm test:e2e` → E2E suite passes including upcoming.spec.ts
+
+---
+
+---
+

@@ -6,7 +6,6 @@ import { getSpendingBreakdown } from '@/services/calculations/spending-analysis'
 import { getMonthlySummary } from '@/services/calculations/monthly-summary';
 import { listTransactions } from '@/services/transactions/list';
 import { getUpcomingItems } from '@/services/dashboard/upcoming';
-import { TransactionQuickEntry } from '@/components/features/transactions';
 import { MetricsOverview } from '@/components/features/dashboard/metrics-overview';
 import { SpendingChart } from '@/components/features/dashboard/spending-chart';
 import { RecentTransactions } from '@/components/features/dashboard/recent-transactions';
@@ -43,15 +42,6 @@ export default async function DashboardPage() {
           <p className="mt-1 text-sm text-gray-500">
             Sua jornada para a liberdade financeira.
           </p>
-        </div>
-
-        {/* Transaction Quick Entry */}
-        <div>
-          <p className="mb-2 text-sm text-gray-500">
-            Digite em linguagem natural, ex: &ldquo;Comprei café e pão, R$
-            25&rdquo;
-          </p>
-          <TransactionQuickEntry className="max-w-2xl" />
         </div>
 
         {/* Upcoming Transactions — Esta Semana */}

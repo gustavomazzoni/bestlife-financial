@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Home, DollarSign, Plus, CalendarDays, Settings } from 'lucide-react';
 import {
   Dialog,
@@ -51,6 +51,7 @@ function isActive(href: string, pathname: string): boolean {
 
 export function BottomNav() {
   const pathname = usePathname();
+  const router = useRouter();
   const [quickEntryOpen, setQuickEntryOpen] = React.useState(false);
 
   if (HIDDEN_ROUTES.some(r => pathname.startsWith(r))) return null;
@@ -124,6 +125,8 @@ export function BottomNav() {
           </DialogHeader>
           <TransactionQuickEntry
             onTransactionSaved={() => {
+              router.refresh();
+              window.dispatchEvent(new Event('transaction-saved'));
               setTimeout(() => setQuickEntryOpen(false), 1500);
             }}
           />
