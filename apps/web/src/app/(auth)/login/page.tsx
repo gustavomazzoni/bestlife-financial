@@ -38,6 +38,9 @@ export default function LoginPage() {
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(userAuthSchema),
+    // Prefilled when opened from the mobile app (?email=...), which
+    // collects the address natively before handing off to this page.
+    defaultValues: { email: searchParams?.get('email') || '' },
   });
 
   // Login via Email (Magic Link)

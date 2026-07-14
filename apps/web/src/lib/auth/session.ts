@@ -1,19 +1,39 @@
+import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { auth } from './config';
+import { decodeMobileToken } from './mobile-token';
 import { UnauthorizedError } from '../api/response';
+
+/**
+ * Mobile clients have no cookie jar shared with the API's domain, so they
+ * authenticate via `Authorization: Bearer <mobile token>` instead of the
+ * session cookie. Checked only when there's no cookie session, so this
+ * never runs on the (cookie-based) web request path.
+ */
+async function getBearerUserId(): Promise<string | null> {
+  const hdrs = await headers();
+  const authHeader = hdrs.get('authorization');
+  if (!authHeader?.startsWith('Bearer ')) return null;
+
+  const token = authHeader.slice('Bearer '.length).trim();
+  if (!token) return null;
+
+  const payload = await decodeMobileToken(token);
+  return payload?.sub ?? null;
+}
 
 /**
  * Server-side function to require authentication
  * Throws error if user is not authenticated
  */
-export async function requireAuth() {
+export async function requireAuth(): Promise<{ user: { id: string } }> {
   const session = await auth();
+  if (session?.user?.id) return session;
 
-  if (!session?.user?.id) {
-    throw new UnauthorizedError();
-  }
+  const bearerUserId = await getBearerUserId();
+  if (bearerUserId) return { user: { id: bearerUserId } };
 
-  return session;
+  throw new UnauthorizedError();
 }
 
 /**
@@ -22,12 +42,12 @@ export async function requireAuth() {
  */
 export async function getUserId(): Promise<string> {
   const session = await auth();
+  if (session?.user?.id) return session.user.id;
 
-  if (!session?.user?.id) {
-    throw new UnauthorizedError();
-  }
+  const bearerUserId = await getBearerUserId();
+  if (bearerUserId) return bearerUserId;
 
-  return session.user.id;
+  throw new UnauthorizedError();
 }
 
 /**
