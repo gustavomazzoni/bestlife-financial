@@ -26,54 +26,57 @@ services:
   app:
     build:
       context: .
-      dockerfile: Dockerfile.dev
+      dockerfile: apps/web/Dockerfile.dev
       target: development
     container_name: lifeos-app-dev
     restart: unless-stopped
-    environment:
-      - NODE_ENV=${NODE_ENV}
-      - DATABASE_URL=${DATABASE_URL}
-      - NEXTAUTH_URL=${NEXTAUTH_URL}
-      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
-      - RESEND_API_KEY=${RESEND_API_KEY}
-      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+    # Forwards every var from the root .env into the container's process.env
+    # directly, so Next.js doesn't need to locate its own .env file inside
+    # apps/web when running under Docker (cwd there is apps/web, not root).
+    env_file:
+      - .env
     ports:
       - '3000:3000'
     volumes:
-      # Mount source code for hot reload
+      # Mount the whole workspace for hot reload (apps/web depends on
+      # packages/shared, which must also be visible inside the container)
       - .:/app
       - /app/node_modules
-      - /app/.next
+      - /app/apps/web/node_modules
+      - /app/apps/web/.next
+      - /app/packages/shared/node_modules
       - pnpm_store:/app/.pnpm-store
     depends_on:
       postgres:
         condition: service_healthy
     networks:
       - lifeos-network
-    command: pnpm dev
+    command: pnpm --filter @lifeos/web dev
 
   # Prisma Studio (Database GUI)
   prisma-studio:
     build:
       context: .
-      dockerfile: Dockerfile.dev
+      dockerfile: apps/web/Dockerfile.dev
       target: development
     container_name: lifeos-prisma-studio
     restart: unless-stopped
-    environment:
-      - DATABASE_URL=${DATABASE_URL}
+    env_file:
+      - .env
     ports:
       - '5555:5555'
     volumes:
       - .:/app
       - /app/node_modules
+      - /app/apps/web/node_modules
+      - /app/packages/shared/node_modules
       - pnpm_store:/app/.pnpm-store
     depends_on:
       postgres:
         condition: service_healthy
     networks:
       - lifeos-network
-    command: pnpm prisma studio --browser none --port 5555
+    command: pnpm --filter @lifeos/web prisma:studio --browser none --port 5555
 
   # Redis (for future use: caching, sessions, queues)
   redis:
@@ -106,9 +109,9 @@ services:
   playwright:
     build:
       context: .
-      dockerfile: Dockerfile.e2e
+      dockerfile: apps/web/Dockerfile.e2e
     container_name: lifeos-playwright
-    working_dir: /app
+    working_dir: /app/apps/web
     environment:
       - CI=true
       - PLAYWRIGHT_HTML_HOST=0.0.0.0
@@ -118,6 +121,8 @@ services:
     volumes:
       - .:/app
       - /app/node_modules
+      - /app/apps/web/node_modules
+      - /app/packages/shared/node_modules
       - pnpm_store:/app/.pnpm-store
     depends_on:
       - app

@@ -4,7 +4,7 @@ import {
   NecessityLevel,
   ValueAlignment,
   ScheduleFrequency,
-} from '@/types';
+} from '../enums';
 
 const commonFields = {
   amount: z.coerce.number().positive('Amount must be positive'),

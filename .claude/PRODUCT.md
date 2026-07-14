@@ -5,14 +5,27 @@
 **Freedom > Money.** The app helps users discover their "Freedom Number" — how much money is enough to cover their ideal lifestyle without having to work. By making smart, conscious, and aligned financial choices, users can create the freedom to live their Best Life.
 
 ### The Problem
-Society teaches us to pursue success based on money, material possessions, and status. We sacrifice health, passions, and time with loved ones, ending up stuck in a life we don't want.
+Most people are stuck in the rat race, in a meaningless life, in a pursuit of a life they don't truly want or care about, because they are making choices everyday towards what society tells them to pursue instead of what truly matter to them.
+
+We are conditioned by society to pursue success based on money, status, material possessions, comfort/luxury. We shape our lives towards it, sacrificing our health and wellness, time with loved ones and building new meaningful relationships, time doing what we love, time pursuing our dreams, time creating, exploring, having new experiencies and adventures and creating new meaningful memories — time pursuing what truly matters to us (what I believe is the true wealth). As a result, we end up stuck in a meaningless life, we don't want.
 
 ### Core Methodology
 1. **Define what truly matters** — Core values and life goals
 2. **Design ideal lifestyle** — Cost of living aligned with values
 3. **Discover Freedom Number** — Calculate how much is enough
-4. **Understand current reality** — Analyze actual spending vs. ideal
-5. **Make conscious choices** — Eliminate non-essential spending
+4. **Highlight the gap** — Analyze actual spending vs. ideal (in case accounts connected or financial statements uploaded) and point out misaligned choices
+5. **Value-aligned spending** - Analyze every logged transaction
+5. **Make conscious choices** — Eliminate non-essential (non-important) spending
+6. **Track progress** — Monitor runway gained, FI progress, value-aligned spending
+
+### Onboarding Flow
+1. **Define what truly matters** — Help user reflect and get clarity on their core-values
+2. **Design ideal lifestyle** — Help user define their ideal life aligned with values and set cost of living
+3. **Discover Freedom Number** — Calculate how much is enough
+4. 
+4. **Highlight the gap** — Analyze actual spending vs. ideal (in case accounts connected or financial statements uploaded) and point out misaligned choices
+5. **Value-aligned spending** - Analyze every logged transaction
+5. **Make conscious choices** — Eliminate non-essential (non-important) spending
 6. **Track progress** — Monitor runway gained, FI progress, value-aligned spending
 
 ---
@@ -25,7 +38,7 @@ Society teaches us to pursue success based on money, material possessions, and s
 - User can add custom values/goals
 - Selections drive the rest of the journey
 
-### Step 2: Defining the Ideal Life (Lifestyle Design)
+### Step 2: Defining the Ideal/Rich Life (Lifestyle Design)
 - App suggests lifestyle categories aligned with selected values
 - Auto-includes essential categories (housing, food) if not selected
 - User arranges and customizes lifestyle buckets (categories + values)
@@ -91,15 +104,14 @@ Society teaches us to pursue success based on money, material possessions, and s
   - Monthly runway gained/lost
   - FI Progress %
   - Value-aligned spending %
-  - Savings rate %
 
 ---
 
 ## Core User Outcomes
 
 Users succeed when they:
-1. **Reduce spending** by cutting non-important expenses
-2. **Increase value-aligned spending** percentage
+1. **Increase value-aligned spending** percentage
+2. **Reduce spending** by cutting non-important expenses
 3. **Increase freedom bucket** (investments/savings toward FI)
 
 ## Primary Dashboard Metrics (Priority Order)

@@ -1,8 +1,8 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# dependencies
-/node_modules
-/.pnp
+# dependencies (root + every workspace package)
+node_modules
+.pnp
 .pnp.*
 .yarn/*
 !.yarn/patches
@@ -11,16 +11,25 @@
 !.yarn/versions
 
 # testing
-/coverage
-/playwright-report
-/test-results
+coverage
+playwright-report
+test-results
 
 # next.js
-/.next/
-/out/
+.next/
+out/
 
 # production
-/build
+build
+
+# expo / react native (apps/mobile)
+.expo/
+.expo-shared/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
 
 # misc
 .DS_Store
@@ -35,6 +44,7 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env
 .env.production
+apps/mobile/.env
 
 # vercel
 .vercel
@@ -47,4 +57,4 @@ next-env.d.ts
 *.code-workspace
 
 # Prisma generated folder
-/src/generated
+apps/web/src/generated

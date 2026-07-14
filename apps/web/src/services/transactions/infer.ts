@@ -409,6 +409,7 @@ const CATEGORY_KEYWORDS: CategoryKeywords[] = [
     keywords: [
       // Portuguese
       'dividendo',
+      'rendimento',
       'aluguel recebido',
       'renda passiva',
       'royalties',
@@ -418,6 +419,8 @@ const CATEGORY_KEYWORDS: CategoryKeywords[] = [
       'passive',
       'royalty',
       'interest',
+      'rent received',
+      'yield',
     ],
   },
   {

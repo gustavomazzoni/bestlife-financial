@@ -1,8 +1,9 @@
 # Use a Node.js base image with Playwright
+# Build context is the monorepo ROOT (see docker-compose.yml).
 FROM mcr.microsoft.com/playwright:v1.57.0-noble
 
 # Install pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@10.26.0 --activate
 
 # Set working directory
 WORKDIR /app
@@ -10,8 +11,10 @@ WORKDIR /app
 # Configure pnpm to use local store
 RUN pnpm config set store-dir /app/.pnpm-store
 
-# Copy package files
-COPY package.json pnpm-lock.yaml* ./
+# Copy workspace manifests first for better layer caching
+COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml ./
+COPY apps/web/package.json ./apps/web/package.json
+COPY packages/shared/package.json ./packages/shared/package.json
 
 # Install dependencies (including dev dependencies) (Use shamefully-hoist to avoid store location issues)
 RUN pnpm install --frozen-lockfile --shamefully-hoist
@@ -20,10 +23,10 @@ RUN pnpm install --frozen-lockfile --shamefully-hoist
 COPY . .
 
 # Install Playwright browsers (chromium, firefox, webkit)
-RUN pnpm playwright install --with-deps
+RUN pnpm --filter @lifeos/web exec playwright install --with-deps
 
 # Expose ports
 EXPOSE 9323
 
 # Default command to run tests
-# CMD ["pnpm", "playwright", "test"]
+# CMD ["pnpm", "--filter", "@lifeos/web", "test:e2e"]

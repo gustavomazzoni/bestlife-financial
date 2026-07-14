@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { TransactionType, NecessityLevel, ValueAlignment } from '@/types';
+import { TransactionType, NecessityLevel, ValueAlignment } from '../enums';
 
 const minimumDate = new Date('2023-01-01T00:00:00Z');
 export const CreateTransactionSchema = z.object({

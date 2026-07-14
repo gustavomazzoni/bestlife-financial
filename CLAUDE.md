@@ -90,45 +90,50 @@
 
 ## Project Structure
 
+**This is a pnpm monorepo** (`pnpm-workspace.yaml`: `apps/*`, `packages/*`).
+The MVP is mobile-first; `apps/web`'s existing pages are frozen (no new web
+development) while `apps/mobile` is built out. `apps/web` remains the one
+backend (`/api/v1/*` + Prisma + service layer) that both clients consume.
+
 ```
-src/
-├── app/
-│   ├── api/v1/
-│   │   ├── transactions/        # route.ts, [id]/route.ts, import/, summary/
-│   │   ├── recurring/           # route.ts, [id]/route.ts, [id]/execute/
-│   │   ├── calculations/        # lifestyle-cost/, freedom-metrics/, fi-projection/, purchase-check/
-│   │   ├── categories/          # route.ts, [id]/route.ts
-│   │   ├── user/                # profile/, preferences/, stats/
-│   │   └── reports/             # weekly/, monthly/
-│   ├── (frontend)/              # Web routes (RSC)
-│   └── (auth)/                  # login/, signup/
-├── services/                    # Business Logic (SHARED)
-│   ├── transactions/            # create, get, list, update, delete, import
-│   ├── calculations/            # lifestyle-cost, freedom-metrics, purchase-analysis
-│   ├── recurring/               # create, execute
-│   ├── user/                    # profile, preferences
-│   └── notifications/           # email, push
-├── lib/
-│   ├── db.ts                    # Prisma client singleton
-│   ├── validations/             # Zod schemas (transaction, user, recurring)
-│   ├── utils/                   # currency, date, calculations helpers
-│   ├── auth/                    # config.ts, session.ts
-│   └── api/                     # response.ts, error.ts
-├── components/
-│   ├── ui/                      # shadcn/ui base components
-│   ├── features/                # transactions/, dashboard/, lifestyle/
-│   └── shared/                  # header, nav, footer
-├── types/                       # TypeScript types (SHARED)
-│   ├── transaction.ts
-│   ├── recurring.ts
-│   ├── user.ts
-│   ├── calculations.ts
-│   └── index.ts
-├── hooks/                       # React hooks (web-only)
-└── prisma/
-    ├── schema.prisma
-    ├── seed.ts
-    └── migrations/
+repo root
+├── apps/
+│   ├── web/                     # Next.js app — REST API + (frozen) web pages
+│   │   ├── src/
+│   │   │   ├── app/
+│   │   │   │   ├── api/v1/
+│   │   │   │   │   ├── transactions/    # route.ts, [id]/route.ts, import/, summary/, infer/
+│   │   │   │   │   ├── scheduled/       # route.ts, [id]/route.ts, [id]/execute/
+│   │   │   │   │   ├── calculations/    # freedom-metrics/, ...
+│   │   │   │   │   ├── categories/      # route.ts, [id]/route.ts
+│   │   │   │   │   └── user/            # profile/, preferences/
+│   │   │   │   ├── (frontend)/          # Web routes (RSC) — frozen
+│   │   │   │   └── (auth)/              # login/, verify-request/
+│   │   │   ├── services/                # Business Logic (SHARED backend)
+│   │   │   │   ├── transactions/        # create, get, list, update, delete, infer
+│   │   │   │   ├── calculations/        # freedom-metrics, spending-analysis, monthly-summary
+│   │   │   │   ├── scheduled/           # create, get, list, update, delete, execute
+│   │   │   │   ├── categories/          # list
+│   │   │   │   ├── user/                # profile
+│   │   │   │   └── dashboard/           # upcoming
+│   │   │   ├── lib/
+│   │   │   │   ├── db.ts                # Prisma client singleton
+│   │   │   │   ├── validations/         # thin re-exports of @lifeos/shared schemas
+│   │   │   │   ├── auth/                # config.ts, session.ts
+│   │   │   │   └── api/                 # response.ts, error.ts
+│   │   │   ├── components/              # web-only (frozen)
+│   │   │   ├── types/                   # TypeScript types wrapping Prisma models (SHARED within apps/web)
+│   │   │   └── hooks/                   # React hooks (web-only)
+│   │   ├── prisma/                      # schema.prisma, seed.ts, migrations/
+│   │   └── tests/
+│   └── mobile/                  # Expo (React Native) app — the MVP surface
+├── packages/
+│   └── shared/                  # Zod schemas + plain TS enums, imported by
+│                                   both apps/web (via re-export shims) and
+│                                   apps/mobile. No Prisma dependency.
+└── docker-compose.yml           # orchestrates postgres/app/mailpit/etc.
+                                    (build context = repo root; see
+                                    apps/web/Dockerfile.dev)
 ```
 
 ---
@@ -612,6 +617,11 @@ ENABLE_EMAIL_NOTIFICATIONS="true"
 ### Running Commands (Docker)
 
 All commands must be executed **inside the Docker containers**, not on the host machine.
+`docker compose exec app <cmd>` runs with cwd `/app` (the monorepo root
+inside the container) — the root `package.json` scripts below delegate to
+`apps/web` via `pnpm --filter @lifeos/web`, so use them rather than raw
+`pnpm prisma`/`next`/etc. commands, which would look for `apps/web`-only
+config (e.g. `prisma/schema.prisma`) relative to the wrong directory.
 
 | Task                     | Command                                                                |
 | ------------------------ | ---------------------------------------------------------------------- |
@@ -620,9 +630,13 @@ All commands must be executed **inside the Docker containers**, not on the host 
 | Type check               | `docker compose exec app pnpm type-check`                              |
 | Lint                     | `docker compose exec app pnpm lint`                                    |
 | Build                    | `docker compose exec app pnpm build`                                   |
-| Prisma migration         | `docker compose exec app pnpm prisma migrate dev`                      |
+| Prisma migration         | `docker compose exec app pnpm prisma:migrate`                          |
 | E2E tests (local/host)   | `pnpm test:e2e`                                                        |
 | E2E tests (Docker/CI)    | `docker compose --profile testing run playwright pnpm test:e2e:docker` |
+
+Working directly inside `apps/web` (e.g. `docker compose exec app sh -c
+"cd apps/web && pnpm prisma migrate dev"`) also works and is equivalent to
+the filtered root scripts above.
 
 **Email in dev**: All emails (e.g. magic links) are captured by Mailpit at `http://localhost:8025`. E2E tests can extract magic link URLs from the Mailpit HTTP API (`GET localhost:8025/api/v1/messages`) without needing real SMTP.
 

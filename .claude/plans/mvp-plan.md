@@ -1348,3 +1348,144 @@ Remove `status` from `ListTransactionsQuerySchema`.
 
 ---
 
+
+it must be another phase of the plan as it is a big change and not only related to the inference plan.
+
+So, the thing is that the big difference between this App I'm building from other personal financial app is that it's main goal/purpose is to help users create freedom to live their best life (rich in what truly matter to them), by making intentional, minimalist, value-aligned financial choices towards freedom.
+
+I'm using my own expertise on this as I have built the life I want and achieved financial freedom.
+People come to me asking how they can too have more freedom to spend their time with what matter to them: their family, friends, their passions, dreams, travel.
+
+People think they always need more money, but what they usually need is to make intentional, wise choices toward what truly matter to them (most of the time they don't really know, and defaults to what society influece us -> consume).
+
+So, my Philosophy is:
+- freedom > money: society teaches us to chase money for a successful life based on material possessions, social status, comfort and external validation. Instead, I believe we should chase freedom to live life we truly want, on our own terms, spending our time on what matters to us, our dreams, passions, health and time with loved ones. The App encourage user to redefine what a rich life means and help them make choices toward it. Money is only one tool for freedom.
+
+- experiences > things: best things in life are free, what we really need is time to spend on it. this is a minimalistic approach where we remove or reduce what's not important or essential, to have more space/time/energy to what really matter
+
+So, I need your help translating this into the App. We can explore the The Three-Tier Framework:
+- Essentials (Needs/Non-negotiables): Expenses required for survival, safety, and basic functioning. These are the first to be paid.
+Examples: Rent/Mortgage, basic groceries, electricity/water, insurance, essential transportation (e.g., gas for work), minimum debt payments.
+- Important (Value-Based): not survival, these are essential to achieve the life we truly want and match our core values (truly matter to us)
+Examples: freedom (emergency savings, investments in general), experiences, health, growth, meaningful relationship (family, friends), our passions, our dreams
+- Desire/Wanting (Discretionary/Lifestyle): Items that can enhance quality of life but are optional and can be cut or delayed if necessary.
+Examples: Dining out, subscriptions (Netflix), hobbies, vacations, designer clothing, upgraded gadgets.
+
+How to Distinguish Between "Essential", "Important" and "Desire":
+The line between "Important" and "Desire" is often blurry. Use these questions to differentiate:
+Will this cause harm if I don't buy it? If yes, it is Essential.
+Is this necessary to maintain my health or income? If yes, it is Important (e.g., a gym membership for back pain, or a laptop for a freelance job).
+Is this to make my life more fun or comfortable? If yes, it is a Desire.
+Can I cut this without changing my quality of life drastically? If yes, it is a Desire.
+
+Summary of Differences:
+Necessity Level |	Priority |	Examples
+Essentials  High/Immediate	Rent, Utilities, Food
+Important	High/Future	Retirement, Savings, Health
+Desires	Medium/Low	Streaming, Dining Out, Upgrades
+
+Note: Needs vs. wants can be subjective; a car is an essential need for someone in the suburbs but a want for someone in a city with public transit.
+
+Please, act as my co-founder and discuss it with me. Ask for more context if needed. You have to really understand the problem, the solution and how I want to deliver it via the App. Think deeply.
+
+
+
+
+1. Is "Important" truly universal, or is it personal to each user?
+
+  You gave a great example: a gym membership is ESSENTIAL for someone with back pain, IMPORTANT (value-aligned) for a
+   fitness-focused person, and a DESIRE for someone who doesn't care. That means the tier can't be statically
+  inferred from the category — it depends on who the user is and what they value.
+
+  Does that mean users should define their personal values during onboarding ("I care about: health, experiences,
+  freedom, family") and the App uses those to help tag or question their choices? Or do you want the three tiers to
+  have fixed, universal definitions that users apply manually?
+
+  2. Can we collapse the two dimensions into one?
+
+  Your three tiers (Essential / Important / Desire) already encode both "survival necessity" AND "value alignment."
+  An expense that is "Important" is by definition value-aligned. A "Desire" might or might not be — it could be a
+  Netflix subscription (low-value, drifting toward social defaults) or a concert ticket (intentional experience
+  aligned to your values).
+
+  So is the real signal just: Essential → Important → Desire (3 tiers, one dimension)? Or do you want a separate "is
+  this aligned to my values?" flag?
+
+  3. What about Income and Savings?
+
+  In the current model, salary and investments get NecessityLevel = IMPORTANT. That doesn't make sense
+  philosophically — income isn't a "need." Should necessity/tier classification only apply to EXPENSE transactions?
+  And for SAVING, the classification is implicit: all savings are inherently "freedom-building."
+
+  4. What does the App DO with this classification?
+
+  This is the strategic question. Right now the classification feeds into:
+  - "Value-Aligned Spending %" metric on dashboard
+  - Color coding on transaction cards
+  - Future: spending insights
+
+  If we redesign the tiers, what new insights or questions should the App help users answer? For example:
+  - "You spent 45% on Desires this month — here's what you could redirect to freedom"
+  - "Your Essential costs are R$4.200/month — that's your minimum freedom number"
+  - "You tagged 0 transactions as Important (value-aligned) this month — are you living intentionally?"
+
+  What are the key moments of insight you want users to have?
+
+
+----
+
+I will answer your questions, but first I want to say that I really liked your insights. I think we should go on that direction with the app.
+I agree that each user should reflect and define their own "Rich Life" (base on that they can find their Freedom Number), with the app's help. Instead of having the Successful life society teaches us to pursue as the life goal, each one of us (each user) should redefine what a successful life means, what a rich life means for themselves.
+
+I think we should follow the Intentional Spending / Mindful Spending / Value-based budgeting strategies as they are very related with our goals with the app. Can you make a deep search on web on those concepts/strategies and "How to Align Your Financial Habits with Your Core Values"? Bring to discussion with me and how we could implement it
+
+Now answering your questions:
+
+1. The primary user moment: When someone opens the app at 9pm after dinner, what do you want them to feel and decide? Is it: "I'm on track, this is working"? Or "Hmm, I should think about this choice differently"? Or "I feel motivated about my freedom path"?
+= I want them to feel motivated about being on track towards their Rich Life ("I'm on track, this is working") and their freedom path ("I feel motivated about my freedom path"). I want them to see that they are making intentional and aligned choices towards their best life, rich in what truly matters to them, instead of others (society) expectation. The App will challenge the status-quo, by challenging users to pursue what's truly important to them (thei Rich Life) instead of social standard.
+
+2. How much do you want the app to challenge users? Your philosophy is fairly direct ("most people are living on autopilot, following social defaults"). The app can be a gentle mirror or a clear-eyed coach. Where on that spectrum?
+= clear-eyed coach. the app should highlight inconsistent choices that are not aligned with their rich life.
+
+3. The social/relational dimension: You mentioned family, friends, loved ones as part of what freedom enables. Do you want the app to acknowledge that some "expenses" are actually investments in relationships — without making users feel guilty about them?
+= yes. just like a gym subscription can be important to achieve a health core value. Since financial freedom is one of the goals for every user (a general core value for every user), the App can challenge user to think about ways to achieve a healthy life spending less.
+
+4. Your own story as product signal: You mentioned you've achieved financial freedom yourself. What were the actual moments of insight that changed your trajectory? Those moments are probably the experiences you want to engineer for users.
+= the moments when I saw myself in a "successful life" (by society standard), with my own house, car, good job, status, but I was unhappy, living a life I didn't want, doing what I didn't care about, because I was following society path and definition of a successful life based on money, that sacrificed my passions, dreams, health and time with my loved ones —– to a point I didn't know what made me happy, my dreams, passions and so on.
+I, then, rebooted my life to pursue what is truly important to me and would make me happy (even though I didn't know at the time). Years later, I had no house, car or a secure job. But I was living my dream, doing what I love everyday, exploring and experiencing the world, living in different countries with my wife as a digital nomad. I didn't have the society definition of a successful life, but I felt more successful and happy than ever before because I had freedom to do what I want, where I want, when I want and with whom I want.
+
+
+
+
+--
+
+No, that's not what I have in vision. Forget about the current Data Model of the app. Let's think and design it from the scratch.
+You haven't explored much the Value-based budgeting
+
+
+
+
+
+
+
+
+---
+
+- PRIOE805 Ex:80,5 15/05/2026: R$ 2,54
+
+- PRIOE825 Ex:82,5 15/05/2026: R$ 2,18
+- PRIOE835 Ex:83,5 15/05/2026: R$ 1,91
+- PRIOE845 Ex:84,5 15/05/2026: R$ 1,81
+- PRIOE875 Ex:87,5 15/05/2026: R$ 1,38
+- PRIOE107 Ex:107 15/05/2026: R$ 0,19
+
+
+7.920
+3.960
+---
+
+
+let's be pragmatic as I'm stuck with this decision for too long. In the future we rethink over this subject/feature. For now, let's build a simple version of value-based spending and budgeting. Users have to define what is Essential, Important and Desire, by breaking down transaction categories granularly. The App will then infer the category from each transaction and know whether it was an Essential, Important or Desired transaction.
+For example: One of my core values is "New Experience & Adventure", so I can define "New Experience & Adventure" as a category inside "Important" and then define "Travel" inside "New Experience & Adventure" ("Important" --> "New Experience & Adventure" --> "Travel"). Another example is "Health & Wellness": "Important" --> "Health & Wellness" --> "Gym". An example for Essential: "Essential" --> "Food" --> "Groceries". "Essential" --> "Housing" --> "Rent" 
+
+---
