@@ -11,7 +11,16 @@ import { UnauthorizedError } from '../api/response';
  * never runs on the (cookie-based) web request path.
  */
 async function getBearerUserId(): Promise<string | null> {
-  const hdrs = await headers();
+  let hdrs: Awaited<ReturnType<typeof headers>>;
+  try {
+    hdrs = await headers();
+  } catch {
+    // headers() throws when called outside a real Next.js request context
+    // (e.g. a test invoking a route handler directly) — no request means
+    // no bearer token, not an error.
+    return null;
+  }
+
   const authHeader = hdrs.get('authorization');
   if (!authHeader?.startsWith('Bearer ')) return null;
 

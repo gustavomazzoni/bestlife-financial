@@ -5,3 +5,7 @@ export * from './infer';
 export * from './transaction';
 export * from './scheduled';
 export * from './calendar';
+export * from './financial-account';
+export * from './investment';
+export * from './debt';
+export * from './category-budget';

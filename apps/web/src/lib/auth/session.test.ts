@@ -100,6 +100,18 @@ describe('Auth Helpers', () => {
       expect(mockedDecodeMobileToken).not.toHaveBeenCalled();
     });
 
+    it('getUserId throws Unauthorized (not a generic error) when headers() throws', async () => {
+      // Mirrors calling a route handler directly outside a real Next.js
+      // request context (e.g. an integration test) — no request means no
+      // bearer token, not a crash that'd surface as a 400/500.
+      mockedAuth.mockResolvedValue(null);
+      mockedHeaders.mockRejectedValue(
+        new Error('`headers` was called outside a request scope.')
+      );
+
+      await expect(getUserId()).rejects.toThrow('Unauthorized');
+    });
+
     it('prefers the cookie session over a bearer token when both are present', async () => {
       mockedAuth.mockResolvedValue({ user: { id: 'cookie_user' } });
       mockedHeaders.mockResolvedValue(

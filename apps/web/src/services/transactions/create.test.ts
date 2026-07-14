@@ -42,6 +42,7 @@ describe('createTransaction', () => {
     necessityLevel: null,
     valueAlignment: null,
     scheduledId: null,
+    accountId: null,
     notes: null,
     createdAt: new Date(),
     updatedAt: new Date(),
