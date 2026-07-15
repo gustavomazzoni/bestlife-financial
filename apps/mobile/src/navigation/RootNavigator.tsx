@@ -9,7 +9,7 @@ import { HomeScreen } from '../screens/HomeScreen';
 import { CalendarScreen } from '../screens/CalendarScreen';
 import { ChatScreen } from '../screens/ChatScreen';
 import { ReportsScreen } from '../screens/ReportsScreen';
-import { AccountsScreen } from '../screens/AccountsScreen';
+import { AccountsStack } from './AccountsStack';
 import { colors, fontFamily } from '../theme';
 
 const Tab = createBottomTabNavigator();
@@ -78,7 +78,7 @@ export function RootNavigator() {
         />
         <Tab.Screen
           name="Accounts"
-          component={AccountsScreen}
+          component={AccountsStack}
           options={{
             title: 'Contas',
             tabBarIcon: ({ color, size }) => (
