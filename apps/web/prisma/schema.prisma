@@ -306,3 +306,15 @@ model VerificationToken {
 
   @@unique([identifier, token])
 }
+
+model MobileLoginCode {
+  id         String    @id @default(cuid())
+  email      String
+  codeHash   String
+  expiresAt  DateTime
+  attempts   Int       @default(0)
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([email])
+}

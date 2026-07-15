@@ -9,3 +9,4 @@ export * from './financial-account';
 export * from './investment';
 export * from './debt';
 export * from './category-budget';
+export * from './mobile-login-code';

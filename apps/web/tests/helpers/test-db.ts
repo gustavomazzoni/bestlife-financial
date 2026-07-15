@@ -299,6 +299,7 @@ export async function truncateTables(): Promise<void> {
       "Session",
       "Account",
       "VerificationToken",
+      "MobileLoginCode",
       "User"
     CASCADE;
   `);
@@ -320,6 +321,7 @@ export async function resetDatabase(): Promise<void> {
       "Session",
       "Account",
       "VerificationToken",
+      "MobileLoginCode",
       "User",
       "Category"
     CASCADE;
