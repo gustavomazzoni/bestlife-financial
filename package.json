@@ -15,6 +15,7 @@
     "test:e2e": "pnpm --filter @lifeos/web test:e2e",
     "test:all": "pnpm --filter @lifeos/web test:all",
     "type-check": "pnpm --filter @lifeos/web type-check && pnpm --filter @lifeos/shared type-check",
+    "type-check:mobile": "pnpm --filter @lifeos/mobile type-check",
     "prisma:generate": "pnpm --filter @lifeos/web prisma:generate",
     "prisma:migrate": "pnpm --filter @lifeos/web prisma:migrate",
     "prisma:studio": "pnpm --filter @lifeos/web prisma:studio",

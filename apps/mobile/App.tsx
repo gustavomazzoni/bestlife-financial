@@ -9,20 +9,38 @@ import {
   View,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { API_URL } from './src/lib/config';
-import { getStoredToken, signInWithEmail, signOut } from './src/lib/auth';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { useFonts } from 'expo-font';
+import {
+  PlusJakartaSans_400Regular,
+  PlusJakartaSans_500Medium,
+  PlusJakartaSans_600SemiBold,
+  PlusJakartaSans_700Bold,
+} from '@expo-google-fonts/plus-jakarta-sans';
+import {
+  SpaceGrotesk_500Medium,
+  SpaceGrotesk_700Bold,
+} from '@expo-google-fonts/space-grotesk';
+import { getStoredToken, signInWithEmail } from './src/lib/auth';
+import { RootNavigator } from './src/navigation/RootNavigator';
+import { colors, fontFamily } from './src/theme';
 
-/**
- * Minimal screen to exercise the Phase 2 auth bridge end-to-end.
- * Phase 7/8 replaces this with real navigation + screens.
- */
 export default function App() {
+  const [fontsLoaded] = useFonts({
+    [fontFamily.body]: PlusJakartaSans_400Regular,
+    [fontFamily.bodyMedium]: PlusJakartaSans_500Medium,
+    [fontFamily.bodySemiBold]: PlusJakartaSans_600SemiBold,
+    [fontFamily.bodyBold]: PlusJakartaSans_700Bold,
+    [fontFamily.display]: SpaceGrotesk_500Medium,
+    [fontFamily.displayBold]: SpaceGrotesk_700Bold,
+  });
+
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<
-    'idle' | 'checking' | 'signing-in' | 'signed-in' | 'error'
+    'checking' | 'idle' | 'signing-in' | 'signed-in' | 'error'
   >('checking');
   const [message, setMessage] = useState('');
-  const [apiResult, setApiResult] = useState<string | null>(null);
 
   useEffect(() => {
     getStoredToken().then(token => {
@@ -44,55 +62,48 @@ export default function App() {
     }
   }
 
-  async function handleSignOut() {
-    await signOut();
-    setStatus('idle');
-    setApiResult(null);
+  if (!fontsLoaded || status === 'checking') {
+    return (
+      <SafeAreaView style={styles.container}>
+        <ActivityIndicator />
+      </SafeAreaView>
+    );
   }
 
-  async function callAuthenticatedApi() {
-    const token = await getStoredToken();
-    const response = await fetch(`${API_URL}/api/v1/categories`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
-    setApiResult(`${response.status} ${response.statusText}`);
+  if (status === 'signed-in') {
+    return (
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <SafeAreaProvider>
+          <StatusBar style="dark" />
+          <RootNavigator />
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
+    );
   }
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar style="auto" />
-      <Text style={styles.title}>LifeOS — Auth Test</Text>
-
-      {status === 'checking' && <ActivityIndicator />}
-
-      {status !== 'checking' && status !== 'signed-in' && (
-        <View style={styles.form}>
-          <TextInput
-            style={styles.input}
-            placeholder="you@example.com"
-            autoCapitalize="none"
-            autoCorrect={false}
-            keyboardType="email-address"
-            value={email}
-            onChangeText={setEmail}
-          />
-          <Button
-            title={status === 'signing-in' ? 'Signing in…' : 'Sign in'}
-            onPress={handleSignIn}
-            disabled={status === 'signing-in' || !email}
-          />
-          {status === 'error' && <Text style={styles.error}>{message}</Text>}
-        </View>
-      )}
-
-      {status === 'signed-in' && (
-        <View style={styles.form}>
-          <Text>Signed in — token stored.</Text>
-          <Button title="Call /api/v1/categories" onPress={callAuthenticatedApi} />
-          {apiResult && <Text>{apiResult}</Text>}
-          <Button title="Sign out" onPress={handleSignOut} />
-        </View>
-      )}
+      <StatusBar style="dark" />
+      <Text style={styles.title}>BestLife</Text>
+      <View style={styles.form}>
+        <TextInput
+          style={styles.input}
+          placeholder="you@example.com"
+          placeholderTextColor={colors.mutedForeground}
+          autoCapitalize="none"
+          autoCorrect={false}
+          keyboardType="email-address"
+          value={email}
+          onChangeText={setEmail}
+        />
+        <Button
+          title={status === 'signing-in' ? 'Entrando…' : 'Entrar'}
+          onPress={handleSignIn}
+          disabled={status === 'signing-in' || !email}
+          color={colors.accent}
+        />
+        {status === 'error' && <Text style={styles.error}>{message}</Text>}
+      </View>
     </SafeAreaView>
   );
 }
@@ -100,15 +111,16 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 16,
     padding: 24,
   },
   title: {
-    fontSize: 20,
-    fontWeight: '700',
+    fontFamily: fontFamily.displayBold,
+    fontSize: 28,
+    color: colors.foreground,
   },
   form: {
     width: '100%',
@@ -116,12 +128,16 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: colors.border,
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
+    fontFamily: fontFamily.body,
+    color: colors.foreground,
+    backgroundColor: colors.surface,
   },
   error: {
-    color: '#c0392b',
+    color: colors.danger,
+    fontFamily: fontFamily.body,
   },
 });
