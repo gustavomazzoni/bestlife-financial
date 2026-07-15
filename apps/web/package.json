@@ -30,9 +30,9 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@lifeos/shared": "workspace:*",
     "@auth/prisma-adapter": "^2.11.1",
     "@hookform/resolvers": "^5.2.2",
+    "@lifeos/shared": "workspace:*",
     "@prisma/adapter-pg": "^7.2.0",
     "@prisma/client": "^7.2.0",
     "@radix-ui/react-label": "^2.1.8",
@@ -46,6 +46,7 @@
     "next": "16.1.6",
     "next-auth": "5.0.0-beta.30",
     "nodemailer": "^7.0.12",
+    "openai": "^6.47.0",
     "radix-ui": "^1.4.3",
     "react": "19.2.3",
     "react-dom": "19.2.3",

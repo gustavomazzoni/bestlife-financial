@@ -10,11 +10,11 @@ const InferTransactionSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    await getUserId();
+    const userId = await getUserId();
     const body = await request.json();
 
     const { text } = InferTransactionSchema.parse(body);
-    const result = await inferTransaction(text);
+    const result = await inferTransaction(text, userId);
 
     return apiResponse(result, 200);
   } catch (error) {
