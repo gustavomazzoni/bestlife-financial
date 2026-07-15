@@ -10,6 +10,9 @@ vi.mock('@/lib/db', () => ({
     transaction: {
       findMany: vi.fn(),
     },
+    investment: {
+      findMany: vi.fn(),
+    },
   },
 }));
 
@@ -19,9 +22,26 @@ describe('calculateFreedomMetrics', () => {
   const mockUser = {
     id: userId,
     dreamLifestyleCost: 10000,
-    currentInvestments: 500000,
     activeIncomeMonthly: 15000,
   };
+
+  // sum(Investment.balance) = 500000, mirroring the old currentInvestments scalar
+  const mockInvestments = [
+    {
+      id: 'inv_1',
+      userId,
+      name: 'Carteira',
+      category: 'stocks',
+      balance: 300000,
+    },
+    {
+      id: 'inv_2',
+      userId,
+      name: 'Reserva',
+      category: 'fixed-income',
+      balance: 200000,
+    },
+  ];
 
   // 3 months of expenses: 3000 + 4000 + 5000 = 12000 total, average = 4000/month
   const mockTransactions = [
@@ -47,6 +67,9 @@ describe('calculateFreedomMetrics', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(prisma.investment.findMany as Mock).mockResolvedValue(
+      mockInvestments
+    );
   });
 
   it('calculates fiNumber as dreamLifestyleCost × 12 × 25', async () => {
@@ -63,7 +86,7 @@ describe('calculateFreedomMetrics', () => {
     expect(result.dreamLifestyleCost).toBe(10000);
   });
 
-  it('calculates currentRunway as currentInvestments / dreamLifestyleCost', async () => {
+  it('calculates currentInvestments as sum(Investment.balance)', async () => {
     vi.mocked(prisma.user.findUniqueOrThrow as Mock).mockResolvedValue(
       mockUser
     );
@@ -106,14 +129,31 @@ describe('calculateFreedomMetrics', () => {
     expect(result.savingsRate).toBe(100); // (15000 - 0) / 15000 × 100
   });
 
-  it('caps fiProgress at 100 when currentInvestments >= fiNumber', async () => {
-    const richUser = {
-      ...mockUser,
-      currentInvestments: 999_999_999,
-    };
+  it('returns currentInvestments = 0 (not an error) when user has no investments', async () => {
     vi.mocked(prisma.user.findUniqueOrThrow as Mock).mockResolvedValue(
-      richUser
+      mockUser
     );
+    vi.mocked(prisma.investment.findMany as Mock).mockResolvedValue([]);
+    vi.mocked(prisma.transaction.findMany as Mock).mockResolvedValue([]);
+
+    const result = await calculateFreedomMetrics(userId);
+
+    expect(result.currentRunway).toBe(0);
+  });
+
+  it('caps fiProgress at 100 when sum(Investment.balance) >= fiNumber', async () => {
+    vi.mocked(prisma.user.findUniqueOrThrow as Mock).mockResolvedValue(
+      mockUser
+    );
+    vi.mocked(prisma.investment.findMany as Mock).mockResolvedValue([
+      {
+        id: 'inv_1',
+        userId,
+        name: 'Fortuna',
+        category: 'stocks',
+        balance: 999_999_999,
+      },
+    ]);
     vi.mocked(prisma.transaction.findMany as Mock).mockResolvedValue([]);
 
     const result = await calculateFreedomMetrics(userId);

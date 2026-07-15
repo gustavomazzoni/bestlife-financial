@@ -5,14 +5,18 @@ import { FreedomMetrics } from '@/types/calculations';
 export async function calculateFreedomMetrics(
   userId: string
 ): Promise<FreedomMetrics> {
-  const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
-  const { average: avgMonthlyExpenses } = await calculateMonthlyExpenses(
-    userId,
-    3
-  );
+  const [user, investments, { average: avgMonthlyExpenses }] =
+    await Promise.all([
+      prisma.user.findUniqueOrThrow({ where: { id: userId } }),
+      prisma.investment.findMany({ where: { userId } }),
+      calculateMonthlyExpenses(userId, 3),
+    ]);
 
   const dreamLifestyleCost = Number(user.dreamLifestyleCost ?? 0);
-  const currentInvestments = Number(user.currentInvestments);
+  const currentInvestments = investments.reduce(
+    (sum, i) => sum + Number(i.balance),
+    0
+  );
   const activeIncomeMonthly = Number(user.activeIncomeMonthly);
 
   const fiNumber = dreamLifestyleCost > 0 ? dreamLifestyleCost * 12 * 25 : 0;

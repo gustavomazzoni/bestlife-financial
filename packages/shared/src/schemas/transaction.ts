@@ -12,6 +12,7 @@ export const CreateTransactionSchema = z.object({
   categoryId: z.string().min(1, 'Category required'),
   necessityLevel: z.enum(Object.values(NecessityLevel)).optional(),
   valueAlignment: z.enum(Object.values(ValueAlignment)).optional(),
+  accountId: z.string().min(1).optional(),
   notes: z.string().max(1000).optional(),
 });
 

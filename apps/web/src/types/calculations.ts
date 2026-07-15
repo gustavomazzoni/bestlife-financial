@@ -79,3 +79,10 @@ export interface CategoryBudgetSummary {
   pct: number;
   isOverBudget: boolean;
 }
+
+export interface NetWorth {
+  accountsTotal: number;
+  investmentsTotal: number;
+  debtsTotal: number;
+  netWorth: number;
+}

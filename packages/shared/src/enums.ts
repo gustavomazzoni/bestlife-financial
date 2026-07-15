@@ -36,3 +36,10 @@ export const ScheduleFrequency = {
   YEARLY: 'YEARLY',
 } as const;
 export type ScheduleFrequency = (typeof ScheduleFrequency)[keyof typeof ScheduleFrequency];
+
+export const FinancialAccountType = {
+  CHECKING: 'CHECKING',
+  SAVINGS: 'SAVINGS',
+  WALLET: 'WALLET',
+} as const;
+export type FinancialAccountType = (typeof FinancialAccountType)[keyof typeof FinancialAccountType];
