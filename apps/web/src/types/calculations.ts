@@ -68,3 +68,14 @@ export interface MonthlySummary {
   income: number;
   expenses: number;
 }
+
+export interface CategoryBudgetSummary {
+  categoryId: string;
+  categoryName: string;
+  categoryIcon: string;
+  categoryColor: string;
+  budget: number;
+  spent: number;
+  pct: number;
+  isOverBudget: boolean;
+}

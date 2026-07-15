@@ -199,6 +199,68 @@ export async function seedCategories(): Promise<void> {
       icon: '💎',
       color: '#60A5FA',
     },
+
+    // Finance App design categories (Portuguese, granular)
+    {
+      name: 'Mercado',
+      type: TransactionType.EXPENSE,
+      icon: '🛒',
+      color: '#F97316',
+    },
+    {
+      name: 'Restaurante',
+      type: TransactionType.EXPENSE,
+      icon: '🍽️',
+      color: '#FB923C',
+    },
+    {
+      name: 'Transporte',
+      type: TransactionType.EXPENSE,
+      icon: '🚗',
+      color: '#F59E0B',
+    },
+    {
+      name: 'Moradia',
+      type: TransactionType.EXPENSE,
+      icon: '🏠',
+      color: '#EF4444',
+    },
+    {
+      name: 'Saúde',
+      type: TransactionType.EXPENSE,
+      icon: '⚕️',
+      color: '#EC4899',
+    },
+    {
+      name: 'Educação',
+      type: TransactionType.EXPENSE,
+      icon: '📚',
+      color: '#6366F1',
+    },
+    {
+      name: 'Lazer',
+      type: TransactionType.EXPENSE,
+      icon: '🎬',
+      color: '#8B5CF6',
+    },
+    {
+      name: 'Compras',
+      type: TransactionType.EXPENSE,
+      icon: '🛍️',
+      color: '#DB2777',
+    },
+    {
+      name: 'Contas',
+      type: TransactionType.EXPENSE,
+      icon: '📄',
+      color: '#DC2626',
+    },
+    {
+      name: 'Renda',
+      type: TransactionType.INCOME,
+      icon: '💰',
+      color: '#10B981',
+    },
   ];
 
   for (const category of categories) {
