@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -17,6 +17,10 @@ import { IconBadge } from '../components/IconBadge';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { LoadingState } from '../components/LoadingState';
 import { ErrorState } from '../components/ErrorState';
+import {
+  TransactionDetailSheet,
+  TransactionDetailSheetRef,
+} from '../components/TransactionDetailSheet';
 import { useApiData } from '../hooks/useApiData';
 import { api, ApiError } from '../lib/api';
 import { formatCurrency } from '../lib/format';
@@ -27,7 +31,7 @@ import {
   projectScheduledOccurrences,
   transactionsToCalendarEvents,
 } from '../lib/calendar';
-import { ScheduledTransaction, Transaction } from '../types';
+import { FinancialAccount, ScheduledTransaction, Transaction } from '../types';
 
 const typeColor: Record<string, string> = {
   INCOME: colors.income,
@@ -54,6 +58,17 @@ export function CalendarScreen() {
       `/api/v1/transactions?startDate=${format(monthStart, 'yyyy-MM-dd')}&endDate=${format(monthEnd, 'yyyy-MM-dd')}&limit=100`
     )
   );
+  const accounts = useApiData(() => api.get<FinancialAccount[]>('/api/v1/accounts'));
+
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const detailSheetRef = useRef<TransactionDetailSheetRef>(null);
+
+  function openTransaction(sourceId: string) {
+    const found = transactions.data?.find(t => t.id === sourceId);
+    if (!found) return;
+    setSelectedTransaction(found);
+    detailSheetRef.current?.expand();
+  }
 
   const eventsByDate = useMemo((): Map<string, CalendarEvent[]> => {
     if (!scheduled.data || !transactions.data) return new Map();
@@ -233,41 +248,59 @@ export function CalendarScreen() {
           </View>
         ) : (
           selectedEvents.map((e, i) => (
-            <Card key={i} style={styles.eventRow}>
-              <IconBadge
-                size={38}
-                color={e.categoryColor ?? colors.mutedForeground2}
-                letter={e.categoryName ?? e.description}
-              />
-              <View style={styles.rowMain}>
-                <Text style={styles.rowTitle}>{e.description}</Text>
-                <Text style={styles.rowSubtitle}>
-                  {e.categoryName ?? '—'}
-                  {e.kind === 'scheduled_projection' ? ' · Projetado' : ''}
+            <Pressable
+              key={i}
+              onPress={e.kind === 'actual' ? () => openTransaction(e.sourceId) : undefined}
+              testID={e.kind === 'actual' ? 'agenda-transaction-item' : undefined}
+            >
+              <Card style={styles.eventRow}>
+                <IconBadge
+                  size={38}
+                  color={e.categoryColor ?? colors.mutedForeground2}
+                  letter={e.categoryName ?? e.description}
+                />
+                <View style={styles.rowMain}>
+                  <Text style={styles.rowTitle}>{e.description}</Text>
+                  <Text style={styles.rowSubtitle}>
+                    {e.categoryName ?? '—'}
+                    {e.kind === 'scheduled_projection' ? ' · Projetado' : ''}
+                  </Text>
+                </View>
+                <Text style={[styles.rowAmount, { color: typeColor[e.type] }]}>
+                  {formatCurrency(e.amount)}
                 </Text>
-              </View>
-              <Text style={[styles.rowAmount, { color: typeColor[e.type] }]}>
-                {formatCurrency(e.amount)}
-              </Text>
-              {e.kind === 'scheduled_projection' && (
-                <Pressable
-                  onPress={() => handleExecute(e)}
-                  disabled={executingId === e.sourceId}
-                  style={styles.executeButton}
-                  hitSlop={8}
-                  testID="agenda-execute-btn"
-                >
-                  {executingId === e.sourceId ? (
-                    <ActivityIndicator size="small" color={colors.accent} />
-                  ) : (
-                    <Feather name="check-circle" size={20} color={colors.accent} />
-                  )}
-                </Pressable>
-              )}
-            </Card>
+                {e.kind === 'scheduled_projection' && (
+                  <Pressable
+                    onPress={() => handleExecute(e)}
+                    disabled={executingId === e.sourceId}
+                    style={styles.executeButton}
+                    hitSlop={8}
+                    testID="agenda-execute-btn"
+                  >
+                    {executingId === e.sourceId ? (
+                      <ActivityIndicator size="small" color={colors.accent} />
+                    ) : (
+                      <Feather name="check-circle" size={20} color={colors.accent} />
+                    )}
+                  </Pressable>
+                )}
+              </Card>
+            </Pressable>
           ))
         )}
       </ScrollView>
+      <TransactionDetailSheet
+        ref={detailSheetRef}
+        transaction={selectedTransaction}
+        accounts={accounts.data ?? []}
+        onSaved={() => {
+          transactions.refetch();
+        }}
+        onDeleted={() => {
+          detailSheetRef.current?.close();
+          transactions.refetch();
+        }}
+      />
     </View>
   );
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -10,6 +10,10 @@ import { Card } from '../components/Card';
 import { IconBadge } from '../components/IconBadge';
 import { LoadingState } from '../components/LoadingState';
 import { ErrorState } from '../components/ErrorState';
+import {
+  TransactionDetailSheet,
+  TransactionDetailSheetRef,
+} from '../components/TransactionDetailSheet';
 import { useApiData } from '../hooks/useApiData';
 import { api, ApiError } from '../lib/api';
 import { formatCurrency, formatRelativeDate } from '../lib/format';
@@ -41,6 +45,13 @@ export function HomeScreen() {
     api.get<Transaction[]>('/api/v1/transactions?limit=6&sortBy=date&sortOrder=desc')
   );
   const [executingId, setExecutingId] = useState<string | null>(null);
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const detailSheetRef = useRef<TransactionDetailSheetRef>(null);
+
+  function openTransaction(t: Transaction) {
+    setSelectedTransaction(t);
+    detailSheetRef.current?.expand();
+  }
 
   function handleExecute(scheduledId: string, description: string) {
     Alert.alert(
@@ -98,6 +109,7 @@ export function HomeScreen() {
   const todayLabel = format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR });
 
   return (
+    <>
     <ScrollView
       style={styles.container}
       contentContainerStyle={[
@@ -202,9 +214,10 @@ export function HomeScreen() {
       ) : (
         <Card style={styles.listCard}>
           {recent.data.map((t, i) => (
-            <View
+            <Pressable
               key={t.id}
               style={[styles.listRow, i > 0 && styles.listRowBorder]}
+              onPress={() => openTransaction(t)}
               testID="recent-transaction-item"
             >
               <IconBadge
@@ -221,11 +234,27 @@ export function HomeScreen() {
               <Text style={[styles.rowAmount, { color: typeColor[t.type] }]}>
                 {formatCurrency(t.amount)}
               </Text>
-            </View>
+            </Pressable>
           ))}
         </Card>
       )}
     </ScrollView>
+    <TransactionDetailSheet
+      ref={detailSheetRef}
+      transaction={selectedTransaction}
+      accounts={accounts.data ?? []}
+      onSaved={() => {
+        recent.refetch();
+        summary.refetch();
+      }}
+      onDeleted={() => {
+        detailSheetRef.current?.close();
+        recent.refetch();
+        summary.refetch();
+        netWorth.refetch();
+      }}
+    />
+    </>
   );
 }
 
