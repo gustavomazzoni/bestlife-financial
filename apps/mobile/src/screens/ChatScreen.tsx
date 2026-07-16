@@ -178,7 +178,7 @@ export function ChatScreen() {
           <Text style={styles.headerTitle}>Assistente</Text>
           <View style={styles.headerStatus}>
             <View style={styles.headerStatusDot} />
-            <Text style={styles.headerStatusLabel}>Lance por mensagem</Text>
+            <Text style={styles.headerStatusLabel}>Lance as transações por mensagem</Text>
           </View>
         </View>
         <View style={styles.headerIcon}>
