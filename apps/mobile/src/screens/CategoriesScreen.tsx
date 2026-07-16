@@ -1,3 +1,4 @@
+import { useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -8,6 +9,10 @@ import { IconBadge } from '../components/IconBadge';
 import { ProgressBar } from '../components/ProgressBar';
 import { LoadingState } from '../components/LoadingState';
 import { ErrorState } from '../components/ErrorState';
+import {
+  CategoryFormSheet,
+  CategoryFormSheetRef,
+} from '../components/CategoryFormSheet';
 import { useApiData } from '../hooks/useApiData';
 import { api } from '../lib/api';
 import { formatCurrency } from '../lib/format';
@@ -21,6 +26,14 @@ export function CategoriesScreen({ navigation }: Props) {
   const budgets = useApiData(() =>
     api.get<CategoryBudgetSummary[]>('/api/v1/categories/budgets')
   );
+
+  const [selected, setSelected] = useState<CategoryBudgetSummary | null>(null);
+  const sheetRef = useRef<CategoryFormSheetRef>(null);
+
+  function openCategory(c: CategoryBudgetSummary | null) {
+    setSelected(c);
+    sheetRef.current?.expand();
+  }
 
   if (budgets.loading) return <LoadingState />;
   if (budgets.error) {
@@ -37,6 +50,14 @@ export function CategoriesScreen({ navigation }: Props) {
           <Text style={styles.title}>Categorias</Text>
           <Text style={styles.subtitle}>Orçamento mensal por categoria</Text>
         </View>
+        <Pressable
+          onPress={() => openCategory(null)}
+          style={[styles.headerButton, styles.headerButtonAccent]}
+          hitSlop={8}
+          testID="add-category-button"
+        >
+          <Feather name="plus" size={18} color="#fff" />
+        </Pressable>
       </View>
 
       <ScrollView
@@ -48,29 +69,39 @@ export function CategoriesScreen({ navigation }: Props) {
           </Card>
         ) : (
           budgets.data.map(b => (
-            <Card key={b.categoryId} style={styles.budgetCard} testID="budget-item">
-              <View style={styles.budgetHeader}>
-                <IconBadge size={38} color={b.categoryColor} letter={b.categoryName} />
-                <View style={styles.budgetMain}>
-                  <Text style={styles.budgetLabel}>{b.categoryName}</Text>
-                  <Text style={styles.budgetSpent}>
-                    {formatCurrency(b.spent)} de {formatCurrency(b.budget)}
+            <Pressable key={b.categoryId} onPress={() => openCategory(b)}>
+              <Card style={styles.budgetCard} testID="budget-item">
+                <View style={styles.budgetHeader}>
+                  <IconBadge size={38} color={b.categoryColor} letter={b.categoryName} />
+                  <View style={styles.budgetMain}>
+                    <Text style={styles.budgetLabel}>{b.categoryName}</Text>
+                    <Text style={styles.budgetSpent}>
+                      {formatCurrency(b.spent)} de {formatCurrency(b.budget)}
+                    </Text>
+                  </View>
+                  <Text
+                    style={[
+                      styles.budgetPct,
+                      { color: b.isOverBudget ? colors.danger : colors.foreground },
+                    ]}
+                  >
+                    {b.pct.toFixed(0)}%
                   </Text>
                 </View>
-                <Text
-                  style={[
-                    styles.budgetPct,
-                    { color: b.isOverBudget ? colors.danger : colors.foreground },
-                  ]}
-                >
-                  {b.pct.toFixed(0)}%
-                </Text>
-              </View>
-              <ProgressBar pct={b.pct} color={b.categoryColor} />
-            </Card>
+                <ProgressBar pct={b.pct} color={b.categoryColor} />
+              </Card>
+            </Pressable>
           ))
         )}
       </ScrollView>
+
+      <CategoryFormSheet
+        ref={sheetRef}
+        categoryBudget={selected}
+        onSaved={() => budgets.refetch()}
+        onDeleted={() => budgets.refetch()}
+        onClose={() => sheetRef.current?.close()}
+      />
     </View>
   );
 }
@@ -97,6 +128,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  headerButtonAccent: {
+    borderWidth: 0,
+    backgroundColor: colors.accent,
   },
   headerText: {
     flex: 1,
