@@ -1,19 +1,10 @@
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
 /**
- * Single source of truth for the floating tab bar's geometry (RootNavigator
- * builds the bar with these same two numbers). `useBottomTabBarHeight()`
- * from @react-navigation/bottom-tabs only reports the bar's own laid-out
- * height — it has no idea about the extra floating gap we position it with
- * (`bottom: insets.bottom + TAB_BAR_BOTTOM_GAP`), so screens that rely on
- * it to reserve bottom space fall short by roughly `insets.bottom` and end
- * up with content/inputs rendered underneath the bar.
+ * The docked bottom tab bar's height (RootNavigator builds the bar with
+ * this same number). React Navigation automatically reserves this much
+ * space in every tab screen's layout, so screens don't need to add their
+ * own compensation for it — this constant exists purely so the bar's
+ * actual geometry and anything that needs to know its height (e.g. Chat's
+ * input bar, styled to match the bar's footprint while it's hidden) can't
+ * drift apart.
  */
-export const TAB_BAR_HEIGHT = 64;
-export const TAB_BAR_BOTTOM_GAP = 10;
-
-/** Total space every screen must reserve at the bottom to clear the floating tab bar. */
-export function useFloatingTabBarHeight(): number {
-  const insets = useSafeAreaInsets();
-  return TAB_BAR_HEIGHT + TAB_BAR_BOTTOM_GAP + insets.bottom;
-}
+export const TAB_BAR_HEIGHT = 94;

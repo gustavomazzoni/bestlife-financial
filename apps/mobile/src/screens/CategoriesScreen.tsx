@@ -1,6 +1,5 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useFloatingTabBarHeight } from '../navigation/tabBarMetrics';
 import { Feather } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { colors, fontFamily, fontSize, radius } from '../theme';
@@ -19,7 +18,6 @@ type Props = NativeStackScreenProps<AccountsStackParamList, 'Categories'>;
 
 export function CategoriesScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
-  const tabBarHeight = useFloatingTabBarHeight();
   const budgets = useApiData(() =>
     api.get<CategoryBudgetSummary[]>('/api/v1/categories/budgets')
   );
@@ -45,7 +43,7 @@ export function CategoriesScreen({ navigation }: Props) {
       </View>
 
       <ScrollView
-        contentContainerStyle={[styles.content, { paddingBottom: tabBarHeight + 20 }]}
+        contentContainerStyle={[styles.content, { paddingBottom: 20 }]}
       >
         {!budgets.data || budgets.data.length === 0 ? (
           <Card>

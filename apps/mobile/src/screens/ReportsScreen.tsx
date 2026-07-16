@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useFloatingTabBarHeight } from '../navigation/tabBarMetrics';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { colors, fontFamily, fontSize } from '../theme';
@@ -34,7 +33,6 @@ const CATEGORY_PALETTE = [
 ];
 
 export function ReportsScreen() {
-  const tabBarHeight = useFloatingTabBarHeight();
   const [selectedMonth, setSelectedMonth] = useState(() => format(new Date(), 'yyyy-MM'));
 
   const summary = useApiData(() =>
@@ -83,7 +81,7 @@ export function ReportsScreen() {
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={[styles.content, { paddingBottom: tabBarHeight + 20 }]}
+      contentContainerStyle={[styles.content, { paddingBottom: 20 }]}
       testID="reports-screen"
     >
       <ScreenHeader eyebrow="Para onde vai o dinheiro" title="Relatório" />

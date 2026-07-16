@@ -1,6 +1,5 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useFloatingTabBarHeight } from '../navigation/tabBarMetrics';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { format } from 'date-fns';
@@ -31,7 +30,6 @@ const typeColor: Record<string, string> = {
 export function HomeScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const tabBarHeight = useFloatingTabBarHeight();
   const netWorth = useApiData(() => api.get<NetWorth>('/api/v1/calculations/net-worth'));
   const accounts = useApiData(() => api.get<FinancialAccount[]>('/api/v1/accounts'));
   const summary = useApiData(() =>
@@ -70,7 +68,7 @@ export function HomeScreen() {
       style={styles.container}
       contentContainerStyle={[
         styles.content,
-        { paddingTop: insets.top + 20, paddingBottom: tabBarHeight + 20 },
+        { paddingTop: insets.top + 20, paddingBottom: 20 },
       ]}
       testID="home-screen"
     >

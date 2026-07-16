@@ -6,7 +6,6 @@ import {
   Text,
   View,
 } from 'react-native';
-import { useFloatingTabBarHeight } from '../navigation/tabBarMetrics';
 import { Feather } from '@expo/vector-icons';
 import { addMonths, endOfMonth, format, isSameMonth, isToday, startOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -38,7 +37,6 @@ const typeColor: Record<string, string> = {
 const WEEKDAY_LABELS = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'];
 
 export function CalendarScreen() {
-  const tabBarHeight = useFloatingTabBarHeight();
   const [selectedMonth, setSelectedMonth] = useState(() => startOfMonth(new Date()));
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
@@ -109,7 +107,7 @@ export function CalendarScreen() {
       />
 
       <ScrollView
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: tabBarHeight + 20 }]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 20 }]}
       >
         <Card style={styles.calendarCard}>
           <Text style={styles.monthTitle}>

@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useFloatingTabBarHeight } from '../navigation/tabBarMetrics';
+import { useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { startOfDay } from 'date-fns';
 import { colors, fontFamily, fontSize, radius, shadow } from '../theme';
@@ -21,6 +21,7 @@ import {
 } from '../components/EditTransactionSheet';
 import { api, ApiError } from '../lib/api';
 import { FinancialAccount, InferTransactionResult, InferredTransaction } from '../types';
+import { TAB_BAR_HEIGHT } from '../navigation/tabBarMetrics';
 
 const SUGGESTIONS: { text: string; icon: keyof typeof Feather.glyphMap; color: string }[] = [
   { text: 'Almocei 35 reais', icon: 'coffee', color: colors.expense },
@@ -47,8 +48,8 @@ function nextId() {
 }
 
 export function ChatScreen() {
+  const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const tabBarHeight = useFloatingTabBarHeight();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [sending, setSending] = useState(false);
@@ -164,6 +165,9 @@ export function ChatScreen() {
       testID="chat-screen"
     >
       <View style={[styles.header, { paddingTop: insets.top + 6 }]}>
+        <Pressable onPress={() => navigation.goBack()} style={styles.headerButton} hitSlop={8}>
+          <Feather name="chevron-left" size={18} color={colors.foreground} />
+        </Pressable>
         <View style={styles.headerText}>
           <Text style={styles.headerTitle}>Assistente</Text>
           <View style={styles.headerStatus}>
@@ -247,7 +251,7 @@ export function ChatScreen() {
         />
       )}
 
-      <View style={[styles.inputBar, { paddingBottom: tabBarHeight + 10 }]}>
+      <View style={[styles.inputBar, { paddingBottom: insets.bottom }]}>
         <TextInput
           style={styles.textInput}
           placeholder="Ex: gastei 80 no mercado hoje"
@@ -317,6 +321,16 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bodySemiBold,
     fontSize: 12,
     color: colors.accent,
+  },
+  headerButton: {
+    width: 38,
+    height: 38,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerIcon: {
     width: 38,
@@ -435,7 +449,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 9,
-    padding: 10,
+    paddingTop: 10,
+    paddingHorizontal: 14,
+    height: TAB_BAR_HEIGHT,
     backgroundColor: colors.background,
     borderTopWidth: 1,
     borderTopColor: colors.borderSoft,
