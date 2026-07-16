@@ -21,6 +21,10 @@ import {
   TransactionDetailSheet,
   TransactionDetailSheetRef,
 } from '../components/TransactionDetailSheet';
+import {
+  ScheduledDetailSheet,
+  ScheduledDetailSheetRef,
+} from '../components/ScheduledDetailSheet';
 import { useApiData } from '../hooks/useApiData';
 import { api, ApiError } from '../lib/api';
 import { formatCurrency } from '../lib/format';
@@ -68,6 +72,16 @@ export function CalendarScreen() {
     if (!found) return;
     setSelectedTransaction(found);
     detailSheetRef.current?.expand();
+  }
+
+  const [selectedScheduled, setSelectedScheduled] = useState<ScheduledTransaction | null>(null);
+  const scheduledSheetRef = useRef<ScheduledDetailSheetRef>(null);
+
+  function openScheduled(sourceId: string) {
+    const found = scheduled.data?.find(s => s.id === sourceId);
+    if (!found) return;
+    setSelectedScheduled(found);
+    scheduledSheetRef.current?.expand();
   }
 
   const eventsByDate = useMemo((): Map<string, CalendarEvent[]> => {
@@ -250,8 +264,12 @@ export function CalendarScreen() {
           selectedEvents.map((e, i) => (
             <Pressable
               key={i}
-              onPress={e.kind === 'actual' ? () => openTransaction(e.sourceId) : undefined}
-              testID={e.kind === 'actual' ? 'agenda-transaction-item' : undefined}
+              onPress={() =>
+                e.kind === 'actual'
+                  ? openTransaction(e.sourceId)
+                  : openScheduled(e.sourceId)
+              }
+              testID={e.kind === 'actual' ? 'agenda-transaction-item' : 'agenda-scheduled-item'}
             >
               <Card style={styles.eventRow}>
                 <IconBadge
@@ -299,6 +317,17 @@ export function CalendarScreen() {
         onDeleted={() => {
           detailSheetRef.current?.close();
           transactions.refetch();
+        }}
+      />
+      <ScheduledDetailSheet
+        ref={scheduledSheetRef}
+        scheduled={selectedScheduled}
+        onSaved={() => {
+          scheduled.refetch();
+        }}
+        onDeleted={() => {
+          scheduledSheetRef.current?.close();
+          scheduled.refetch();
         }}
       />
     </View>
