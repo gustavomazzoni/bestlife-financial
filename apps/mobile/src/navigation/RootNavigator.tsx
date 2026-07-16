@@ -97,8 +97,9 @@ export function RootNavigator() {
 const styles = StyleSheet.create({
   tabBar: {
     height: TAB_BAR_HEIGHT,
-    backgroundColor: colors.surface,
-    borderTopWidth: 0,
+    backgroundColor: colors.background,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderSoft,
     paddingTop: 8,
     ...shadow.card,
   },
