@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { colors, fontFamily, fontSize } from '../theme';
@@ -62,26 +62,27 @@ export function ReportsScreen() {
   );
 
   const loading = summary.loading || breakdown.loading || budgets.loading;
+  const refreshing = summary.refreshing || breakdown.refreshing || budgets.refreshing;
   const error = summary.error ?? breakdown.error ?? budgets.error;
+
+  function refetchAll() {
+    summary.refetch();
+    breakdown.refetch();
+    budgets.refetch();
+  }
 
   if (loading) return <LoadingState />;
   if (error) {
-    return (
-      <ErrorState
-        message={error}
-        onRetry={() => {
-          summary.refetch();
-          breakdown.refetch();
-          budgets.refetch();
-        }}
-      />
-    );
+    return <ErrorState message={error} onRetry={refetchAll} />;
   }
 
   return (
     <ScrollView
       style={styles.container}
       contentContainerStyle={[styles.content, { paddingBottom: 20 }]}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={refetchAll} tintColor={colors.accent} />
+      }
       testID="reports-screen"
     >
       <ScreenHeader eyebrow="Para onde vai o dinheiro" title="Relatório" />

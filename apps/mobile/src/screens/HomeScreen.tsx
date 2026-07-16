@@ -1,5 +1,14 @@
 import { useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -87,22 +96,25 @@ export function HomeScreen() {
 
   const loading =
     netWorth.loading || accounts.loading || summary.loading || upcoming.loading || recent.loading;
+  const refreshing =
+    netWorth.refreshing ||
+    accounts.refreshing ||
+    summary.refreshing ||
+    upcoming.refreshing ||
+    recent.refreshing;
   const error = netWorth.error ?? accounts.error ?? summary.error ?? upcoming.error ?? recent.error;
+
+  function refetchAll() {
+    netWorth.refetch();
+    accounts.refetch();
+    summary.refetch();
+    upcoming.refetch();
+    recent.refetch();
+  }
 
   if (loading) return <LoadingState />;
   if (error) {
-    return (
-      <ErrorState
-        message={error}
-        onRetry={() => {
-          netWorth.refetch();
-          accounts.refetch();
-          summary.refetch();
-          upcoming.refetch();
-          recent.refetch();
-        }}
-      />
-    );
+    return <ErrorState message={error} onRetry={refetchAll} />;
   }
 
   const monthSummary = summary.data?.[summary.data.length - 1];
@@ -116,6 +128,9 @@ export function HomeScreen() {
         styles.content,
         { paddingTop: insets.top + 20, paddingBottom: 20 },
       ]}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={refetchAll} tintColor={colors.accent} />
+      }
       testID="home-screen"
     >
       <View style={styles.header}>

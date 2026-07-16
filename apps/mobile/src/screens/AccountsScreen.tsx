@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { colors, fontFamily, fontSize, radius, shadow } from '../theme';
@@ -54,21 +54,20 @@ export function AccountsScreen({ navigation }: Props) {
 
   const loading =
     netWorth.loading || accounts.loading || investments.loading || debts.loading;
+  const refreshing =
+    netWorth.refreshing || accounts.refreshing || investments.refreshing || debts.refreshing;
   const error = netWorth.error ?? accounts.error ?? investments.error ?? debts.error;
+
+  function refetchAll() {
+    netWorth.refetch();
+    accounts.refetch();
+    investments.refetch();
+    debts.refetch();
+  }
 
   if (loading) return <LoadingState />;
   if (error) {
-    return (
-      <ErrorState
-        message={error}
-        onRetry={() => {
-          netWorth.refetch();
-          accounts.refetch();
-          investments.refetch();
-          debts.refetch();
-        }}
-      />
-    );
+    return <ErrorState message={error} onRetry={refetchAll} />;
   }
 
   return (
@@ -76,6 +75,9 @@ export function AccountsScreen({ navigation }: Props) {
       <ScrollView
         style={styles.container}
         contentContainerStyle={[styles.content, { paddingBottom: 20 }]}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={refetchAll} tintColor={colors.accent} />
+        }
         testID="accounts-screen"
       >
         <ScreenHeader eyebrow="Seu patrimônio" title="Contas" />

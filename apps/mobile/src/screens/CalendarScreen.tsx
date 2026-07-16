@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -135,19 +136,18 @@ export function CalendarScreen() {
   }
 
   const loading = scheduled.loading || transactions.loading;
+  const refreshing = scheduled.refreshing || transactions.refreshing;
   const error = scheduled.error ?? transactions.error;
+
+  function refetchAll() {
+    scheduled.refetch();
+    transactions.refetch();
+    accounts.refetch();
+  }
 
   if (loading) return <LoadingState />;
   if (error) {
-    return (
-      <ErrorState
-        message={error}
-        onRetry={() => {
-          scheduled.refetch();
-          transactions.refetch();
-        }}
-      />
-    );
+    return <ErrorState message={error} onRetry={refetchAll} />;
   }
 
   const selectedEvents = selectedDay ? (eventsByDate.get(selectedDay) ?? []) : [];
@@ -171,6 +171,9 @@ export function CalendarScreen() {
 
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingBottom: 20 }]}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={refetchAll} tintColor={colors.accent} />
+        }
       >
         <Card style={styles.calendarCard}>
           <Text style={styles.monthTitle}>

@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -62,6 +62,13 @@ export function CategoriesScreen({ navigation }: Props) {
 
       <ScrollView
         contentContainerStyle={[styles.content, { paddingBottom: 20 }]}
+        refreshControl={
+          <RefreshControl
+            refreshing={budgets.refreshing}
+            onRefresh={budgets.refetch}
+            tintColor={colors.accent}
+          />
+        }
       >
         {!budgets.data || budgets.data.length === 0 ? (
           <Card>
