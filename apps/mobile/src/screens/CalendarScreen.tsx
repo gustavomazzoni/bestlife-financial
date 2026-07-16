@@ -6,10 +6,14 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { Feather } from '@expo/vector-icons';
 import { addMonths, endOfMonth, format, isSameMonth, isToday, startOfMonth } from 'date-fns';
-import { colors, fontFamily, fontSize } from '../theme';
+import { ptBR } from 'date-fns/locale';
+import { colors, fontFamily, fontSize, radius } from '../theme';
 import { Card } from '../components/Card';
+import { IconBadge } from '../components/IconBadge';
+import { ScreenHeader } from '../components/ScreenHeader';
 import { LoadingState } from '../components/LoadingState';
 import { ErrorState } from '../components/ErrorState';
 import { useApiData } from '../hooks/useApiData';
@@ -34,6 +38,7 @@ const typeColor: Record<string, string> = {
 const WEEKDAY_LABELS = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'];
 
 export function CalendarScreen() {
+  const tabBarHeight = useBottomTabBarHeight();
   const [selectedMonth, setSelectedMonth] = useState(() => startOfMonth(new Date()));
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
@@ -88,84 +93,120 @@ export function CalendarScreen() {
 
   return (
     <View style={styles.container} testID="calendar-screen">
-      <View style={styles.monthNav}>
-        <Pressable onPress={() => goToMonth(-1)} hitSlop={12}>
-          <Feather name="chevron-left" size={24} color={colors.foreground} />
-        </Pressable>
-        <Text style={styles.monthTitle}>
-          {format(selectedMonth, 'MMMM yyyy')}
-        </Text>
-        <Pressable onPress={() => goToMonth(1)} hitSlop={12}>
-          <Feather name="chevron-right" size={24} color={colors.foreground} />
-        </Pressable>
-      </View>
-
-      <View style={styles.weekHeader}>
-        {WEEKDAY_LABELS.map((label, i) => (
-          <Text key={i} style={styles.weekLabel}>
-            {label}
-          </Text>
-        ))}
-      </View>
-
-      <View style={styles.grid} testID="calendar-grid">
-        {gridDates.map(date => {
-          const dateKey = format(date, 'yyyy-MM-dd');
-          const events = eventsByDate.get(dateKey) ?? [];
-          const inMonth = isSameMonth(date, selectedMonth);
-          const selected = selectedDay === dateKey;
-
-          return (
-            <Pressable
-              key={dateKey}
-              style={[
-                styles.dayCell,
-                selected && styles.dayCellSelected,
-                isToday(date) && !selected && styles.dayCellToday,
-              ]}
-              onPress={() => setSelectedDay(dateKey)}
-              testID={`calendar-day-${dateKey}`}
-            >
-              <Text
-                style={[
-                  styles.dayNumber,
-                  !inMonth && styles.dayNumberOutside,
-                  selected && styles.dayNumberSelected,
-                ]}
-              >
-                {date.getDate()}
-              </Text>
-              <View style={styles.dotsRow}>
-                {events.slice(0, 2).map((e, i) => (
-                  <View
-                    key={i}
-                    style={[
-                      styles.dot,
-                      {
-                        backgroundColor: typeColor[e.type] ?? colors.mutedForeground,
-                        opacity: e.kind === 'scheduled_projection' ? 0.5 : 1,
-                      },
-                    ]}
-                  />
-                ))}
-              </View>
+      <ScreenHeader
+        eyebrow="Organize-se"
+        title="Calendário"
+        right={
+          <View style={styles.monthNav}>
+            <Pressable onPress={() => goToMonth(-1)} style={styles.navButton} hitSlop={8}>
+              <Feather name="chevron-left" size={16} color={colors.foreground} />
             </Pressable>
-          );
-        })}
-      </View>
+            <Pressable onPress={() => goToMonth(1)} style={styles.navButton} hitSlop={8}>
+              <Feather name="chevron-right" size={16} color={colors.foreground} />
+            </Pressable>
+          </View>
+        }
+      />
 
-      <ScrollView style={styles.agenda} testID="day-agenda">
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: tabBarHeight + 20 }]}
+      >
+        <Card style={styles.calendarCard}>
+          <Text style={styles.monthTitle}>
+            {format(selectedMonth, 'MMMM yyyy', { locale: ptBR })}
+          </Text>
+
+          <View style={styles.weekHeader}>
+            {WEEKDAY_LABELS.map((label, i) => (
+              <Text key={i} style={styles.weekLabel}>
+                {label}
+              </Text>
+            ))}
+          </View>
+
+          <View style={styles.grid} testID="calendar-grid">
+            {gridDates.map(date => {
+              const dateKey = format(date, 'yyyy-MM-dd');
+              const events = eventsByDate.get(dateKey) ?? [];
+              const inMonth = isSameMonth(date, selectedMonth);
+              const selected = selectedDay === dateKey;
+
+              return (
+                <Pressable
+                  key={dateKey}
+                  style={styles.dayCell}
+                  onPress={() => setSelectedDay(dateKey)}
+                  testID={`calendar-day-${dateKey}`}
+                >
+                  <View
+                    style={[
+                      styles.dayNumberWrap,
+                      selected && styles.dayCellSelected,
+                      isToday(date) && !selected && styles.dayCellToday,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.dayNumber,
+                        !inMonth && styles.dayNumberOutside,
+                        selected && styles.dayNumberSelected,
+                      ]}
+                    >
+                      {date.getDate()}
+                    </Text>
+                  </View>
+                  <View style={styles.dotsRow}>
+                    {events.slice(0, 2).map((e, i) => (
+                      <View
+                        key={i}
+                        style={[
+                          styles.dot,
+                          {
+                            backgroundColor: typeColor[e.type] ?? colors.mutedForeground,
+                            opacity: e.kind === 'scheduled_projection' ? 0.5 : 1,
+                          },
+                        ]}
+                      />
+                    ))}
+                  </View>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <View style={styles.legend}>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: colors.income }]} />
+              <Text style={styles.legendLabel}>Entrada</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: colors.expense }]} />
+              <Text style={styles.legendLabel}>Saída</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: colors.warning }]} />
+              <Text style={styles.legendLabel}>Agendado</Text>
+            </View>
+          </View>
+        </Card>
+
+        <Text style={styles.agendaTitle}>
+          {selectedDay ? format(new Date(`${selectedDay}T00:00:00`), "EEEE, d 'de' MMMM", { locale: ptBR }) : 'Selecione um dia'}
+        </Text>
         {!selectedDay ? (
           <Text style={styles.agendaEmpty}>Selecione um dia para ver os eventos</Text>
         ) : selectedEvents.length === 0 ? (
-          <Text style={styles.agendaEmpty}>Nenhum evento neste dia</Text>
+          <View style={styles.agendaEmptyCard}>
+            <Text style={styles.agendaEmpty}>Nenhuma transação neste dia</Text>
+          </View>
         ) : (
           selectedEvents.map((e, i) => (
-            <Card
-              key={i}
-              style={[styles.eventRow, e.kind === 'scheduled_projection' && styles.eventRowProjected]}
-            >
-              <Text style={styles.rowIcon}>{e.categoryIcon ?? '📊'}</Text>
+            <Card key={i} style={styles.eventRow}>
+              <IconBadge
+                size={38}
+                color={e.categoryColor ?? colors.mutedForeground2}
+                letter={e.categoryName ?? e.description}
+              />
               <View style={styles.rowMain}>
                 <Text style={styles.rowTitle}>{e.description}</Text>
                 <Text style={styles.rowSubtitle}>
@@ -193,49 +234,68 @@ const styles = StyleSheet.create({
   },
   monthNav: {
     flexDirection: 'row',
+    gap: 8,
+  },
+  navButton: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+  },
+  scrollContent: {
     paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 8,
+    paddingBottom: 100,
+  },
+  calendarCard: {
+    padding: 16,
   },
   monthTitle: {
-    fontFamily: fontFamily.displayBold,
-    fontSize: fontSize.lg,
+    textAlign: 'center',
+    fontFamily: fontFamily.bodyBold,
+    fontSize: fontSize.sm,
     color: colors.foreground,
     textTransform: 'capitalize',
+    marginBottom: 14,
   },
   weekHeader: {
     flexDirection: 'row',
-    paddingHorizontal: 12,
+    marginBottom: 6,
   },
   weekLabel: {
     width: CELL_SIZE,
     textAlign: 'center',
-    fontFamily: fontFamily.bodyMedium,
-    fontSize: fontSize.xs,
-    color: colors.mutedForeground,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 11,
+    color: colors.mutedForeground2,
   },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    paddingHorizontal: 12,
   },
   dayCell: {
     width: CELL_SIZE,
     aspectRatio: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 2,
+    gap: 3,
+  },
+  dayNumberWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   dayCellSelected: {
     backgroundColor: colors.accent,
-    borderRadius: 12,
   },
   dayCellToday: {
     borderWidth: 1.5,
     borderColor: colors.warning,
-    borderRadius: 12,
   },
   dayNumber: {
     fontFamily: fontFamily.bodyMedium,
@@ -247,53 +307,83 @@ const styles = StyleSheet.create({
   },
   dayNumberSelected: {
     color: colors.accentForeground,
+    fontFamily: fontFamily.bodyBold,
   },
   dotsRow: {
     flexDirection: 'row',
     gap: 3,
+    height: 5,
   },
   dot: {
     width: 5,
     height: 5,
     borderRadius: 2.5,
   },
-  agenda: {
-    flex: 1,
-    padding: 20,
+  legend: {
+    flexDirection: 'row',
+    gap: 16,
+    justifyContent: 'center',
+    marginTop: 12,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderSoft,
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  legendDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+  },
+  legendLabel: {
+    fontFamily: fontFamily.bodyMedium,
+    fontSize: 11,
+    color: colors.mutedForeground,
+  },
+  agendaTitle: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: fontSize.sm,
+    color: colors.foreground,
+    textTransform: 'capitalize',
+    marginTop: 24,
+    marginBottom: 12,
   },
   agendaEmpty: {
-    fontFamily: fontFamily.body,
-    color: colors.mutedForeground,
+    fontFamily: fontFamily.bodyMedium,
+    color: colors.mutedForeground2,
     textAlign: 'center',
-    marginTop: 24,
+  },
+  agendaEmptyCard: {
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: colors.borderDashed,
+    borderRadius: radius.lg,
+    padding: 26,
   },
   eventRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 10,
-  },
-  eventRowProjected: {
-    borderStyle: 'dashed',
-  },
-  rowIcon: {
-    fontSize: 22,
+    gap: 13,
+    marginBottom: 9,
   },
   rowMain: {
     flex: 1,
   },
   rowTitle: {
-    fontFamily: fontFamily.bodyMedium,
-    fontSize: fontSize.base,
+    fontFamily: fontFamily.bodySemiBold,
+    fontSize: fontSize.sm,
     color: colors.foreground,
   },
   rowSubtitle: {
     fontFamily: fontFamily.body,
-    fontSize: fontSize.xs,
+    fontSize: 12,
     color: colors.mutedForeground,
   },
   rowAmount: {
-    fontFamily: fontFamily.bodySemiBold,
+    fontFamily: fontFamily.displayBold,
     fontSize: fontSize.sm,
   },
 });

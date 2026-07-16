@@ -1,6 +1,6 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { colors, fontFamily, fontSize } from '../theme';
+import { colors, fontFamily, fontSize, radius, shadow } from '../theme';
 import { formatCurrency } from '../lib/format';
 import { InferredTransaction, FinancialAccount } from '../types';
 
@@ -111,12 +111,13 @@ export function TransactionPreviewCard({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
-    borderRadius: 16,
+    borderRadius: radius.lg,
     padding: 16,
     borderWidth: 1,
     borderColor: colors.border,
     gap: 8,
     maxWidth: '85%',
+    ...shadow.card,
   },
   header: {
     flexDirection: 'row',
@@ -183,9 +184,8 @@ const styles = StyleSheet.create({
   editButton: {
     flex: 1,
     paddingVertical: 8,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceMuted,
     alignItems: 'center',
   },
   editButtonLabel: {
@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
   confirmButton: {
     flex: 1,
     paddingVertical: 8,
-    borderRadius: 10,
+    borderRadius: radius.sm,
     backgroundColor: colors.accent,
     alignItems: 'center',
   },

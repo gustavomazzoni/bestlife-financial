@@ -20,6 +20,7 @@ export interface CalendarEvent {
   sourceId: string;
   categoryIcon?: string;
   categoryName?: string;
+  categoryColor?: string;
 }
 
 export function projectScheduledOccurrences(
@@ -46,6 +47,7 @@ export function projectScheduledOccurrences(
           sourceId: s.id,
           categoryIcon: s.category?.icon,
           categoryName: s.category?.name,
+          categoryColor: s.category?.color,
         });
       }
 
@@ -76,6 +78,7 @@ export function transactionsToCalendarEvents(
     sourceId: t.id,
     categoryIcon: t.category?.icon,
     categoryName: t.category?.name,
+    categoryColor: t.category?.color,
   }));
 }
 

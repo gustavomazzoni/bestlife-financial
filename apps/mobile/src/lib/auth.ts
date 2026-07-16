@@ -1,7 +1,7 @@
-import * as SecureStore from 'expo-secure-store';
 import { api, ApiError } from './api';
+import { getStoredToken, setStoredToken, clearStoredToken } from './token';
 
-const TOKEN_KEY = 'lifeos_mobile_token';
+export { getStoredToken };
 
 export type AuthActionResult =
   | { type: 'success' }
@@ -30,7 +30,7 @@ export async function verifyLoginCode(
       '/api/v1/auth/mobile-login/verify',
       { email, code }
     );
-    await SecureStore.setItemAsync(TOKEN_KEY, token);
+    await setStoredToken(token);
     return { type: 'success' };
   } catch (err) {
     return {
@@ -40,10 +40,6 @@ export async function verifyLoginCode(
   }
 }
 
-export async function getStoredToken(): Promise<string | null> {
-  return SecureStore.getItemAsync(TOKEN_KEY);
-}
-
 export async function signOut(): Promise<void> {
-  await SecureStore.deleteItemAsync(TOKEN_KEY);
+  await clearStoredToken();
 }

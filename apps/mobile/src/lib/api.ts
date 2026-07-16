@@ -1,5 +1,5 @@
 import { API_URL } from './config';
-import { getStoredToken } from './auth';
+import { getStoredToken } from './token';
 
 export interface ApiMeta {
   page?: number;

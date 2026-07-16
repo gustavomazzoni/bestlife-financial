@@ -1,13 +1,25 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { Feather } from '@expo/vector-icons';
-import { colors, fontFamily, fontSize } from '../theme';
+import { useNavigation } from '@react-navigation/native';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { colors, fontFamily, fontSize, radius, shadow } from '../theme';
 import { Card } from '../components/Card';
+import { IconBadge } from '../components/IconBadge';
 import { LoadingState } from '../components/LoadingState';
 import { ErrorState } from '../components/ErrorState';
 import { useApiData } from '../hooks/useApiData';
 import { api } from '../lib/api';
 import { formatCurrency, formatRelativeDate } from '../lib/format';
-import { NetWorth, Transaction, UpcomingItem } from '../types';
+import { FinancialAccount, NetWorth, Transaction, UpcomingItem } from '../types';
+
+interface MonthlySummary {
+  month: string;
+  income: number;
+  expenses: number;
+}
 
 const typeColor: Record<string, string> = {
   INCOME: colors.income,
@@ -17,14 +29,22 @@ const typeColor: Record<string, string> = {
 };
 
 export function HomeScreen() {
+  const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
+  const tabBarHeight = useBottomTabBarHeight();
   const netWorth = useApiData(() => api.get<NetWorth>('/api/v1/calculations/net-worth'));
+  const accounts = useApiData(() => api.get<FinancialAccount[]>('/api/v1/accounts'));
+  const summary = useApiData(() =>
+    api.get<MonthlySummary[]>('/api/v1/transactions/summary?period=month&months=1')
+  );
   const upcoming = useApiData(() => api.get<UpcomingItem[]>('/api/v1/dashboard/upcoming?days=7'));
   const recent = useApiData(() =>
     api.get<Transaction[]>('/api/v1/transactions?limit=6&sortBy=date&sortOrder=desc')
   );
 
-  const loading = netWorth.loading || upcoming.loading || recent.loading;
-  const error = netWorth.error ?? upcoming.error ?? recent.error;
+  const loading =
+    netWorth.loading || accounts.loading || summary.loading || upcoming.loading || recent.loading;
+  const error = netWorth.error ?? accounts.error ?? summary.error ?? upcoming.error ?? recent.error;
 
   if (loading) return <LoadingState />;
   if (error) {
@@ -33,6 +53,8 @@ export function HomeScreen() {
         message={error}
         onRetry={() => {
           netWorth.refetch();
+          accounts.refetch();
+          summary.refetch();
           upcoming.refetch();
           recent.refetch();
         }}
@@ -40,42 +62,63 @@ export function HomeScreen() {
     );
   }
 
+  const monthSummary = summary.data?.[summary.data.length - 1];
+  const todayLabel = format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR });
+
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[
+        styles.content,
+        { paddingTop: insets.top + 20, paddingBottom: tabBarHeight + 20 },
+      ]}
       testID="home-screen"
     >
-      <Text style={styles.greeting}>Início</Text>
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.todayLabel}>{todayLabel}</Text>
+          <Text style={styles.greeting}>Olá!</Text>
+        </View>
+        <Pressable style={styles.profileButton}>
+          <Feather name="bell" size={18} color={colors.foreground} />
+          <View style={styles.profileDot} />
+        </Pressable>
+      </View>
 
       <View style={styles.balanceCard}>
-        <Text style={styles.balanceLabel}>Patrimônio líquido</Text>
+        <View style={styles.balanceHeader}>
+          <Text style={styles.balanceLabel}>Saldo em contas</Text>
+          <View style={styles.accountsPill}>
+            <Text style={styles.accountsPillLabel}>
+              {accounts.data?.length ?? 0} contas
+            </Text>
+          </View>
+        </View>
         <Text style={styles.balanceValue}>
-          {formatCurrency(netWorth.data?.netWorth ?? 0)}
+          {formatCurrency(netWorth.data?.accountsTotal ?? 0)}
         </Text>
         <View style={styles.balanceRow}>
-          <View style={styles.balanceItem}>
-            <Text style={styles.balanceItemLabel}>Contas</Text>
-            <Text style={styles.balanceItemValue}>
-              {formatCurrency(netWorth.data?.accountsTotal ?? 0)}
+          <View style={styles.balancePill}>
+            <Text style={styles.balancePillLabel}>Entradas · mês</Text>
+            <Text style={[styles.balancePillValue, { color: colors.incomeSoft }]}>
+              {formatCurrency(monthSummary?.income ?? 0)}
             </Text>
           </View>
-          <View style={styles.balanceItem}>
-            <Text style={styles.balanceItemLabel}>Investimentos</Text>
-            <Text style={styles.balanceItemValue}>
-              {formatCurrency(netWorth.data?.investmentsTotal ?? 0)}
-            </Text>
-          </View>
-          <View style={styles.balanceItem}>
-            <Text style={styles.balanceItemLabel}>Dívidas</Text>
-            <Text style={styles.balanceItemValue}>
-              {formatCurrency(netWorth.data?.debtsTotal ?? 0)}
+          <View style={styles.balancePill}>
+            <Text style={styles.balancePillLabel}>Saídas · mês</Text>
+            <Text style={[styles.balancePillValue, { color: colors.expenseSoft }]}>
+              {formatCurrency(monthSummary?.expenses ?? 0)}
             </Text>
           </View>
         </View>
       </View>
 
-      <Text style={styles.sectionTitle}>A vencer</Text>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>A vencer</Text>
+        <Pressable onPress={() => navigation.navigate('Calendar' as never)}>
+          <Text style={styles.sectionLink}>Calendário</Text>
+        </Pressable>
+      </View>
       {!upcoming.data || upcoming.data.length === 0 ? (
         <Card style={styles.emptyCard}>
           <Feather name="check-circle" size={20} color={colors.accent} />
@@ -83,12 +126,11 @@ export function HomeScreen() {
         </Card>
       ) : (
         upcoming.data.map(item => (
-          <Card
-            key={item.id}
-            style={[styles.rowCard, item.isToday && styles.rowCardToday]}
-            testID="upcoming-item"
-          >
-            <Text style={styles.rowIcon}>{item.categoryIcon ?? '📊'}</Text>
+          <Card key={item.id} style={styles.rowCard} testID="upcoming-item">
+            <IconBadge
+              color={colors.warningSoft}
+              icon={<Feather name="clock" size={17} color={colors.warning} />}
+            />
             <View style={styles.rowMain}>
               <Text style={styles.rowTitle}>{item.description}</Text>
               <Text style={styles.rowSubtitle}>
@@ -96,31 +138,51 @@ export function HomeScreen() {
                 {item.isRecurring ? ' · Recorrente' : ''}
               </Text>
             </View>
-            <Text style={[styles.rowAmount, { color: typeColor[item.type] }]}>
-              {formatCurrency(item.amount)}
-            </Text>
+            <View style={styles.rowAmountGroup}>
+              <Text style={[styles.rowAmount, { color: typeColor[item.type] }]}>
+                {formatCurrency(item.amount)}
+              </Text>
+              {item.isToday && <Text style={styles.rowDue}>Hoje</Text>}
+            </View>
           </Card>
         ))
       )}
 
-      <Text style={styles.sectionTitle}>Transações recentes</Text>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Transações recentes</Text>
+        <Pressable onPress={() => navigation.navigate('Reports' as never)}>
+          <Text style={styles.sectionLink}>Relatório</Text>
+        </Pressable>
+      </View>
       {!recent.data || recent.data.length === 0 ? (
         <Card style={styles.emptyCard}>
           <Text style={styles.emptyText}>Nenhuma transação ainda</Text>
         </Card>
       ) : (
-        recent.data.map(t => (
-          <Card key={t.id} style={styles.rowCard} testID="recent-transaction-item">
-            <Text style={styles.rowIcon}>{t.category?.icon ?? '📊'}</Text>
-            <View style={styles.rowMain}>
-              <Text style={styles.rowTitle}>{t.description}</Text>
-              <Text style={styles.rowSubtitle}>{t.category?.name ?? '—'}</Text>
+        <Card style={styles.listCard}>
+          {recent.data.map((t, i) => (
+            <View
+              key={t.id}
+              style={[styles.listRow, i > 0 && styles.listRowBorder]}
+              testID="recent-transaction-item"
+            >
+              <IconBadge
+                color={t.category?.color ?? colors.mutedForeground2}
+                letter={t.category?.name ?? t.description}
+                size={40}
+              />
+              <View style={styles.rowMain}>
+                <Text style={styles.rowTitle} numberOfLines={1}>
+                  {t.description}
+                </Text>
+                <Text style={styles.rowSubtitle}>{t.category?.name ?? '—'}</Text>
+              </View>
+              <Text style={[styles.rowAmount, { color: typeColor[t.type] }]}>
+                {formatCurrency(t.amount)}
+              </Text>
             </View>
-            <Text style={[styles.rowAmount, { color: typeColor[t.type] }]}>
-              {formatCurrency(t.amount)}
-            </Text>
-          </Card>
-        ))
+          ))}
+        </Card>
       )}
     </ScrollView>
   );
@@ -134,54 +196,120 @@ const styles = StyleSheet.create({
   content: {
     padding: 20,
     paddingBottom: 100,
-    gap: 12,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    paddingBottom: 18,
+  },
+  todayLabel: {
+    fontFamily: fontFamily.bodyMedium,
+    fontSize: fontSize.sm,
+    color: colors.mutedForeground,
+    textTransform: 'capitalize',
   },
   greeting: {
     fontFamily: fontFamily.displayBold,
-    fontSize: fontSize['2xl'],
+    fontSize: fontSize.xl,
     color: colors.foreground,
-    marginBottom: 4,
+    marginTop: 2,
+    letterSpacing: -0.3,
+  },
+  profileButton: {
+    width: 42,
+    height: 42,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadow.card,
+  },
+  profileDot: {
+    position: 'absolute',
+    top: 8,
+    right: 9,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.warning,
+    borderWidth: 2,
+    borderColor: colors.surface,
   },
   balanceCard: {
     backgroundColor: colors.card,
-    borderRadius: 20,
-    padding: 20,
-    gap: 16,
+    borderRadius: radius.xl,
+    padding: 22,
+    paddingBottom: 20,
+    ...shadow.dark,
+  },
+  balanceHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   balanceLabel: {
-    fontFamily: fontFamily.body,
+    fontFamily: fontFamily.bodyMedium,
     fontSize: fontSize.sm,
-    color: colors.cardForeground,
-    opacity: 0.7,
+    color: 'rgba(255,255,255,0.6)',
+  },
+  accountsPill: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: radius.pill,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+  },
+  accountsPillLabel: {
+    fontFamily: fontFamily.bodySemiBold,
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.5)',
   },
   balanceValue: {
     fontFamily: fontFamily.displayBold,
-    fontSize: fontSize['3xl'],
+    fontSize: 38,
     color: colors.cardForeground,
+    letterSpacing: -1,
+    marginTop: 8,
   },
   balanceRow: {
     flexDirection: 'row',
+    gap: 10,
+    marginTop: 18,
+  },
+  balancePill: {
+    flex: 1,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: radius.md,
+    padding: 12,
+  },
+  balancePillLabel: {
+    fontFamily: fontFamily.bodyMedium,
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.55)',
+  },
+  balancePillValue: {
+    fontFamily: fontFamily.displayBold,
+    fontSize: fontSize.base,
+    marginTop: 3,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-  },
-  balanceItem: {
-    gap: 2,
-  },
-  balanceItemLabel: {
-    fontFamily: fontFamily.body,
-    fontSize: fontSize.xs,
-    color: colors.cardForeground,
-    opacity: 0.6,
-  },
-  balanceItemValue: {
-    fontFamily: fontFamily.bodySemiBold,
-    fontSize: fontSize.sm,
-    color: colors.cardForeground,
+    marginTop: 26,
+    marginBottom: 12,
   },
   sectionTitle: {
-    fontFamily: fontFamily.bodySemiBold,
-    fontSize: fontSize.lg,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: fontSize.base,
     color: colors.foreground,
-    marginTop: 8,
+  },
+  sectionLink: {
+    fontFamily: fontFamily.bodySemiBold,
+    fontSize: fontSize.sm,
+    color: colors.accent,
   },
   emptyCard: {
     flexDirection: 'row',
@@ -195,30 +323,49 @@ const styles = StyleSheet.create({
   rowCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 13,
+    marginBottom: 10,
   },
-  rowCardToday: {
-    borderColor: colors.warning,
-    borderWidth: 1.5,
+  listCard: {
+    padding: 0,
+    overflow: 'hidden',
   },
-  rowIcon: {
-    fontSize: 22,
+  listRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 13,
+    padding: 15,
+  },
+  listRowBorder: {
+    borderTopWidth: 1,
+    borderTopColor: colors.borderSoft,
   },
   rowMain: {
     flex: 1,
+    minWidth: 0,
   },
   rowTitle: {
-    fontFamily: fontFamily.bodyMedium,
-    fontSize: fontSize.base,
+    fontFamily: fontFamily.bodySemiBold,
+    fontSize: fontSize.sm,
     color: colors.foreground,
   },
   rowSubtitle: {
     fontFamily: fontFamily.body,
-    fontSize: fontSize.xs,
+    fontSize: 12,
     color: colors.mutedForeground,
+    marginTop: 1,
+  },
+  rowAmountGroup: {
+    alignItems: 'flex-end',
   },
   rowAmount: {
-    fontFamily: fontFamily.bodySemiBold,
+    fontFamily: fontFamily.displayBold,
     fontSize: fontSize.sm,
+  },
+  rowDue: {
+    fontFamily: fontFamily.bodySemiBold,
+    fontSize: 11,
+    color: colors.warning,
+    marginTop: 1,
   },
 });

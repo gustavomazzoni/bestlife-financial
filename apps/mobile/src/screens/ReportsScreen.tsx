@@ -1,11 +1,15 @@
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { colors, fontFamily, fontSize } from '../theme';
 import { Card } from '../components/Card';
 import { Chip } from '../components/Chip';
 import { DonutChart } from '../components/DonutChart';
+import { IconBadge } from '../components/IconBadge';
 import { ProgressBar } from '../components/ProgressBar';
+import { ScreenHeader } from '../components/ScreenHeader';
 import { LoadingState } from '../components/LoadingState';
 import { ErrorState } from '../components/ErrorState';
 import { useApiData } from '../hooks/useApiData';
@@ -30,6 +34,7 @@ const CATEGORY_PALETTE = [
 ];
 
 export function ReportsScreen() {
+  const tabBarHeight = useBottomTabBarHeight();
   const [selectedMonth, setSelectedMonth] = useState(() => format(new Date(), 'yyyy-MM'));
 
   const summary = useApiData(() =>
@@ -78,17 +83,17 @@ export function ReportsScreen() {
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, { paddingBottom: tabBarHeight + 20 }]}
       testID="reports-screen"
     >
-      <Text style={styles.title}>Relatórios</Text>
+      <ScreenHeader eyebrow="Para onde vai o dinheiro" title="Relatório" />
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.monthPicker}>
         <View style={styles.monthPickerRow}>
           {months.map(m => (
             <Chip
               key={m}
-              label={format(new Date(`${m}-01T00:00:00`), 'MMM/yy')}
+              label={format(new Date(`${m}-01T00:00:00`), 'MMM/yy', { locale: ptBR })}
               selected={m === selectedMonth}
               onPress={() => setSelectedMonth(m)}
             />
@@ -96,22 +101,20 @@ export function ReportsScreen() {
         </View>
       </ScrollView>
 
-      <Card style={styles.summaryCard}>
-        <View style={styles.summaryRow}>
-          <View>
-            <Text style={styles.summaryLabel}>Receitas</Text>
-            <Text style={[styles.summaryValue, { color: colors.income }]}>
-              {formatCurrency(currentMonthSummary?.income ?? 0)}
-            </Text>
-          </View>
-          <View>
-            <Text style={styles.summaryLabel}>Despesas</Text>
-            <Text style={[styles.summaryValue, { color: colors.expense }]}>
-              {formatCurrency(currentMonthSummary?.expenses ?? 0)}
-            </Text>
-          </View>
-        </View>
-      </Card>
+      <View style={styles.summaryRow}>
+        <Card style={styles.summaryCard}>
+          <Text style={styles.summaryLabel}>Entradas</Text>
+          <Text style={[styles.summaryValue, { color: colors.income }]}>
+            {formatCurrency(currentMonthSummary?.income ?? 0)}
+          </Text>
+        </Card>
+        <Card style={styles.summaryCard}>
+          <Text style={styles.summaryLabel}>Saídas</Text>
+          <Text style={[styles.summaryValue, { color: colors.foreground }]}>
+            {formatCurrency(currentMonthSummary?.expenses ?? 0)}
+          </Text>
+        </Card>
+      </View>
 
       {donutSegments.length > 0 && (
         <Card style={styles.donutCard}>
@@ -125,7 +128,9 @@ export function ReportsScreen() {
                     { backgroundColor: CATEGORY_PALETTE[i % CATEGORY_PALETTE.length] },
                   ]}
                 />
-                <Text style={styles.legendLabel}>{c.categoryName}</Text>
+                <Text style={styles.legendLabel} numberOfLines={1}>
+                  {c.categoryName}
+                </Text>
                 <Text style={styles.legendValue}>{c.percentage.toFixed(0)}%</Text>
               </View>
             ))}
@@ -142,9 +147,10 @@ export function ReportsScreen() {
         budgets.data.map(b => (
           <Card key={b.categoryId} style={styles.budgetCard} testID="budget-item">
             <View style={styles.budgetHeader}>
-              <Text style={styles.budgetLabel}>
-                {b.categoryIcon} {b.categoryName}
-              </Text>
+              <View style={styles.budgetHeaderLeft}>
+                <IconBadge size={30} color={b.categoryColor} letter={b.categoryName} />
+                <Text style={styles.budgetLabel}>{b.categoryName}</Text>
+              </View>
               <Text
                 style={[
                   styles.budgetAmount,
@@ -168,14 +174,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   content: {
-    padding: 20,
+    paddingHorizontal: 20,
     paddingBottom: 100,
     gap: 12,
-  },
-  title: {
-    fontFamily: fontFamily.displayBold,
-    fontSize: fontSize['2xl'],
-    color: colors.foreground,
   },
   monthPicker: {
     marginVertical: 4,
@@ -184,19 +185,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
   },
-  summaryCard: {},
   summaryRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: 10,
+  },
+  summaryCard: {
+    flex: 1,
   },
   summaryLabel: {
-    fontFamily: fontFamily.body,
-    fontSize: fontSize.sm,
+    fontFamily: fontFamily.bodyMedium,
+    fontSize: 12,
     color: colors.mutedForeground,
   },
   summaryValue: {
     fontFamily: fontFamily.displayBold,
-    fontSize: fontSize.xl,
+    fontSize: fontSize.lg,
+    marginTop: 3,
   },
   donutCard: {
     flexDirection: 'row',
@@ -229,8 +233,8 @@ const styles = StyleSheet.create({
     color: colors.mutedForeground,
   },
   sectionTitle: {
-    fontFamily: fontFamily.bodySemiBold,
-    fontSize: fontSize.lg,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: fontSize.base,
     color: colors.foreground,
     marginTop: 8,
   },
@@ -239,20 +243,29 @@ const styles = StyleSheet.create({
     color: colors.mutedForeground,
   },
   budgetCard: {
-    gap: 8,
+    gap: 11,
   },
   budgetHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  budgetHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+    minWidth: 0,
   },
   budgetLabel: {
-    fontFamily: fontFamily.bodyMedium,
+    fontFamily: fontFamily.bodySemiBold,
     fontSize: fontSize.sm,
     color: colors.foreground,
+    flexShrink: 1,
   },
   budgetAmount: {
     fontFamily: fontFamily.body,
-    fontSize: fontSize.xs,
+    fontSize: 11,
     color: colors.mutedForeground,
   },
 });

@@ -9,10 +9,11 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { Feather } from '@expo/vector-icons';
 import { startOfDay } from 'date-fns';
-import { colors, fontFamily, fontSize } from '../theme';
-import { Chip } from '../components/Chip';
+import { colors, fontFamily, fontSize, radius, shadow } from '../theme';
 import { TransactionPreviewCard } from '../components/TransactionPreviewCard';
 import {
   EditTransactionSheet,
@@ -21,11 +22,11 @@ import {
 import { api, ApiError } from '../lib/api';
 import { FinancialAccount, InferTransactionResult, InferredTransaction } from '../types';
 
-const SUGGESTIONS = [
-  'Almocei 35 reais',
-  'Uber ontem 28 reais',
-  'Salário do mês 8000',
-  'Conta de luz 180, vence dia 28 todo mês',
+const SUGGESTIONS: { text: string; icon: keyof typeof Feather.glyphMap; color: string }[] = [
+  { text: 'Almocei 35 reais', icon: 'coffee', color: colors.expense },
+  { text: 'Uber ontem 28 reais', icon: 'navigation', color: colors.saving },
+  { text: 'Salário do mês 8000', icon: 'trending-up', color: colors.income },
+  { text: 'Conta de luz 180, vence dia 28 todo mês', icon: 'zap', color: colors.warning },
 ];
 
 type ChatMessage =
@@ -46,6 +47,8 @@ function nextId() {
 }
 
 export function ChatScreen() {
+  const insets = useSafeAreaInsets();
+  const tabBarHeight = useBottomTabBarHeight();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [sending, setSending] = useState(false);
@@ -160,13 +163,42 @@ export function ChatScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       testID="chat-screen"
     >
+      <View style={[styles.header, { paddingTop: insets.top + 6 }]}>
+        <View style={styles.headerText}>
+          <Text style={styles.headerTitle}>Assistente</Text>
+          <View style={styles.headerStatus}>
+            <View style={styles.headerStatusDot} />
+            <Text style={styles.headerStatusLabel}>Lance por mensagem</Text>
+          </View>
+        </View>
+        <View style={styles.headerIcon}>
+          <Feather name="message-circle" size={17} color={colors.accent} />
+        </View>
+      </View>
+
       {messages.length === 0 ? (
         <View style={styles.emptyState} testID="chat-empty-state">
-          <Feather name="message-circle" size={32} color={colors.accent} />
-          <Text style={styles.emptyTitle}>Conte o que você gastou ou recebeu</Text>
+          <View style={styles.emptyIcon}>
+            <Feather name="message-circle" size={26} color="#fff" />
+          </View>
+          <Text style={styles.emptyTitle}>Escreva, e eu organizo.</Text>
+          <Text style={styles.emptySubtitle}>
+            Conte um gasto, receita ou conta a pagar em linguagem natural. Eu categorizo e
+            lanço pra você.
+          </Text>
+          <Text style={styles.emptyEyebrow}>Experimente</Text>
           <View style={styles.suggestions}>
             {SUGGESTIONS.map(s => (
-              <Chip key={s} label={s} onPress={() => sendText(s)} />
+              <Pressable
+                key={s.text}
+                style={styles.suggestionRow}
+                onPress={() => sendText(s.text)}
+              >
+                <View style={[styles.suggestionIcon, { backgroundColor: s.color }]}>
+                  <Feather name={s.icon} size={13} color="#fff" />
+                </View>
+                <Text style={styles.suggestionText}>{s.text}</Text>
+              </Pressable>
             ))}
           </View>
         </View>
@@ -187,13 +219,19 @@ export function ChatScreen() {
             }
             if (item.role === 'error') {
               return (
-                <View style={styles.assistantWrapper}>
+                <View style={styles.assistantRow}>
+                  <View style={styles.assistantAvatar}>
+                    <Feather name="message-circle" size={14} color={colors.accent} />
+                  </View>
                   <Text style={styles.errorMessage}>{item.text}</Text>
                 </View>
               );
             }
             return (
-              <View style={styles.assistantWrapper}>
+              <View style={styles.assistantRow}>
+                <View style={styles.assistantAvatar}>
+                  <Feather name="message-circle" size={14} color={colors.accent} />
+                </View>
                 <TransactionPreviewCard
                   inferred={item.result.inferred}
                   confidence={item.result.confidence}
@@ -209,10 +247,10 @@ export function ChatScreen() {
         />
       )}
 
-      <View style={styles.inputBar}>
+      <View style={[styles.inputBar, { paddingBottom: tabBarHeight + 10 }]}>
         <TextInput
           style={styles.textInput}
-          placeholder="Digite uma transação…"
+          placeholder="Ex: gastei 80 no mercado hoje"
           placeholderTextColor={colors.mutedForeground}
           value={inputText}
           onChangeText={setInputText}
@@ -244,24 +282,112 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  emptyState: {
-    flex: 1,
+  header: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 32,
-    gap: 16,
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingTop: 6,
+    paddingBottom: 12,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderSoft,
   },
-  emptyTitle: {
-    fontFamily: fontFamily.bodyMedium,
+  headerText: {
+    flex: 1,
+  },
+  headerTitle: {
+    fontFamily: fontFamily.bodyBold,
     fontSize: fontSize.base,
     color: colors.foreground,
-    textAlign: 'center',
+  },
+  headerStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 2,
+  },
+  headerStatusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.accent,
+  },
+  headerStatusLabel: {
+    fontFamily: fontFamily.bodySemiBold,
+    fontSize: 12,
+    color: colors.accent,
+  },
+  headerIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: radius.sm,
+    backgroundColor: colors.accentSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyState: {
+    flex: 1,
+    padding: 24,
+    paddingTop: 24,
+  },
+  emptyIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 17,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+    ...shadow.accent,
+  },
+  emptyTitle: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 22,
+    color: colors.foreground,
+    letterSpacing: -0.4,
+  },
+  emptySubtitle: {
+    fontFamily: fontFamily.body,
+    fontSize: fontSize.sm,
+    color: colors.mutedForeground,
+    marginTop: 6,
+    lineHeight: 20,
+  },
+  emptyEyebrow: {
+    fontFamily: fontFamily.bodySemiBold,
+    fontSize: 12,
+    color: colors.mutedForeground2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginTop: 26,
+    marginBottom: 12,
   },
   suggestions: {
+    gap: 9,
+  },
+  suggestionRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+    alignItems: 'center',
+    gap: 11,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    borderRadius: radius.md,
+    padding: 13,
+  },
+  suggestionIcon: {
+    width: 26,
+    height: 26,
+    borderRadius: 8,
+    alignItems: 'center',
     justifyContent: 'center',
+  },
+  suggestionText: {
+    flex: 1,
+    fontFamily: fontFamily.bodyMedium,
+    fontSize: fontSize.sm,
+    color: colors.foreground,
   },
   list: {
     padding: 16,
@@ -273,10 +399,10 @@ const styles = StyleSheet.create({
   },
   userBubble: {
     backgroundColor: colors.accent,
-    borderRadius: 16,
-    borderTopRightRadius: 4,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    borderRadius: 20,
+    borderTopRightRadius: 6,
+    paddingHorizontal: 15,
+    paddingVertical: 11,
     maxWidth: '80%',
   },
   userBubbleText: {
@@ -284,11 +410,23 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.accentForeground,
   },
-  assistantWrapper: {
+  assistantRow: {
+    flexDirection: 'row',
     alignItems: 'flex-start',
+    gap: 9,
     marginBottom: 12,
   },
+  assistantAvatar: {
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    backgroundColor: colors.accentSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
   errorMessage: {
+    flex: 1,
     fontFamily: fontFamily.body,
     fontSize: fontSize.sm,
     color: colors.danger,
@@ -296,23 +434,23 @@ const styles = StyleSheet.create({
   inputBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    padding: 12,
+    gap: 9,
+    padding: 10,
+    backgroundColor: colors.background,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
-    backgroundColor: colors.surface,
+    borderTopColor: colors.borderSoft,
   },
   textInput: {
     flex: 1,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 999,
+    borderRadius: radius.pill,
     paddingHorizontal: 16,
     paddingVertical: 10,
     fontFamily: fontFamily.body,
     fontSize: fontSize.base,
     color: colors.foreground,
-    backgroundColor: colors.background,
+    backgroundColor: colors.surface,
   },
   sendButton: {
     width: 40,

@@ -4,13 +4,13 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
-import { colors, fontFamily, fontSize } from '../theme';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors, fontFamily, fontSize, radius } from '../theme';
 import { requestLoginCode, verifyLoginCode } from '../lib/auth';
 
 interface LoginScreenProps {
@@ -168,7 +168,7 @@ const styles = StyleSheet.create({
   input: {
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 8,
+    borderRadius: radius.sm,
     padding: 12,
     fontSize: fontSize.base,
     fontFamily: fontFamily.body,
@@ -183,7 +183,7 @@ const styles = StyleSheet.create({
   },
   button: {
     paddingVertical: 14,
-    borderRadius: 10,
+    borderRadius: radius.sm,
     backgroundColor: colors.accent,
     alignItems: 'center',
   },

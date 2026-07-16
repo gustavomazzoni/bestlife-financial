@@ -5,12 +5,13 @@ import {
 } from '@react-navigation/bottom-tabs';
 import { Feather } from '@expo/vector-icons';
 import { Pressable, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { HomeScreen } from '../screens/HomeScreen';
 import { CalendarScreen } from '../screens/CalendarScreen';
 import { ChatScreen } from '../screens/ChatScreen';
 import { ReportsScreen } from '../screens/ReportsScreen';
 import { AccountsStack } from './AccountsStack';
-import { colors, fontFamily } from '../theme';
+import { colors, fontFamily, shadow } from '../theme';
 
 const Tab = createBottomTabNavigator();
 
@@ -24,14 +25,16 @@ function ChatTabButton({ children, onPress }: BottomTabBarButtonProps) {
 }
 
 export function RootNavigator() {
+  const insets = useSafeAreaInsets();
+
   return (
     <NavigationContainer>
       <Tab.Navigator
         screenOptions={{
           headerShown: false,
-          tabBarActiveTintColor: colors.accent,
-          tabBarInactiveTintColor: colors.mutedForeground,
-          tabBarStyle: styles.tabBar,
+          tabBarActiveTintColor: colors.foreground,
+          tabBarInactiveTintColor: colors.mutedForeground2,
+          tabBarStyle: [styles.tabBar, { bottom: insets.bottom + 10 }],
           tabBarLabelStyle: styles.tabBarLabel,
         }}
       >
@@ -41,7 +44,7 @@ export function RootNavigator() {
           options={{
             title: 'Início',
             tabBarIcon: ({ color, size }) => (
-              <Feather name="home" color={color} size={size} />
+              <Feather name="home" color={color} size={size - 2} strokeWidth={1.8} />
             ),
           }}
         />
@@ -51,7 +54,7 @@ export function RootNavigator() {
           options={{
             title: 'Calendário',
             tabBarIcon: ({ color, size }) => (
-              <Feather name="calendar" color={color} size={size} />
+              <Feather name="calendar" color={color} size={size - 2} strokeWidth={1.8} />
             ),
           }}
         />
@@ -72,7 +75,7 @@ export function RootNavigator() {
           options={{
             title: 'Relatórios',
             tabBarIcon: ({ color, size }) => (
-              <Feather name="pie-chart" color={color} size={size} />
+              <Feather name="pie-chart" color={color} size={size - 2} strokeWidth={1.8} />
             ),
           }}
         />
@@ -82,7 +85,7 @@ export function RootNavigator() {
           options={{
             title: 'Contas',
             tabBarIcon: ({ color, size }) => (
-              <Feather name="credit-card" color={color} size={size} />
+              <Feather name="credit-card" color={color} size={size - 2} strokeWidth={1.8} />
             ),
           }}
         />
@@ -93,33 +96,33 @@ export function RootNavigator() {
 
 const styles = StyleSheet.create({
   tabBar: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    height: 64,
+    borderRadius: 28,
     backgroundColor: colors.surface,
-    borderTopColor: colors.border,
-    height: 68,
-    paddingBottom: 10,
+    borderTopWidth: 0,
     paddingTop: 8,
+    ...shadow.card,
   },
   tabBarLabel: {
-    fontFamily: fontFamily.bodyMedium,
-    fontSize: 11,
+    fontFamily: fontFamily.bodySemiBold,
+    fontSize: 10,
   },
   chatButtonWrapper: {
-    top: -22,
+    top: -18,
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
   chatButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 48,
+    height: 48,
+    borderRadius: 16,
     backgroundColor: colors.accent,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 6,
+    ...shadow.accent,
   },
 });
