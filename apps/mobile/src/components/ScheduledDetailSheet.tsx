@@ -57,6 +57,7 @@ export const ScheduledDetailSheet = forwardRef<
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoriesError, setCategoriesError] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -103,6 +104,7 @@ export const ScheduledDetailSheet = forwardRef<
         description: draft.description,
         categoryId: draft.categoryId,
         frequency: draft.frequency !== 'ONCE' ? draft.frequency : undefined,
+        startDate: draft.startDate,
         endDate: draft.endDate,
       });
       setMode('view');
@@ -242,6 +244,24 @@ export const ScheduledDetailSheet = forwardRef<
               value={draft.description}
               onChangeText={t => update({ description: t })}
             />
+
+            <Text style={styles.label}>
+              {draft.frequency === 'ONCE' ? 'Data' : 'Próxima ocorrência'}
+            </Text>
+            <Pressable style={styles.dateButton} onPress={() => setShowStartDatePicker(true)}>
+              <Text style={styles.dateButtonLabel}>{formatDateOnly(draft.startDate)}</Text>
+            </Pressable>
+            {showStartDatePicker && (
+              <DateTimePicker
+                value={new Date(`${draft.startDate.slice(0, 10)}T00:00:00`)}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                onChange={(_, selected) => {
+                  setShowStartDatePicker(Platform.OS === 'ios');
+                  if (selected) update({ startDate: selected.toISOString() });
+                }}
+              />
+            )}
 
             <Text style={styles.label}>Categoria</Text>
             {categoriesError ? (

@@ -87,8 +87,7 @@ export function RootNavigator() {
           options={{
             title: 'Chat',
             tabBarStyle: { display: 'none' },
-            tabBarActiveTintColor: colors.accentForeground,
-            tabBarInactiveTintColor: colors.accentForeground,
+            tabBarLabelStyle: styles.chatTabBarLabel,
             tabBarIcon: ({ size }) => (
               <Feather name="message-circle" color={colors.accentForeground} size={size} />
             ),
@@ -133,6 +132,17 @@ const styles = StyleSheet.create({
   tabBarLabel: {
     fontFamily: fontFamily.bodySemiBold,
     fontSize: 10,
+  },
+  chatTabBarLabel: {
+    fontFamily: fontFamily.bodySemiBold,
+    fontSize: 10,
+    // tabBarActiveTintColor/tabBarInactiveTintColor are read from whichever
+    // tab is currently focused (shared across every tab item, not each
+    // tab's own options — confirmed in @react-navigation/bottom-tabs'
+    // BottomTabBar source), so they can't reliably color just this one
+    // label. A color set directly here wins over that shared tint
+    // regardless (see @react-navigation/elements' Label component).
+    color: colors.accentForeground,
   },
   chatButtonWrapper: {
     top: -18,
