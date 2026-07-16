@@ -1,5 +1,5 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useFloatingTabBarHeight } from '../navigation/tabBarMetrics';
 import { Feather } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { colors, fontFamily, fontSize, radius, shadow } from '../theme';
@@ -17,7 +17,7 @@ import { AccountsStackParamList } from '../navigation/AccountsStack';
 type Props = NativeStackScreenProps<AccountsStackParamList, 'AccountsHome'>;
 
 export function AccountsScreen({ navigation }: Props) {
-  const tabBarHeight = useBottomTabBarHeight();
+  const tabBarHeight = useFloatingTabBarHeight();
   const netWorth = useApiData(() => api.get<NetWorth>('/api/v1/calculations/net-worth'));
   const accounts = useApiData(() => api.get<FinancialAccount[]>('/api/v1/accounts'));
   const investments = useApiData(() => api.get<Investment[]>('/api/v1/investments'));

@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useFloatingTabBarHeight } from '../navigation/tabBarMetrics';
 import { Feather } from '@expo/vector-icons';
 import { startOfDay } from 'date-fns';
 import { colors, fontFamily, fontSize, radius, shadow } from '../theme';
@@ -48,7 +48,7 @@ function nextId() {
 
 export function ChatScreen() {
   const insets = useSafeAreaInsets();
-  const tabBarHeight = useBottomTabBarHeight();
+  const tabBarHeight = useFloatingTabBarHeight();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [sending, setSending] = useState(false);

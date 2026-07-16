@@ -11,6 +11,7 @@ import { CalendarScreen } from '../screens/CalendarScreen';
 import { ChatScreen } from '../screens/ChatScreen';
 import { ReportsScreen } from '../screens/ReportsScreen';
 import { AccountsStack } from './AccountsStack';
+import { TAB_BAR_HEIGHT, TAB_BAR_BOTTOM_GAP } from './tabBarMetrics';
 import { colors, fontFamily, shadow } from '../theme';
 
 const Tab = createBottomTabNavigator();
@@ -34,7 +35,7 @@ export function RootNavigator() {
           headerShown: false,
           tabBarActiveTintColor: colors.foreground,
           tabBarInactiveTintColor: colors.mutedForeground2,
-          tabBarStyle: [styles.tabBar, { bottom: insets.bottom + 10 }],
+          tabBarStyle: [styles.tabBar, { bottom: insets.bottom + TAB_BAR_BOTTOM_GAP }],
           tabBarLabelStyle: styles.tabBarLabel,
         }}
       >
@@ -99,7 +100,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 16,
     right: 16,
-    height: 64,
+    height: TAB_BAR_HEIGHT,
     borderRadius: 28,
     backgroundColor: colors.surface,
     borderTopWidth: 0,

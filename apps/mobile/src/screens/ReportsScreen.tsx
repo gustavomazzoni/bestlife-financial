@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useFloatingTabBarHeight } from '../navigation/tabBarMetrics';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { colors, fontFamily, fontSize } from '../theme';
@@ -34,7 +34,7 @@ const CATEGORY_PALETTE = [
 ];
 
 export function ReportsScreen() {
-  const tabBarHeight = useBottomTabBarHeight();
+  const tabBarHeight = useFloatingTabBarHeight();
   const [selectedMonth, setSelectedMonth] = useState(() => format(new Date(), 'yyyy-MM'));
 
   const summary = useApiData(() =>
