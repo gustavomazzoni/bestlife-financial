@@ -1,5 +1,6 @@
 export * from './transaction';
 export * from './scheduled';
+export * from './category';
 export * from './user';
 export * from './category-budget';
 export * from './financial-account';
