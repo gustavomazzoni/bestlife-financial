@@ -1,14 +1,16 @@
 import { ElementRef, forwardRef, useEffect, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import BottomSheet, {
   BottomSheetScrollView,
   BottomSheetTextInput,
 } from '@gorhom/bottom-sheet';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { Feather } from '@expo/vector-icons';
 import { TransactionType, ScheduleFrequency } from '@lifeos/shared';
-import { colors, fontFamily, fontSize } from '../theme';
+import { colors, fontFamily, fontSize, radius } from '../theme';
 import { Chip } from './Chip';
 import { api } from '../lib/api';
+import { isInferredComplete } from '../lib/inferredTransaction';
 import { Category, FinancialAccount, InferredTransaction } from '../types';
 
 export type BottomSheetRef = ElementRef<typeof BottomSheet>;
@@ -29,13 +31,14 @@ const FREQUENCY_OPTIONS: { value: ScheduleFrequency; label: string }[] = [
 interface EditTransactionSheetProps {
   value: InferredTransaction | null;
   accounts: FinancialAccount[];
-  onSave: (updated: InferredTransaction) => void;
+  onConfirm: (updated: InferredTransaction) => void;
+  onDelete: () => void;
 }
 
 export const EditTransactionSheet = forwardRef<
   BottomSheetRef,
   EditTransactionSheetProps
->(({ value, accounts, onSave }, ref) => {
+>(({ value, accounts, onConfirm, onDelete }, ref) => {
   const [draft, setDraft] = useState<InferredTransaction | null>(value);
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoriesError, setCategoriesError] = useState(false);
@@ -72,10 +75,22 @@ export const EditTransactionSheet = forwardRef<
   }
 
   const isValid =
+    isInferredComplete(draft) &&
     draft.amount != null &&
     !Number.isNaN(draft.amount) &&
     draft.amount > 0 &&
     draft.description.trim().length > 0;
+
+  function handleDelete() {
+    Alert.alert(
+      'Excluir mensagem',
+      'Descartar esta transação sem salvar?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Excluir', style: 'destructive', onPress: onDelete },
+      ]
+    );
+  }
 
   return (
     <BottomSheet
@@ -215,14 +230,23 @@ export const EditTransactionSheet = forwardRef<
           </View>
         )}
 
-        <Pressable
-          style={[styles.saveButton, !isValid && styles.saveButtonDisabled]}
-          onPress={() => onSave(draft)}
-          disabled={!isValid}
-          testID="save-edit-button"
-        >
-          <Text style={styles.saveButtonLabel}>Salvar</Text>
-        </Pressable>
+        <View style={styles.actionsRow}>
+          <Pressable
+            style={styles.deleteButton}
+            onPress={handleDelete}
+            testID="delete-edit-button"
+          >
+            <Feather name="trash-2" size={16} color={colors.danger} />
+          </Pressable>
+          <Pressable
+            style={[styles.saveButton, !isValid && styles.saveButtonDisabled]}
+            onPress={() => onConfirm(draft)}
+            disabled={!isValid}
+            testID="confirm-edit-button"
+          >
+            <Text style={styles.saveButtonLabel}>Confirmar</Text>
+          </Pressable>
+        </View>
       </BottomSheetScrollView>
     </BottomSheet>
   );
@@ -322,12 +346,27 @@ const styles = StyleSheet.create({
   toggleThumbOn: {
     transform: [{ translateX: 18 }],
   },
-  saveButton: {
+  actionsRow: {
+    flexDirection: 'row',
+    gap: 10,
     marginTop: 16,
+  },
+  deleteButton: {
+    width: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.danger,
+    backgroundColor: colors.background,
+  },
+  saveButton: {
+    flex: 1,
     paddingVertical: 14,
     borderRadius: 12,
     backgroundColor: colors.accent,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   saveButtonDisabled: {
     opacity: 0.5,

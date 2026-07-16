@@ -1,7 +1,5 @@
 import { useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -23,8 +21,12 @@ import {
   TransactionDetailSheet,
   TransactionDetailSheetRef,
 } from '../components/TransactionDetailSheet';
+import {
+  ExecuteScheduledSheet,
+  ExecuteScheduledSheetRef,
+} from '../components/ExecuteScheduledSheet';
 import { useApiData } from '../hooks/useApiData';
-import { api, ApiError } from '../lib/api';
+import { api } from '../lib/api';
 import { formatCurrency, formatRelativeDate } from '../lib/format';
 import { FinancialAccount, NetWorth, Transaction, UpcomingItem } from '../types';
 
@@ -53,7 +55,6 @@ export function HomeScreen() {
   const recent = useApiData(() =>
     api.get<Transaction[]>('/api/v1/transactions?limit=6&sortBy=date&sortOrder=desc')
   );
-  const [executingId, setExecutingId] = useState<string | null>(null);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const detailSheetRef = useRef<TransactionDetailSheetRef>(null);
 
@@ -62,36 +63,15 @@ export function HomeScreen() {
     detailSheetRef.current?.expand();
   }
 
-  function handleExecute(scheduledId: string, description: string) {
-    Alert.alert(
-      'Executar transação',
-      `Confirmar "${description}" como realizada hoje?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Confirmar',
-          onPress: async () => {
-            setExecutingId(scheduledId);
-            try {
-              await api.post(`/api/v1/scheduled/${scheduledId}/execute`, {
-                date: new Date().toISOString().split('T')[0],
-              });
-              upcoming.refetch();
-              recent.refetch();
-              summary.refetch();
-              netWorth.refetch();
-            } catch (err) {
-              Alert.alert(
-                'Erro',
-                err instanceof ApiError ? err.message : 'Erro ao executar transação'
-              );
-            } finally {
-              setExecutingId(null);
-            }
-          },
-        },
-      ]
-    );
+  const [executingItem, setExecutingItem] = useState<{
+    scheduledId: string;
+    description: string;
+  } | null>(null);
+  const executeSheetRef = useRef<ExecuteScheduledSheetRef>(null);
+
+  function openExecute(scheduledId: string, description: string) {
+    setExecutingItem({ scheduledId, description });
+    executeSheetRef.current?.expand();
   }
 
   const loading =
@@ -188,15 +168,29 @@ export function HomeScreen() {
         </Card>
       ) : (
         upcoming.data.map(item => (
-          <Card key={item.id} style={styles.rowCard} testID="upcoming-item">
+          <Card
+            key={item.id}
+            style={[styles.rowCard, item.isOverdue && styles.rowCardOverdue]}
+            testID="upcoming-item"
+          >
             <IconBadge
-              color={colors.warningSoft}
-              icon={<Feather name="clock" size={17} color={colors.warning} />}
+              color={item.isOverdue ? colors.expenseSoft : colors.warningSoft}
+              icon={
+                <Feather
+                  name={item.isOverdue ? 'alert-triangle' : 'clock'}
+                  size={17}
+                  color={item.isOverdue ? colors.danger : colors.warning}
+                />
+              }
             />
             <View style={styles.rowMain}>
               <Text style={styles.rowTitle}>{item.description}</Text>
-              <Text style={styles.rowSubtitle}>
-                {item.isToday ? 'Hoje' : formatRelativeDate(item.date)}
+              <Text style={[styles.rowSubtitle, item.isOverdue && styles.rowSubtitleOverdue]}>
+                {item.isOverdue
+                  ? `Atrasado · ${formatRelativeDate(item.date)}`
+                  : item.isToday
+                    ? 'Hoje'
+                    : formatRelativeDate(item.date)}
                 {item.isRecurring ? ' · Recorrente' : ''}
               </Text>
             </View>
@@ -204,20 +198,19 @@ export function HomeScreen() {
               <Text style={[styles.rowAmount, { color: typeColor[item.type] }]}>
                 {formatCurrency(item.amount)}
               </Text>
-              {item.isToday && <Text style={styles.rowDue}>Hoje</Text>}
+              {item.isOverdue ? (
+                <Text style={styles.rowOverdueTag}>Atrasado</Text>
+              ) : (
+                item.isToday && <Text style={styles.rowDue}>Hoje</Text>
+              )}
             </View>
             <Pressable
-              onPress={() => handleExecute(item.scheduledId, item.description)}
-              disabled={executingId === item.scheduledId}
+              onPress={() => openExecute(item.scheduledId, item.description)}
               style={styles.executeButton}
               hitSlop={8}
               testID="upcoming-execute-btn"
             >
-              {executingId === item.scheduledId ? (
-                <ActivityIndicator size="small" color={colors.accent} />
-              ) : (
-                <Feather name="check-circle" size={20} color={colors.accent} />
-              )}
+              <Feather name="check-circle" size={20} color={colors.accent} />
             </Pressable>
           </Card>
         ))
@@ -271,6 +264,18 @@ export function HomeScreen() {
       }}
       onDeleted={() => {
         detailSheetRef.current?.close();
+        recent.refetch();
+        summary.refetch();
+        netWorth.refetch();
+      }}
+    />
+    <ExecuteScheduledSheet
+      ref={executeSheetRef}
+      item={executingItem}
+      accounts={accounts.data ?? []}
+      onExecuted={() => {
+        executeSheetRef.current?.close();
+        upcoming.refetch();
         recent.refetch();
         summary.refetch();
         netWorth.refetch();
@@ -407,6 +412,9 @@ const styles = StyleSheet.create({
     gap: 13,
     marginBottom: 10,
   },
+  rowCardOverdue: {
+    borderColor: colors.danger,
+  },
   listCard: {
     padding: 0,
     overflow: 'hidden',
@@ -436,6 +444,10 @@ const styles = StyleSheet.create({
     color: colors.mutedForeground,
     marginTop: 1,
   },
+  rowSubtitleOverdue: {
+    color: colors.danger,
+    fontFamily: fontFamily.bodySemiBold,
+  },
   rowAmountGroup: {
     alignItems: 'flex-end',
   },
@@ -454,6 +466,12 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bodySemiBold,
     fontSize: 11,
     color: colors.warning,
+    marginTop: 1,
+  },
+  rowOverdueTag: {
+    fontFamily: fontFamily.bodySemiBold,
+    fontSize: 11,
+    color: colors.danger,
     marginTop: 1,
   },
 });

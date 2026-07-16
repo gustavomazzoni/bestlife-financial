@@ -1,7 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -26,8 +24,12 @@ import {
   ScheduledDetailSheet,
   ScheduledDetailSheetRef,
 } from '../components/ScheduledDetailSheet';
+import {
+  ExecuteScheduledSheet,
+  ExecuteScheduledSheetRef,
+} from '../components/ExecuteScheduledSheet';
 import { useApiData } from '../hooks/useApiData';
-import { api, ApiError } from '../lib/api';
+import { api } from '../lib/api';
 import { formatCurrency } from '../lib/format';
 import {
   CalendarEvent,
@@ -103,36 +105,15 @@ export function CalendarScreen() {
     setSelectedDay(null);
   }
 
-  const [executingId, setExecutingId] = useState<string | null>(null);
+  const [executingItem, setExecutingItem] = useState<{
+    scheduledId: string;
+    description: string;
+  } | null>(null);
+  const executeSheetRef = useRef<ExecuteScheduledSheetRef>(null);
 
-  function handleExecute(event: CalendarEvent) {
-    Alert.alert(
-      'Executar transação',
-      `Confirmar "${event.description}" como realizada em ${format(new Date(`${event.date}T00:00:00`), 'dd/MM/yyyy')}?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Confirmar',
-          onPress: async () => {
-            setExecutingId(event.sourceId);
-            try {
-              await api.post(`/api/v1/scheduled/${event.sourceId}/execute`, {
-                date: event.date,
-              });
-              scheduled.refetch();
-              transactions.refetch();
-            } catch (err) {
-              Alert.alert(
-                'Erro',
-                err instanceof ApiError ? err.message : 'Erro ao executar transação'
-              );
-            } finally {
-              setExecutingId(null);
-            }
-          },
-        },
-      ]
-    );
+  function openExecute(event: CalendarEvent) {
+    setExecutingItem({ scheduledId: event.sourceId, description: event.description });
+    executeSheetRef.current?.expand();
   }
 
   const loading = scheduled.loading || transactions.loading;
@@ -292,17 +273,12 @@ export function CalendarScreen() {
                 </Text>
                 {e.kind === 'scheduled_projection' && (
                   <Pressable
-                    onPress={() => handleExecute(e)}
-                    disabled={executingId === e.sourceId}
+                    onPress={() => openExecute(e)}
                     style={styles.executeButton}
                     hitSlop={8}
                     testID="agenda-execute-btn"
                   >
-                    {executingId === e.sourceId ? (
-                      <ActivityIndicator size="small" color={colors.accent} />
-                    ) : (
-                      <Feather name="check-circle" size={20} color={colors.accent} />
-                    )}
+                    <Feather name="check-circle" size={20} color={colors.accent} />
                   </Pressable>
                 )}
               </Card>
@@ -331,6 +307,16 @@ export function CalendarScreen() {
         onDeleted={() => {
           scheduledSheetRef.current?.close();
           scheduled.refetch();
+        }}
+      />
+      <ExecuteScheduledSheet
+        ref={executeSheetRef}
+        item={executingItem}
+        accounts={accounts.data ?? []}
+        onExecuted={() => {
+          executeSheetRef.current?.close();
+          scheduled.refetch();
+          transactions.refetch();
         }}
       />
     </View>

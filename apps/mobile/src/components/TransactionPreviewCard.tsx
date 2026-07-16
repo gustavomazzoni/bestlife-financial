@@ -2,6 +2,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 import { Feather } from '@expo/vector-icons';
 import { colors, fontFamily, fontSize, radius, shadow } from '../theme';
 import { formatCurrency } from '../lib/format';
+import { isInferredComplete } from '../lib/inferredTransaction';
 import { InferredTransaction, FinancialAccount } from '../types';
 
 const typeColor: Record<string, string> = {
@@ -40,6 +41,7 @@ export function TransactionPreviewCard({
   const account = accounts.find(a => a.id === inferred.accountId);
   const confidenceColor =
     confidence >= 0.8 ? colors.income : confidence >= 0.5 ? colors.warning : colors.danger;
+  const complete = isInferredComplete(inferred);
 
   return (
     <View style={styles.card} testID="transaction-preview-card">
@@ -74,6 +76,9 @@ export function TransactionPreviewCard({
       {status === 'error' && (
         <Text style={styles.errorText}>{errorMessage ?? 'Erro ao salvar'}</Text>
       )}
+      {!complete && status !== 'confirmed' && (
+        <Text style={styles.incompleteHint}>Complete os dados para confirmar</Text>
+      )}
 
       {status === 'confirmed' ? (
         <View style={styles.confirmedRow}>
@@ -92,8 +97,8 @@ export function TransactionPreviewCard({
           </Pressable>
           <Pressable
             onPress={onConfirm}
-            style={styles.confirmButton}
-            disabled={status === 'saving'}
+            style={[styles.confirmButton, !complete && styles.confirmButtonDisabled]}
+            disabled={status === 'saving' || !complete}
             testID="confirm-button"
           >
             {status === 'saving' ? (
@@ -116,6 +121,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     gap: 8,
+    minWidth: 240,
     maxWidth: '85%',
     ...shadow.card,
   },
@@ -176,6 +182,11 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.danger,
   },
+  incompleteHint: {
+    fontFamily: fontFamily.body,
+    fontSize: fontSize.xs,
+    color: colors.mutedForeground,
+  },
   actions: {
     flexDirection: 'row',
     gap: 8,
@@ -184,6 +195,7 @@ const styles = StyleSheet.create({
   editButton: {
     flex: 1,
     paddingVertical: 8,
+    paddingHorizontal: 8,
     borderRadius: radius.sm,
     backgroundColor: colors.surfaceMuted,
     alignItems: 'center',
@@ -196,9 +208,13 @@ const styles = StyleSheet.create({
   confirmButton: {
     flex: 1,
     paddingVertical: 8,
+    paddingHorizontal: 8,
     borderRadius: radius.sm,
     backgroundColor: colors.accent,
     alignItems: 'center',
+  },
+  confirmButtonDisabled: {
+    opacity: 0.5,
   },
   confirmButtonLabel: {
     fontFamily: fontFamily.bodySemiBold,

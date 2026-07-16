@@ -101,9 +101,8 @@ export function ChatScreen() {
     );
   }
 
-  async function handleConfirm(message: Extract<ChatMessage, { role: 'assistant' }>) {
-    updateMessage(message.id, { status: 'saving' });
-    const inferred = message.result.inferred;
+  async function confirmTransaction(messageId: string, inferred: InferredTransaction) {
+    updateMessage(messageId, { status: 'saving' });
 
     try {
       const txDate = new Date(inferred.date);
@@ -134,10 +133,10 @@ export function ChatScreen() {
           notes: inferred.notes,
         });
       }
-      updateMessage(message.id, { status: 'confirmed' });
+      updateMessage(messageId, { status: 'confirmed' });
     } catch (err) {
       const errorMessage = err instanceof ApiError ? err.message : 'Erro ao salvar';
-      updateMessage(message.id, { status: 'error', errorMessage });
+      updateMessage(messageId, { status: 'error', errorMessage });
     }
   }
 
@@ -146,15 +145,24 @@ export function ChatScreen() {
     sheetRef.current?.expand();
   }
 
-  function handleSheetSave(updated: InferredTransaction) {
+  function handleSheetConfirm(updated: InferredTransaction) {
     if (editingMessageId) {
       setMessages(prev =>
         prev.map(m =>
           m.id === editingMessageId && m.role === 'assistant'
-            ? { ...m, result: { ...m.result, inferred: updated }, status: 'pending' }
+            ? { ...m, result: { ...m.result, inferred: updated } }
             : m
         )
       );
+      confirmTransaction(editingMessageId, updated);
+    }
+    sheetRef.current?.close();
+    setEditingMessageId(null);
+  }
+
+  function handleSheetDelete() {
+    if (editingMessageId) {
+      setMessages(prev => prev.filter(m => m.id !== editingMessageId));
     }
     sheetRef.current?.close();
     setEditingMessageId(null);
@@ -260,7 +268,7 @@ export function ChatScreen() {
                   accounts={accounts}
                   status={item.status}
                   errorMessage={item.errorMessage}
-                  onConfirm={() => handleConfirm(item)}
+                  onConfirm={() => confirmTransaction(item.id, item.result.inferred)}
                   onEdit={() => handleEdit(item)}
                 />
               </View>
@@ -293,7 +301,8 @@ export function ChatScreen() {
         ref={sheetRef}
         value={editingMessage?.result.inferred ?? null}
         accounts={accounts}
-        onSave={handleSheetSave}
+        onConfirm={handleSheetConfirm}
+        onDelete={handleSheetDelete}
       />
     </KeyboardAvoidingView>
   );

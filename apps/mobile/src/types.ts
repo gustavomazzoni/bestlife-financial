@@ -49,6 +49,7 @@ export interface UpcomingItem {
   isRecurring: boolean;
   date: string;
   isToday: boolean;
+  isOverdue: boolean;
   description: string;
   amount: string;
   type: TransactionType;

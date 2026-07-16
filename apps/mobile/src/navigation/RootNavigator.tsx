@@ -1,4 +1,8 @@
-import { NavigationContainer } from '@react-navigation/native';
+import {
+  NavigationContainer,
+  getFocusedRouteNameFromRoute,
+  RouteProp,
+} from '@react-navigation/native';
 import {
   createBottomTabNavigator,
   BottomTabBarButtonProps,
@@ -24,6 +28,25 @@ function ChatTabButton({ children, onPress }: BottomTabBarButtonProps) {
   );
 }
 
+/**
+ * Hides the tab bar when a nested stack's focused screen is
+ * `hiddenOnRouteName` (e.g. Settings inside HomeStack, Categories inside
+ * AccountsStack) — those screens already have their own back button, so
+ * the bar underneath is redundant. `getFocusedRouteNameFromRoute` is the
+ * standard React Navigation pattern for reading a nested stack's current
+ * screen from the parent Tab.Screen's own `options`.
+ */
+function tabBarStyleFor(
+  route: RouteProp<Record<string, object | undefined>, string>,
+  hiddenOnRouteName: string,
+  defaultRouteName: string
+) {
+  const focusedRouteName = getFocusedRouteNameFromRoute(route) ?? defaultRouteName;
+  return focusedRouteName === hiddenOnRouteName
+    ? { display: 'none' as const }
+    : styles.tabBar;
+}
+
 export function RootNavigator() {
   return (
     <NavigationContainer>
@@ -40,12 +63,13 @@ export function RootNavigator() {
         <Tab.Screen
           name="Home"
           component={HomeStack}
-          options={{
+          options={({ route }) => ({
             title: 'Início',
+            tabBarStyle: tabBarStyleFor(route, 'Settings', 'HomeMain'),
             tabBarIcon: ({ color, size }) => (
               <Feather name="home" color={color} size={size - 2} strokeWidth={1.8} />
             ),
-          }}
+          })}
         />
         <Tab.Screen
           name="Calendar"
@@ -63,6 +87,8 @@ export function RootNavigator() {
           options={{
             title: 'Chat',
             tabBarStyle: { display: 'none' },
+            tabBarActiveTintColor: colors.accentForeground,
+            tabBarInactiveTintColor: colors.accentForeground,
             tabBarIcon: ({ size }) => (
               <Feather name="message-circle" color={colors.accentForeground} size={size} />
             ),
@@ -82,12 +108,13 @@ export function RootNavigator() {
         <Tab.Screen
           name="Accounts"
           component={AccountsStack}
-          options={{
+          options={({ route }) => ({
             title: 'Contas',
+            tabBarStyle: tabBarStyleFor(route, 'Categories', 'AccountsHome'),
             tabBarIcon: ({ color, size }) => (
               <Feather name="credit-card" color={color} size={size - 2} strokeWidth={1.8} />
             ),
-          }}
+          })}
         />
       </Tab.Navigator>
     </NavigationContainer>
