@@ -178,7 +178,7 @@ export function HomeScreen() {
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>A vencer</Text>
         <Pressable onPress={() => navigation.navigate('Calendar' as never)}>
-          <Text style={styles.sectionLink}>Calendário</Text>
+          <Text style={styles.sectionLink}>Calendário &rarr;</Text>
         </Pressable>
       </View>
       {!upcoming.data || upcoming.data.length === 0 ? (
@@ -226,7 +226,7 @@ export function HomeScreen() {
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Transações recentes</Text>
         <Pressable onPress={() => navigation.navigate('Reports' as never)}>
-          <Text style={styles.sectionLink}>Relatório</Text>
+          <Text style={styles.sectionLink}>Relatório &rarr;</Text>
         </Pressable>
       </View>
       {!recent.data || recent.data.length === 0 ? (
