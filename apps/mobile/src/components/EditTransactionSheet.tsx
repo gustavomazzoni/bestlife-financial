@@ -38,18 +38,24 @@ export const EditTransactionSheet = forwardRef<
 >(({ value, accounts, onSave }, ref) => {
   const [draft, setDraft] = useState<InferredTransaction | null>(value);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [categoriesError, setCategoriesError] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   useEffect(() => {
     setDraft(value);
   }, [value]);
 
+  function loadCategories(type: string) {
+    setCategoriesError(false);
+    api
+      .get<Category[]>(`/api/v1/categories?type=${type}`)
+      .then(setCategories)
+      .catch(() => setCategoriesError(true));
+  }
+
   useEffect(() => {
     if (!draft) return;
-    api
-      .get<Category[]>(`/api/v1/categories?type=${draft.type}`)
-      .then(setCategories)
-      .catch(() => setCategories([]));
+    loadCategories(draft.type);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draft?.type]);
 
@@ -64,6 +70,12 @@ export const EditTransactionSheet = forwardRef<
   function update(patch: Partial<InferredTransaction>) {
     setDraft(prev => (prev ? { ...prev, ...patch } : prev));
   }
+
+  const isValid =
+    draft.amount != null &&
+    !Number.isNaN(draft.amount) &&
+    draft.amount > 0 &&
+    draft.description.trim().length > 0;
 
   return (
     <BottomSheet
@@ -96,7 +108,14 @@ export const EditTransactionSheet = forwardRef<
           style={styles.input}
           keyboardType="decimal-pad"
           value={draft.amount != null ? String(draft.amount) : ''}
-          onChangeText={t => update({ amount: t ? Number(t.replace(',', '.')) : null })}
+          onChangeText={t => {
+            if (!t) {
+              update({ amount: null });
+              return;
+            }
+            const parsed = Number(t.replace(',', '.'));
+            if (!Number.isNaN(parsed)) update({ amount: parsed });
+          }}
         />
 
         <Text style={styles.label}>Descrição</Text>
@@ -107,17 +126,26 @@ export const EditTransactionSheet = forwardRef<
         />
 
         <Text style={styles.label}>Categoria</Text>
-        <View style={styles.chipRow}>
-          {categories.map(c => (
-            <Chip
-              key={c.id}
-              label={c.name}
-              icon={c.icon}
-              selected={draft.category?.id === c.id}
-              onPress={() => update({ category: { id: c.id, name: c.name } })}
-            />
-          ))}
-        </View>
+        {categoriesError ? (
+          <View style={styles.fetchErrorRow}>
+            <Text style={styles.fetchErrorText}>Não foi possível carregar categorias.</Text>
+            <Pressable onPress={() => loadCategories(draft.type)} hitSlop={8}>
+              <Text style={styles.fetchErrorRetry}>Tentar novamente</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <View style={styles.chipRow}>
+            {categories.map(c => (
+              <Chip
+                key={c.id}
+                label={c.name}
+                icon={c.icon}
+                selected={draft.category?.id === c.id}
+                onPress={() => update({ category: { id: c.id, name: c.name } })}
+              />
+            ))}
+          </View>
+        )}
 
         {accounts.length > 0 && (
           <>
@@ -188,8 +216,9 @@ export const EditTransactionSheet = forwardRef<
         )}
 
         <Pressable
-          style={styles.saveButton}
+          style={[styles.saveButton, !isValid && styles.saveButtonDisabled]}
           onPress={() => onSave(draft)}
+          disabled={!isValid}
           testID="save-edit-button"
         >
           <Text style={styles.saveButtonLabel}>Salvar</Text>
@@ -229,6 +258,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
+  },
+  fetchErrorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  fetchErrorText: {
+    flex: 1,
+    fontFamily: fontFamily.body,
+    fontSize: fontSize.xs,
+    color: colors.danger,
+  },
+  fetchErrorRetry: {
+    fontFamily: fontFamily.bodySemiBold,
+    fontSize: fontSize.xs,
+    color: colors.accent,
   },
   input: {
     borderWidth: 1,
@@ -283,6 +328,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: colors.accent,
     alignItems: 'center',
+  },
+  saveButtonDisabled: {
+    opacity: 0.5,
   },
   saveButtonLabel: {
     fontFamily: fontFamily.bodySemiBold,

@@ -37,9 +37,6 @@ export function CategoriesScreen({ navigation }: Props) {
           <Text style={styles.title}>Categorias</Text>
           <Text style={styles.subtitle}>Orçamento mensal por categoria</Text>
         </View>
-        <View style={[styles.headerButton, styles.headerButtonAccent]}>
-          <Feather name="plus" size={18} color="#fff" />
-        </View>
       </View>
 
       <ScrollView
@@ -100,10 +97,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  headerButtonAccent: {
-    borderWidth: 0,
-    backgroundColor: colors.accent,
   },
   headerText: {
     flex: 1,

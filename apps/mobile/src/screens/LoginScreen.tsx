@@ -19,12 +19,15 @@ interface LoginScreenProps {
 
 type Step = 'email' | 'code';
 
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export function LoginScreen({ onSignedIn }: LoginScreenProps) {
   const [step, setStep] = useState<Step>('email');
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const isValidEmail = EMAIL_PATTERN.test(email.trim());
 
   async function handleSendCode() {
     setLoading(true);
@@ -82,10 +85,10 @@ export function LoginScreen({ onSignedIn }: LoginScreenProps) {
             <Pressable
               style={[
                 styles.button,
-                (loading || !email.trim()) && styles.buttonDisabled,
+                (loading || !isValidEmail) && styles.buttonDisabled,
               ]}
               onPress={handleSendCode}
-              disabled={loading || !email.trim()}
+              disabled={loading || !isValidEmail}
               testID="send-code-button"
             >
               {loading ? (
@@ -107,7 +110,7 @@ export function LoginScreen({ onSignedIn }: LoginScreenProps) {
               keyboardType="number-pad"
               maxLength={6}
               value={code}
-              onChangeText={setCode}
+              onChangeText={t => setCode(t.replace(/[^0-9]/g, ''))}
               editable={!loading}
               testID="login-code-input"
             />

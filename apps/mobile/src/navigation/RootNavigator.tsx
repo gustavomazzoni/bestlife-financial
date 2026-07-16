@@ -96,11 +96,7 @@ export function RootNavigator() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    // position: 'absolute',
-    // left: 16,
-    // right: 16,
     height: TAB_BAR_HEIGHT,
-    // borderRadius: 28,
     backgroundColor: colors.surface,
     borderTopWidth: 0,
     paddingTop: 8,

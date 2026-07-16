@@ -54,14 +54,20 @@ export function ChatScreen() {
   const [inputText, setInputText] = useState('');
   const [sending, setSending] = useState(false);
   const [accounts, setAccounts] = useState<FinancialAccount[]>([]);
+  const [accountsError, setAccountsError] = useState(false);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const sheetRef = useRef<BottomSheetRef>(null);
 
-  useEffect(() => {
+  function loadAccounts() {
+    setAccountsError(false);
     api
       .get<FinancialAccount[]>('/api/v1/accounts')
       .then(setAccounts)
-      .catch(() => setAccounts([]));
+      .catch(() => setAccountsError(true));
+  }
+
+  useEffect(() => {
+    loadAccounts();
   }, []);
 
   async function sendText(text: string) {
@@ -179,6 +185,18 @@ export function ChatScreen() {
           <Feather name="message-circle" size={17} color={colors.accent} />
         </View>
       </View>
+
+      {accountsError && (
+        <View style={styles.accountsErrorBanner}>
+          <Feather name="alert-triangle" size={14} color={colors.danger} />
+          <Text style={styles.accountsErrorText}>
+            Não foi possível carregar suas contas.
+          </Text>
+          <Pressable onPress={loadAccounts} hitSlop={8}>
+            <Text style={styles.accountsErrorRetry}>Tentar novamente</Text>
+          </Pressable>
+        </View>
+      )}
 
       {messages.length === 0 ? (
         <View style={styles.emptyState} testID="chat-empty-state">
@@ -339,6 +357,27 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accentSoft,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  accountsErrorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: colors.warningSoft,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderSoft,
+  },
+  accountsErrorText: {
+    flex: 1,
+    fontFamily: fontFamily.body,
+    fontSize: 12,
+    color: colors.danger,
+  },
+  accountsErrorRetry: {
+    fontFamily: fontFamily.bodySemiBold,
+    fontSize: 12,
+    color: colors.accent,
   },
   emptyState: {
     flex: 1,
