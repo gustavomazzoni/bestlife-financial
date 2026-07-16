@@ -1,6 +1,7 @@
-import { addDays, addMonths, addYears, startOfDay, format } from 'date-fns';
+import { addDays, addMonths, addYears, format } from 'date-fns';
 import type { ScheduledWithCategory } from '@/components/features/scheduled';
 import type { TransactionRow, CalendarEvent } from '@/types';
+import { fromUTCCalendarDate } from '@lifeos/shared';
 
 export function projectScheduledOccurrences(
   scheduleds: ScheduledWithCategory[],
@@ -15,14 +16,14 @@ export function projectScheduledOccurrences(
 
     // Skip if scheduled.endDate is before startDate
     if (scheduled.endDate) {
-      const scheduledEnd = startOfDay(new Date(scheduled.endDate));
+      const scheduledEnd = fromUTCCalendarDate(scheduled.endDate);
       if (scheduledEnd < startDate) continue;
     }
 
-    // Start cursor at startOfDay(nextOccurrence)
-    let cursor = startOfDay(new Date(scheduled.nextOccurrence));
+    // Start cursor at the scheduled's next occurrence
+    let cursor = fromUTCCalendarDate(scheduled.nextOccurrence);
     const scheduledEnd = scheduled.endDate
-      ? startOfDay(new Date(scheduled.endDate))
+      ? fromUTCCalendarDate(scheduled.endDate)
       : null;
 
     while (cursor <= endDate) {
@@ -64,7 +65,7 @@ export function transactionsToCalendarEvents(
   transactions: TransactionRow[]
 ): CalendarEvent[] {
   return transactions.map(t => ({
-    date: format(new Date(t.date), 'yyyy-MM-dd'),
+    date: format(fromUTCCalendarDate(t.date), 'yyyy-MM-dd'),
     description: t.description,
     amount: String(t.amount),
     type: t.type,

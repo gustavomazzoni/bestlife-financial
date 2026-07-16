@@ -3,10 +3,10 @@ import {
   addMonths,
   addYears,
   format,
-  startOfDay,
   startOfMonth,
   startOfWeek,
 } from 'date-fns';
+import { fromUTCCalendarDate } from '@lifeos/shared';
 import { ScheduledTransaction, Transaction } from '../types';
 
 export type CalendarEventKind = 'scheduled_projection' | 'actual';
@@ -31,10 +31,10 @@ export function projectScheduledOccurrences(
   const events: CalendarEvent[] = [];
 
   for (const s of scheduled) {
-    const endDate = s.endDate ? new Date(s.endDate) : null;
+    const endDate = s.endDate ? fromUTCCalendarDate(s.endDate) : null;
     if (endDate && endDate < windowStart) continue;
 
-    let cursor = startOfDay(new Date(s.nextOccurrence));
+    let cursor = fromUTCCalendarDate(s.nextOccurrence);
 
     while (cursor <= windowEnd) {
       if (cursor >= windowStart) {
@@ -70,7 +70,7 @@ export function transactionsToCalendarEvents(
   transactions: Transaction[]
 ): CalendarEvent[] {
   return transactions.map(t => ({
-    date: format(new Date(t.date), 'yyyy-MM-dd'),
+    date: format(fromUTCCalendarDate(t.date), 'yyyy-MM-dd'),
     description: t.description,
     amount: t.amount,
     type: t.type,

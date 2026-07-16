@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db';
 import { Transaction, ScheduleFrequency } from '@/types';
-import { addDays, addMonths, addYears, startOfDay } from 'date-fns';
+import { addDays, addMonths, addYears } from 'date-fns';
+import { toUTCMidnight } from '@lifeos/shared';
 
 /**
  * Calculate the next occurrence based on frequency.
@@ -38,8 +39,8 @@ export async function executeScheduledTransaction(
   scheduledId: string,
   executionDate?: Date
 ): Promise<Transaction> {
-  const today = startOfDay(new Date());
-  const transactionDate = executionDate ? startOfDay(executionDate) : today;
+  const today = toUTCMidnight(new Date());
+  const transactionDate = executionDate ? toUTCMidnight(executionDate) : today;
 
   return prisma.$transaction(async tx => {
     const scheduled = await tx.scheduledTransaction.findFirst({
@@ -58,7 +59,7 @@ export async function executeScheduledTransaction(
     if (
       scheduled.frequency !== 'ONCE' &&
       !executionDate &&
-      startOfDay(scheduled.nextOccurrence) > today
+      toUTCMidnight(scheduled.nextOccurrence) > today
     ) {
       throw new Error('Scheduled transaction is not due yet');
     }

@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/db';
 import { ScheduledTransaction, ScheduleFrequency } from '@/types';
-import { addDays, addMonths, addYears, startOfDay } from 'date-fns';
+import { toUTCMidnight } from '@lifeos/shared';
 
 export interface CreateScheduledInput {
   amount: number;
@@ -22,51 +22,29 @@ export interface CreateScheduledInput {
   notes?: string;
 }
 
-/**
- * Calculate the next occurrence date based on frequency.
- * For ONCE: nextOccurrence = startDate (the scheduled date itself).
- * For RECURRING: nextOccurrence = one period after startDate.
- */
-function calculateNextOccurrence(
-  startDate: Date,
-  frequency: ScheduleFrequency
-): Date {
-  switch (frequency) {
-    case 'ONCE':
-      return startDate;
-    case 'WEEKLY':
-      return addDays(startDate, 7);
-    case 'MONTHLY':
-      return addMonths(startDate, 1);
-    case 'YEARLY':
-      return addYears(startDate, 1);
-    default:
-      throw new Error(`Unknown frequency: ${frequency}`);
-  }
-}
-
 export async function createScheduledTransaction(
   userId: string,
   data: CreateScheduledInput
 ): Promise<ScheduledTransaction> {
-  const today = startOfDay(new Date());
+  const today = toUTCMidnight(new Date());
 
   if (data.amount <= 0) {
     throw new Error('Amount must be positive');
   }
 
-  const startDate = startOfDay(data.startDate);
+  const startDate = toUTCMidnight(data.startDate);
+  const endDate = data.endDate ? toUTCMidnight(data.endDate) : undefined;
 
   if (startDate < today) {
     throw new Error('Start date cannot be in the past');
   }
 
-  if (data.endDate && data.endDate <= data.startDate) {
+  if (endDate && endDate <= startDate) {
     throw new Error('End date must be after start date');
   }
 
   // ONCE transactions cannot have an endDate
-  if (data.frequency === 'ONCE' && data.endDate) {
+  if (data.frequency === 'ONCE' && endDate) {
     throw new Error('One-time scheduled transactions cannot have an end date');
   }
 
@@ -82,7 +60,10 @@ export async function createScheduledTransaction(
     throw new Error('Category type does not match transaction type');
   }
 
-  const nextOccurrence = calculateNextOccurrence(startDate, data.frequency);
+  // The first occurrence of a new schedule is always startDate itself —
+  // execute.ts is solely responsible for advancing nextOccurrence forward,
+  // and only after that first occurrence has actually been executed.
+  const nextOccurrence = startDate;
 
   const scheduled = await prisma.scheduledTransaction.create({
     data: {
@@ -93,7 +74,7 @@ export async function createScheduledTransaction(
       categoryId: data.categoryId,
       frequency: data.frequency,
       startDate,
-      endDate: data.endDate,
+      endDate,
       nextOccurrence,
       notificationDaysBefore: data.notificationDaysBefore ?? 3,
       necessityLevel: data.necessityLevel,

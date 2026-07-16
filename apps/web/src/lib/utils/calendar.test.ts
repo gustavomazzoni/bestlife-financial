@@ -134,10 +134,15 @@ describe('projectScheduledOccurrences', () => {
       frequency: 'MONTHLY',
       nextOccurrence: '2026-01-31',
     });
+    // Window bounds mirror the real caller (calendar/page.tsx uses
+    // startOfMonth/endOfMonth on a local Date) — a local constructor, not a
+    // bare ISO date string, since those parse as UTC midnight and would
+    // create a spurious few-hours mismatch against the function's
+    // local-anchored cursor right at this exact month-boundary edge case.
     const result = projectScheduledOccurrences(
       [scheduled],
-      new Date('2026-02-01'),
-      new Date('2026-02-28')
+      new Date(2026, 1, 1),
+      new Date(2026, 1, 28)
     );
     // Jan 31 is before startDate, not pushed; addMonths → Feb 28 (date-fns handles this)
     expect(result).toHaveLength(1);
