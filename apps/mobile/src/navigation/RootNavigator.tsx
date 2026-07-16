@@ -5,7 +5,7 @@ import {
 } from '@react-navigation/bottom-tabs';
 import { Feather } from '@expo/vector-icons';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { HomeScreen } from '../screens/HomeScreen';
+import { HomeStack } from './HomeStack';
 import { CalendarScreen } from '../screens/CalendarScreen';
 import { ChatScreen } from '../screens/ChatScreen';
 import { ReportsScreen } from '../screens/ReportsScreen';
@@ -39,7 +39,7 @@ export function RootNavigator() {
       >
         <Tab.Screen
           name="Home"
-          component={HomeScreen}
+          component={HomeStack}
           options={{
             title: 'Início',
             tabBarIcon: ({ color, size }) => (

@@ -14,7 +14,8 @@ import {
   SpaceGrotesk_500Medium,
   SpaceGrotesk_700Bold,
 } from '@expo-google-fonts/space-grotesk';
-import { getStoredToken } from './src/lib/auth';
+import { getStoredToken, signOut } from './src/lib/auth';
+import { AuthContext } from './src/lib/authContext';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { colors, fontFamily } from './src/theme';
@@ -52,7 +53,16 @@ export default function App() {
       <GestureHandlerRootView style={{ flex: 1 }}>
         <SafeAreaProvider>
           <StatusBar style="dark" />
-          <RootNavigator />
+          <AuthContext.Provider
+            value={{
+              signOut: () => {
+                signOut();
+                setStatus('idle');
+              },
+            }}
+          >
+            <RootNavigator />
+          </AuthContext.Provider>
         </SafeAreaProvider>
       </GestureHandlerRootView>
     );

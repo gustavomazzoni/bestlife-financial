@@ -154,3 +154,10 @@ export interface FreedomMetrics {
   avgMonthlyExpenses: number;
   dreamLifestyleCost: number;
 }
+
+export interface UserProfile {
+  activeIncomeMonthly: number;
+  passiveIncomeMonthly: number;
+  dreamLifestyleCost: number | null;
+  currentInvestments: number;
+}

@@ -123,6 +123,13 @@ export function HomeScreen() {
           <Text style={styles.todayLabel}>{todayLabel}</Text>
           <Text style={styles.greeting}>Olá!</Text>
         </View>
+        <Pressable
+          style={styles.profileButton}
+          onPress={() => navigation.navigate('Settings' as never)}
+          testID="settings-button"
+        >
+          <Feather name="settings" size={18} color={colors.foreground} />
+        </Pressable>
       </View>
 
       <View style={styles.balanceCard}>
@@ -285,6 +292,17 @@ const styles = StyleSheet.create({
     color: colors.foreground,
     marginTop: 2,
     letterSpacing: -0.3,
+  },
+  profileButton: {
+    width: 42,
+    height: 42,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadow.card,
   },
   balanceCard: {
     backgroundColor: colors.card,
