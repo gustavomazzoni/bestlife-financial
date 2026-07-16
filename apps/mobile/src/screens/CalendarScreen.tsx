@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -16,7 +18,7 @@ import { ScreenHeader } from '../components/ScreenHeader';
 import { LoadingState } from '../components/LoadingState';
 import { ErrorState } from '../components/ErrorState';
 import { useApiData } from '../hooks/useApiData';
-import { api } from '../lib/api';
+import { api, ApiError } from '../lib/api';
 import { formatCurrency } from '../lib/format';
 import {
   CalendarEvent,
@@ -69,6 +71,38 @@ export function CalendarScreen() {
   function goToMonth(delta: number) {
     setSelectedMonth(m => addMonths(m, delta));
     setSelectedDay(null);
+  }
+
+  const [executingId, setExecutingId] = useState<string | null>(null);
+
+  function handleExecute(event: CalendarEvent) {
+    Alert.alert(
+      'Executar transação',
+      `Confirmar "${event.description}" como realizada em ${format(new Date(`${event.date}T00:00:00`), 'dd/MM/yyyy')}?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Confirmar',
+          onPress: async () => {
+            setExecutingId(event.sourceId);
+            try {
+              await api.post(`/api/v1/scheduled/${event.sourceId}/execute`, {
+                date: event.date,
+              });
+              scheduled.refetch();
+              transactions.refetch();
+            } catch (err) {
+              Alert.alert(
+                'Erro',
+                err instanceof ApiError ? err.message : 'Erro ao executar transação'
+              );
+            } finally {
+              setExecutingId(null);
+            }
+          },
+        },
+      ]
+    );
   }
 
   const loading = scheduled.loading || transactions.loading;
@@ -215,6 +249,21 @@ export function CalendarScreen() {
               <Text style={[styles.rowAmount, { color: typeColor[e.type] }]}>
                 {formatCurrency(e.amount)}
               </Text>
+              {e.kind === 'scheduled_projection' && (
+                <Pressable
+                  onPress={() => handleExecute(e)}
+                  disabled={executingId === e.sourceId}
+                  style={styles.executeButton}
+                  hitSlop={8}
+                  testID="agenda-execute-btn"
+                >
+                  {executingId === e.sourceId ? (
+                    <ActivityIndicator size="small" color={colors.accent} />
+                  ) : (
+                    <Feather name="check-circle" size={20} color={colors.accent} />
+                  )}
+                </Pressable>
+              )}
             </Card>
           ))
         )}
@@ -383,5 +432,12 @@ const styles = StyleSheet.create({
   rowAmount: {
     fontFamily: fontFamily.displayBold,
     fontSize: fontSize.sm,
+  },
+  executeButton: {
+    marginLeft: 4,
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

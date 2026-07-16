@@ -1,4 +1,5 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -10,7 +11,7 @@ import { IconBadge } from '../components/IconBadge';
 import { LoadingState } from '../components/LoadingState';
 import { ErrorState } from '../components/ErrorState';
 import { useApiData } from '../hooks/useApiData';
-import { api } from '../lib/api';
+import { api, ApiError } from '../lib/api';
 import { formatCurrency, formatRelativeDate } from '../lib/format';
 import { FinancialAccount, NetWorth, Transaction, UpcomingItem } from '../types';
 
@@ -39,6 +40,39 @@ export function HomeScreen() {
   const recent = useApiData(() =>
     api.get<Transaction[]>('/api/v1/transactions?limit=6&sortBy=date&sortOrder=desc')
   );
+  const [executingId, setExecutingId] = useState<string | null>(null);
+
+  function handleExecute(scheduledId: string, description: string) {
+    Alert.alert(
+      'Executar transação',
+      `Confirmar "${description}" como realizada hoje?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Confirmar',
+          onPress: async () => {
+            setExecutingId(scheduledId);
+            try {
+              await api.post(`/api/v1/scheduled/${scheduledId}/execute`, {
+                date: new Date().toISOString().split('T')[0],
+              });
+              upcoming.refetch();
+              recent.refetch();
+              summary.refetch();
+              netWorth.refetch();
+            } catch (err) {
+              Alert.alert(
+                'Erro',
+                err instanceof ApiError ? err.message : 'Erro ao executar transação'
+              );
+            } finally {
+              setExecutingId(null);
+            }
+          },
+        },
+      ]
+    );
+  }
 
   const loading =
     netWorth.loading || accounts.loading || summary.loading || upcoming.loading || recent.loading;
@@ -138,6 +172,19 @@ export function HomeScreen() {
               </Text>
               {item.isToday && <Text style={styles.rowDue}>Hoje</Text>}
             </View>
+            <Pressable
+              onPress={() => handleExecute(item.scheduledId, item.description)}
+              disabled={executingId === item.scheduledId}
+              style={styles.executeButton}
+              hitSlop={8}
+              testID="upcoming-execute-btn"
+            >
+              {executingId === item.scheduledId ? (
+                <ActivityIndicator size="small" color={colors.accent} />
+              ) : (
+                <Feather name="check-circle" size={20} color={colors.accent} />
+              )}
+            </Pressable>
           </Card>
         ))
       )}
@@ -329,6 +376,13 @@ const styles = StyleSheet.create({
   },
   rowAmountGroup: {
     alignItems: 'flex-end',
+  },
+  executeButton: {
+    marginLeft: 4,
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   rowAmount: {
     fontFamily: fontFamily.displayBold,
