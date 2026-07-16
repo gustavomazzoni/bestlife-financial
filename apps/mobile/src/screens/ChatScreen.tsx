@@ -183,14 +183,16 @@ export function ChatScreen() {
           <Feather name="chevron-left" size={18} color={colors.foreground} />
         </Pressable>
         <View style={styles.headerText}>
-          <Text style={styles.headerTitle}>Assistente</Text>
+          <View style={styles.headerStatus}>
+            <View style={styles.headerIcon}>
+              <Feather name="message-circle" size={17} color={colors.accent} />
+            </View>
+            <Text style={styles.headerTitle}>Assistente</Text>
+          </View>
           <View style={styles.headerStatus}>
             <View style={styles.headerStatusDot} />
             <Text style={styles.headerStatusLabel}>Lance as transações por mensagem</Text>
           </View>
-        </View>
-        <View style={styles.headerIcon}>
-          <Feather name="message-circle" size={17} color={colors.accent} />
         </View>
       </View>
 
@@ -360,8 +362,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerIcon: {
-    width: 38,
-    height: 38,
+    width: 34,
+    height: 34,
     borderRadius: radius.sm,
     backgroundColor: colors.accentSoft,
     alignItems: 'center',
