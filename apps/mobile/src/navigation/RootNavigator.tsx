@@ -28,6 +28,7 @@ export function RootNavigator() {
   return (
     <NavigationContainer>
       <Tab.Navigator
+        backBehavior="history"
         screenOptions={{
           headerShown: false,
           tabBarActiveTintColor: colors.foreground,
@@ -61,14 +62,11 @@ export function RootNavigator() {
           component={ChatScreen}
           options={{
             title: 'Chat',
-            tabBarInactiveTintColor: colors.accentForeground,
+            tabBarStyle: { display: 'none' },
             tabBarIcon: ({ size }) => (
               <Feather name="message-circle" color={colors.accentForeground} size={size} />
             ),
             tabBarButton: props => <ChatTabButton {...props} />,
-            tabBarStyle: {
-              display: 'none',
-            },
           }}
         />
         <Tab.Screen
