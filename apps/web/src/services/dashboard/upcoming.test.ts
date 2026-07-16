@@ -47,6 +47,28 @@ describe('getUpcomingItems', () => {
     updatedAt: new Date(),
   };
 
+  const mockOverdueScheduled = {
+    id: 'sched_overdue_1',
+    userId,
+    nextOccurrence: addDays(today, -5),
+    amount: new Prisma.Decimal(150),
+    description: 'Conta de luz',
+    type: 'EXPENSE' as const,
+    frequency: 'ONCE' as const,
+    categoryId: 'cat_1',
+    category: mockCategory,
+    necessityLevel: 'NEEDS' as const,
+    valueAlignment: null,
+    startDate: addDays(today, -5),
+    endDate: null,
+    notificationDaysBefore: 3,
+    isActive: true,
+    lastExecutedDate: null,
+    notes: null,
+    createdAt: addDays(today, -5),
+    updatedAt: addDays(today, -5),
+  };
+
   const mockMonthlyScheduled = {
     id: 'sched_monthly_1',
     userId,
@@ -111,6 +133,39 @@ describe('getUpcomingItems', () => {
     const result = await getUpcomingItems(userId);
 
     expect(result[0].isToday).toBe(false);
+  });
+
+  it('should include items whose nextOccurrence already passed, flagged as overdue', async () => {
+    vi.mocked(prisma.scheduledTransaction.findMany).mockResolvedValue([
+      mockOverdueScheduled,
+    ]);
+
+    const result = await getUpcomingItems(userId);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].isOverdue).toBe(true);
+    expect(result[0].isToday).toBe(false);
+  });
+
+  it('should mark today and future items as isOverdue=false', async () => {
+    vi.mocked(prisma.scheduledTransaction.findMany).mockResolvedValue([
+      mockMonthlyScheduled, // nextOccurrence = today
+      mockOnceScheduled, // nextOccurrence = today + 2
+    ]);
+
+    const result = await getUpcomingItems(userId);
+
+    expect(result.every(i => !i.isOverdue)).toBe(true);
+  });
+
+  it('should not filter out overdue items via a nextOccurrence lower bound', async () => {
+    vi.mocked(prisma.scheduledTransaction.findMany).mockResolvedValue([]);
+
+    await getUpcomingItems(userId, 7);
+
+    const call = vi.mocked(prisma.scheduledTransaction.findMany).mock
+      .calls[0][0];
+    expect(call?.where?.nextOccurrence).not.toHaveProperty('gte');
   });
 
   it('should return empty array when no upcoming items', async () => {

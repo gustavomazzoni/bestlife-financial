@@ -9,6 +9,8 @@ export interface UpcomingItem {
   isRecurring: boolean;
   date: string; // YYYY-MM-DD
   isToday: boolean;
+  /** Due date has already passed without being executed. */
+  isOverdue: boolean;
   description: string;
   amount: string; // Decimal serialized as string
   type: TransactionType;
@@ -24,11 +26,14 @@ export async function getUpcomingItems(
   const today = toUTCMidnight(new Date());
   const cutoff = addDays(today, days);
 
+  // No lower bound on nextOccurrence: an item whose due date already
+  // passed without being executed should keep showing (flagged via
+  // isOverdue below) rather than silently disappearing from the list.
   const scheduled = await prisma.scheduledTransaction.findMany({
     where: {
       userId,
       isActive: true,
-      nextOccurrence: { gte: today, lt: cutoff },
+      nextOccurrence: { lt: cutoff },
     },
     include: { category: true },
     orderBy: { nextOccurrence: 'asc' },
@@ -42,6 +47,7 @@ export async function getUpcomingItems(
       isRecurring: s.frequency !== 'ONCE',
       date: format(calendarDate, 'yyyy-MM-dd'),
       isToday: isToday(calendarDate),
+      isOverdue: calendarDate < today,
       description: s.description,
       amount: s.amount.toString(),
       type: s.type,

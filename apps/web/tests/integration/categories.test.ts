@@ -112,10 +112,11 @@ describe('Categories Integration Tests', () => {
       );
       const created = await parseResponse(createRes);
 
+      const renamedTo = `Renomeada ${Date.now()}`;
       const request = createMockPatchRequest(
         `api/v1/categories/${created.data.id}`,
         {
-          name: 'Renomeada',
+          name: renamedTo,
         }
       );
       const params = Promise.resolve({ id: created.data.id });
@@ -123,7 +124,7 @@ describe('Categories Integration Tests', () => {
       const json = await parseResponse(response);
 
       expect(response.status).toBe(200);
-      expect(json.data.name).toBe('Renomeada');
+      expect(json.data.name).toBe(renamedTo);
     });
 
     it('returns 403 when attempting to modify a system default category', async () => {

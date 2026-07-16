@@ -14,6 +14,9 @@ vi.mock('@/lib/db', () => ({
     transaction: {
       create: vi.fn(),
     },
+    financialAccount: {
+      findFirst: vi.fn(),
+    },
   },
 }));
 
@@ -138,5 +141,49 @@ describe('executeScheduledTransaction', () => {
     await expect(
       executeScheduledTransaction(userId, scheduledId, dueToday)
     ).rejects.toThrow('Scheduled transaction is not active');
+  });
+
+  it('records the given accountId on the created transaction when it belongs to the user', async () => {
+    vi.mocked(prisma.scheduledTransaction.findFirst).mockResolvedValue(
+      mockMonthlyScheduled
+    );
+    vi.mocked(prisma.financialAccount.findFirst).mockResolvedValue({
+      id: 'acc_1',
+      userId,
+      name: 'Nubank',
+      type: 'CHECKING' as const,
+      balance: new Prisma.Decimal(0),
+      color: '#6B7280',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    await executeScheduledTransaction(userId, scheduledId, dueToday, 'acc_1');
+
+    expect(prisma.financialAccount.findFirst).toHaveBeenCalledWith({
+      where: { id: 'acc_1', userId },
+    });
+    expect(prisma.transaction.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ accountId: 'acc_1' }),
+      })
+    );
+  });
+
+  it('rejects an accountId that does not belong to the user', async () => {
+    vi.mocked(prisma.scheduledTransaction.findFirst).mockResolvedValue(
+      mockMonthlyScheduled
+    );
+    vi.mocked(prisma.financialAccount.findFirst).mockResolvedValue(null);
+
+    await expect(
+      executeScheduledTransaction(
+        userId,
+        scheduledId,
+        dueToday,
+        'someone-elses-account'
+      )
+    ).rejects.toThrow('Account not found');
+    expect(prisma.transaction.create).not.toHaveBeenCalled();
   });
 });

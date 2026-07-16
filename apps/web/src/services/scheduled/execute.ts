@@ -32,12 +32,16 @@ function calculateNextOccurrence(
  *   Create Transaction, advance nextOccurrence.
  *   If nextOccurrence > endDate: set isActive = false.
  *
- * An optional executionDate can override today's date.
+ * An optional executionDate can override today's date. An optional
+ * accountId records which account the (now-confirmed) transaction came
+ * from — ScheduledTransaction itself has no account, since that's only
+ * known once it's actually paid.
  */
 export async function executeScheduledTransaction(
   userId: string,
   scheduledId: string,
-  executionDate?: Date
+  executionDate?: Date,
+  accountId?: string
 ): Promise<Transaction> {
   const today = toUTCMidnight(new Date());
   const transactionDate = executionDate ? toUTCMidnight(executionDate) : today;
@@ -64,6 +68,16 @@ export async function executeScheduledTransaction(
       throw new Error('Scheduled transaction is not due yet');
     }
 
+    if (accountId) {
+      const account = await tx.financialAccount.findFirst({
+        where: { id: accountId, userId },
+      });
+
+      if (!account) {
+        throw new Error('Account not found');
+      }
+    }
+
     // Create transaction record
     const transaction = await tx.transaction.create({
       data: {
@@ -76,6 +90,7 @@ export async function executeScheduledTransaction(
         necessityLevel: scheduled.necessityLevel,
         valueAlignment: scheduled.valueAlignment,
         scheduledId,
+        accountId,
         notes: scheduled.notes,
       },
     });

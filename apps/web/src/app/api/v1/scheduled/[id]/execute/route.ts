@@ -12,10 +12,13 @@ export async function POST(
     const { id } = await params;
     const body = await request.json().catch(() => ({}));
     const executionDate = body.date ? new Date(body.date) : undefined;
+    const accountId =
+      typeof body.accountId === 'string' ? body.accountId : undefined;
     const transaction = await executeScheduledTransaction(
       userId,
       id,
-      executionDate
+      executionDate,
+      accountId
     );
     return apiResponse(transaction, 201);
   } catch (error) {
