@@ -41,10 +41,8 @@ type ChatMessage =
     }
   | { id: string; role: 'error'; text: string };
 
-let messageCounter = 0;
 function nextId() {
-  messageCounter += 1;
-  return `msg-${messageCounter}`;
+  return `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 export function ChatScreen() {
