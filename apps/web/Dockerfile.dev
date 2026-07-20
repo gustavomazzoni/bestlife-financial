@@ -30,11 +30,24 @@ RUN pnpm install --frozen-lockfile --shamefully-hoist
 # Copy application code
 COPY . .
 
+# prisma.config.ts requires DATABASE_URL to resolve; env_file (docker-compose)
+# only applies at container runtime, not during this build, so it must be
+# passed explicitly as a build arg.
+ARG DATABASE_URL
+ENV DATABASE_URL=$DATABASE_URL
+
 # Generate Prisma Client
 RUN pnpm --filter @lifeos/web prisma:generate
 
 # Expose ports
 EXPOSE 3000 5555
+
+# Re-syncs node_modules against the lockfile on every container start, since
+# anonymous node_modules volumes (docker-compose.yml) persist across image
+# rebuilds and would otherwise shadow this image's freshly-installed deps.
+COPY docker/entrypoint.dev.sh /usr/local/bin/entrypoint.dev.sh
+RUN chmod +x /usr/local/bin/entrypoint.dev.sh
+ENTRYPOINT ["entrypoint.dev.sh"]
 
 # Default command (can be overridden in docker-compose)
 CMD ["pnpm", "--filter", "@lifeos/web", "dev"]

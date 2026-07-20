@@ -28,6 +28,8 @@ services:
       context: .
       dockerfile: apps/web/Dockerfile.dev
       target: development
+      args:
+        DATABASE_URL: ${DATABASE_URL}
     container_name: lifeos-app-dev
     restart: unless-stopped
     # Forwards every var from the root .env into the container's process.env
@@ -59,6 +61,8 @@ services:
       context: .
       dockerfile: apps/web/Dockerfile.dev
       target: development
+      args:
+        DATABASE_URL: ${DATABASE_URL}
     container_name: lifeos-prisma-studio
     restart: unless-stopped
     env_file:
