@@ -140,7 +140,7 @@ export function ChatScreen() {
 
   function handleEdit(message: Extract<ChatMessage, { role: 'assistant' }>) {
     setEditingMessageId(message.id);
-    sheetRef.current?.expand();
+    sheetRef.current?.present();
   }
 
   function handleSheetConfirm(updated: InferredTransaction) {
@@ -154,7 +154,7 @@ export function ChatScreen() {
       );
       confirmTransaction(editingMessageId, updated);
     }
-    sheetRef.current?.close();
+    sheetRef.current?.dismiss();
     setEditingMessageId(null);
   }
 
@@ -162,7 +162,7 @@ export function ChatScreen() {
     if (editingMessageId) {
       setMessages(prev => prev.filter(m => m.id !== editingMessageId));
     }
-    sheetRef.current?.close();
+    sheetRef.current?.dismiss();
     setEditingMessageId(null);
   }
 

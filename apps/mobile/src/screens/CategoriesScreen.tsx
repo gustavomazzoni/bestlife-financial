@@ -32,7 +32,7 @@ export function CategoriesScreen({ navigation }: Props) {
 
   function openCategory(c: CategoryBudgetSummary | null) {
     setSelected(c);
-    sheetRef.current?.expand();
+    sheetRef.current?.present();
   }
 
   if (budgets.loading) return <LoadingState />;
@@ -107,7 +107,7 @@ export function CategoriesScreen({ navigation }: Props) {
         categoryBudget={selected}
         onSaved={() => budgets.refetch()}
         onDeleted={() => budgets.refetch()}
-        onClose={() => sheetRef.current?.close()}
+        onClose={() => sheetRef.current?.dismiss()}
       />
     </View>
   );

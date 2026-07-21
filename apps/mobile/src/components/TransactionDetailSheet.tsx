@@ -1,6 +1,7 @@
 import { ElementRef, forwardRef, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import BottomSheet, {
+import {
+  BottomSheetModal,
   BottomSheetScrollView,
   BottomSheetTextInput,
 } from '@gorhom/bottom-sheet';
@@ -8,13 +9,14 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { Feather } from '@expo/vector-icons';
 import { TransactionType } from '@lifeos/shared';
 import { colors, fontFamily, fontSize, radius } from '../theme';
+import { AmountInput } from './AmountInput';
 import { Chip } from './Chip';
 import { IconBadge } from './IconBadge';
 import { api, ApiError } from '../lib/api';
 import { formatCurrency } from '../lib/format';
 import { Category, FinancialAccount, Transaction } from '../types';
 
-export type TransactionDetailSheetRef = ElementRef<typeof BottomSheet>;
+export type TransactionDetailSheetRef = ElementRef<typeof BottomSheetModal>;
 
 const TYPE_OPTIONS: { value: TransactionType; label: string }[] = [
   { value: 'EXPENSE', label: 'Despesa' },
@@ -71,9 +73,9 @@ export const TransactionDetailSheet = forwardRef<
 
   if (!draft) {
     return (
-      <BottomSheet ref={ref} index={-1} snapPoints={['75%']} enablePanDownToClose>
+      <BottomSheetModal ref={ref} snapPoints={['75%']} enablePanDownToClose>
         <View style={styles.empty} />
-      </BottomSheet>
+      </BottomSheetModal>
     );
   }
 
@@ -138,9 +140,8 @@ export const TransactionDetailSheet = forwardRef<
   const account = accounts.find(a => a.id === draft.accountId);
 
   return (
-    <BottomSheet
+    <BottomSheetModal
       ref={ref}
-      index={-1}
       snapPoints={['75%']}
       enablePanDownToClose
       backgroundStyle={styles.sheetBackground}
@@ -237,11 +238,10 @@ export const TransactionDetailSheet = forwardRef<
             </View>
 
             <Text style={styles.label}>Valor</Text>
-            <BottomSheetTextInput
+            <AmountInput
               style={styles.input}
-              keyboardType="decimal-pad"
               value={draft.amount}
-              onChangeText={t => update({ amount: t.replace(',', '.') })}
+              onChangeValue={t => update({ amount: t })}
             />
 
             <Text style={styles.label}>Descrição</Text>
@@ -336,7 +336,7 @@ export const TransactionDetailSheet = forwardRef<
           </>
         )}
       </BottomSheetScrollView>
-    </BottomSheet>
+    </BottomSheetModal>
   );
 });
 

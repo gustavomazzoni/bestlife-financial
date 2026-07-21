@@ -1,6 +1,7 @@
 import { ElementRef, forwardRef, useEffect, useState } from 'react';
 import { Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import BottomSheet, {
+import {
+  BottomSheetModal,
   BottomSheetScrollView,
   BottomSheetTextInput,
 } from '@gorhom/bottom-sheet';
@@ -8,12 +9,13 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { Feather } from '@expo/vector-icons';
 import { TransactionType, ScheduleFrequency } from '@lifeos/shared';
 import { colors, fontFamily, fontSize, radius } from '../theme';
+import { AmountInput } from './AmountInput';
 import { Chip } from './Chip';
 import { api } from '../lib/api';
 import { isInferredComplete } from '../lib/inferredTransaction';
 import { Category, FinancialAccount, InferredTransaction } from '../types';
 
-export type BottomSheetRef = ElementRef<typeof BottomSheet>;
+export type BottomSheetRef = ElementRef<typeof BottomSheetModal>;
 
 const TYPE_OPTIONS: { value: TransactionType; label: string }[] = [
   { value: 'EXPENSE', label: 'Despesa' },
@@ -64,9 +66,9 @@ export const EditTransactionSheet = forwardRef<
 
   if (!draft) {
     return (
-      <BottomSheet ref={ref} index={-1} snapPoints={['80%']} enablePanDownToClose>
+      <BottomSheetModal ref={ref} snapPoints={['80%']} enablePanDownToClose>
         <View style={styles.empty} />
-      </BottomSheet>
+      </BottomSheetModal>
     );
   }
 
@@ -93,9 +95,8 @@ export const EditTransactionSheet = forwardRef<
   }
 
   return (
-    <BottomSheet
+    <BottomSheetModal
       ref={ref}
-      index={-1}
       snapPoints={['85%']}
       enablePanDownToClose
       backgroundStyle={styles.sheetBackground}
@@ -119,18 +120,10 @@ export const EditTransactionSheet = forwardRef<
         </View>
 
         <Text style={styles.label}>Valor</Text>
-        <BottomSheetTextInput
+        <AmountInput
           style={styles.input}
-          keyboardType="decimal-pad"
           value={draft.amount != null ? String(draft.amount) : ''}
-          onChangeText={t => {
-            if (!t) {
-              update({ amount: null });
-              return;
-            }
-            const parsed = Number(t.replace(',', '.'));
-            if (!Number.isNaN(parsed)) update({ amount: parsed });
-          }}
+          onChangeValue={t => update({ amount: t === '' ? null : Number(t) })}
         />
 
         <Text style={styles.label}>Descrição</Text>
@@ -248,7 +241,7 @@ export const EditTransactionSheet = forwardRef<
           </Pressable>
         </View>
       </BottomSheetScrollView>
-    </BottomSheet>
+    </BottomSheetModal>
   );
 });
 

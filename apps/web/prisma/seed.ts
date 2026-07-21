@@ -106,6 +106,12 @@ const categories = [
     icon: '💸',
     color: '#64748B',
   },
+  {
+    name: 'Work',
+    type: TransactionType.EXPENSE,
+    icon: '🧑‍💼',
+    color: '#475569',
+  },
 
   // Saving Categories
   {

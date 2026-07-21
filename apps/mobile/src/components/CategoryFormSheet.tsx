@@ -1,6 +1,7 @@
 import { ElementRef, forwardRef, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
-import BottomSheet, {
+import {
+  BottomSheetModal,
   BottomSheetScrollView,
   BottomSheetTextInput,
 } from '@gorhom/bottom-sheet';
@@ -9,7 +10,7 @@ import { colors, fontFamily, fontSize, radius } from '../theme';
 import { api, ApiError } from '../lib/api';
 import { CategoryBudgetSummary } from '../types';
 
-export type CategoryFormSheetRef = ElementRef<typeof BottomSheet>;
+export type CategoryFormSheetRef = ElementRef<typeof BottomSheetModal>;
 
 interface Draft {
   name: string;
@@ -115,9 +116,8 @@ export const CategoryFormSheet = forwardRef<CategoryFormSheetRef, CategoryFormSh
     }
 
     return (
-      <BottomSheet
+      <BottomSheetModal
         ref={ref}
-        index={-1}
         snapPoints={['60%']}
         enablePanDownToClose
         backgroundStyle={styles.sheetBackground}
@@ -186,7 +186,7 @@ export const CategoryFormSheet = forwardRef<CategoryFormSheetRef, CategoryFormSh
             </Pressable>
           </View>
         </BottomSheetScrollView>
-      </BottomSheet>
+      </BottomSheetModal>
     );
   }
 );

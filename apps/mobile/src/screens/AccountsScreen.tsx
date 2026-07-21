@@ -35,21 +35,21 @@ export function AccountsScreen({ navigation }: Props) {
   const accountSheetRef = useRef<AccountFormSheetRef>(null);
   function openAccount(a: FinancialAccount | null) {
     setSelectedAccount(a);
-    accountSheetRef.current?.expand();
+    accountSheetRef.current?.present();
   }
 
   const [selectedInvestment, setSelectedInvestment] = useState<Investment | null>(null);
   const investmentSheetRef = useRef<InvestmentFormSheetRef>(null);
   function openInvestment(i: Investment | null) {
     setSelectedInvestment(i);
-    investmentSheetRef.current?.expand();
+    investmentSheetRef.current?.present();
   }
 
   const [selectedDebt, setSelectedDebt] = useState<Debt | null>(null);
   const debtSheetRef = useRef<DebtFormSheetRef>(null);
   function openDebt(d: Debt | null) {
     setSelectedDebt(d);
-    debtSheetRef.current?.expand();
+    debtSheetRef.current?.present();
   }
 
   const loading =
@@ -71,17 +71,15 @@ export function AccountsScreen({ navigation }: Props) {
   }
 
   return (
-    <>
+    <View style={styles.container} testID="accounts-screen">
+      <ScreenHeader eyebrow="Seu patrimônio" title="Contas" />
+
       <ScrollView
-        style={styles.container}
         contentContainerStyle={[styles.content, { paddingBottom: 20 }]}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={refetchAll} tintColor={colors.accent} />
         }
-        testID="accounts-screen"
       >
-        <ScreenHeader eyebrow="Seu patrimônio" title="Contas" />
-
         <View style={styles.netWorthCard}>
           <Text style={styles.netWorthLabel}>Patrimônio líquido</Text>
           <Text style={styles.netWorthValue}>
@@ -235,7 +233,7 @@ export function AccountsScreen({ navigation }: Props) {
           accounts.refetch();
           netWorth.refetch();
         }}
-        onClose={() => accountSheetRef.current?.close()}
+        onClose={() => accountSheetRef.current?.dismiss()}
       />
       <InvestmentFormSheet
         ref={investmentSheetRef}
@@ -248,7 +246,7 @@ export function AccountsScreen({ navigation }: Props) {
           investments.refetch();
           netWorth.refetch();
         }}
-        onClose={() => investmentSheetRef.current?.close()}
+        onClose={() => investmentSheetRef.current?.dismiss()}
       />
       <DebtFormSheet
         ref={debtSheetRef}
@@ -261,9 +259,9 @@ export function AccountsScreen({ navigation }: Props) {
           debts.refetch();
           netWorth.refetch();
         }}
-        onClose={() => debtSheetRef.current?.close()}
+        onClose={() => debtSheetRef.current?.dismiss()}
       />
-    </>
+    </View>
   );
 }
 

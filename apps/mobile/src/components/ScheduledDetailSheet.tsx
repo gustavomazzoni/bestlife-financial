@@ -1,6 +1,7 @@
 import { ElementRef, forwardRef, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import BottomSheet, {
+import {
+  BottomSheetModal,
   BottomSheetScrollView,
   BottomSheetTextInput,
 } from '@gorhom/bottom-sheet';
@@ -14,7 +15,7 @@ import { api, ApiError } from '../lib/api';
 import { formatCurrency } from '../lib/format';
 import { Category, ScheduledTransaction } from '../types';
 
-export type ScheduledDetailSheetRef = ElementRef<typeof BottomSheet>;
+export type ScheduledDetailSheetRef = ElementRef<typeof BottomSheetModal>;
 
 const FREQUENCY_OPTIONS: { value: ScheduleFrequency; label: string }[] = [
   { value: 'WEEKLY', label: 'Semanal' },
@@ -81,9 +82,9 @@ export const ScheduledDetailSheet = forwardRef<
 
   if (!draft) {
     return (
-      <BottomSheet ref={ref} index={-1} snapPoints={['70%']} enablePanDownToClose>
+      <BottomSheetModal ref={ref} snapPoints={['70%']} enablePanDownToClose>
         <View style={styles.empty} />
-      </BottomSheet>
+      </BottomSheetModal>
     );
   }
 
@@ -150,9 +151,8 @@ export const ScheduledDetailSheet = forwardRef<
   }
 
   return (
-    <BottomSheet
+    <BottomSheetModal
       ref={ref}
-      index={-1}
       snapPoints={['75%']}
       enablePanDownToClose
       backgroundStyle={styles.sheetBackground}
@@ -355,7 +355,7 @@ export const ScheduledDetailSheet = forwardRef<
           </>
         )}
       </BottomSheetScrollView>
-    </BottomSheet>
+    </BottomSheetModal>
   );
 });
 

@@ -60,7 +60,7 @@ export function HomeScreen() {
 
   function openTransaction(t: Transaction) {
     setSelectedTransaction(t);
-    detailSheetRef.current?.expand();
+    detailSheetRef.current?.present();
   }
 
   const [executingItem, setExecutingItem] = useState<{
@@ -71,7 +71,7 @@ export function HomeScreen() {
 
   function openExecute(scheduledId: string, description: string) {
     setExecutingItem({ scheduledId, description });
-    executeSheetRef.current?.expand();
+    executeSheetRef.current?.present();
   }
 
   const loading =
@@ -101,19 +101,8 @@ export function HomeScreen() {
   const todayLabel = format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR });
 
   return (
-    <>
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={[
-        styles.content,
-        { paddingTop: insets.top + 20, paddingBottom: 20 },
-      ]}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={refetchAll} tintColor={colors.accent} />
-      }
-      testID="home-screen"
-    >
-      <View style={styles.header}>
+    <View style={styles.container} testID="home-screen">
+      <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
         <View>
           <Text style={styles.todayLabel}>{todayLabel}</Text>
           <Text style={styles.greeting}>Olá!</Text>
@@ -127,6 +116,12 @@ export function HomeScreen() {
         </Pressable>
       </View>
 
+    <ScrollView
+      contentContainerStyle={[styles.content, { paddingBottom: 20 }]}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={refetchAll} tintColor={colors.accent} />
+      }
+    >
       <View style={styles.balanceCard}>
         <View style={styles.balanceHeader}>
           <Text style={styles.balanceLabel}>Saldo em contas</Text>
@@ -244,7 +239,9 @@ export function HomeScreen() {
                 <Text style={styles.rowTitle} numberOfLines={1}>
                   {t.description}
                 </Text>
-                <Text style={styles.rowSubtitle}>{t.category?.name ?? '—'}</Text>
+                <Text style={styles.rowSubtitle}>
+                  {t.category?.name ?? '—'} · {formatRelativeDate(t.date.slice(0, 10))}
+                </Text>
               </View>
               <Text style={[styles.rowAmount, { color: typeColor[t.type] }]}>
                 {formatCurrency(t.amount)}
@@ -263,7 +260,7 @@ export function HomeScreen() {
         summary.refetch();
       }}
       onDeleted={() => {
-        detailSheetRef.current?.close();
+        detailSheetRef.current?.dismiss();
         recent.refetch();
         summary.refetch();
         netWorth.refetch();
@@ -274,14 +271,14 @@ export function HomeScreen() {
       item={executingItem}
       accounts={accounts.data ?? []}
       onExecuted={() => {
-        executeSheetRef.current?.close();
+        executeSheetRef.current?.dismiss();
         upcoming.refetch();
         recent.refetch();
         summary.refetch();
         netWorth.refetch();
       }}
     />
-    </>
+    </View>
   );
 }
 
@@ -298,6 +295,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
+    paddingHorizontal: 20,
     paddingBottom: 18,
   },
   todayLabel: {

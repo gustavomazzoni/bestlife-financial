@@ -74,7 +74,7 @@ export function CalendarScreen() {
     const found = transactions.data?.find(t => t.id === sourceId);
     if (!found) return;
     setSelectedTransaction(found);
-    detailSheetRef.current?.expand();
+    detailSheetRef.current?.present();
   }
 
   const [selectedScheduled, setSelectedScheduled] = useState<ScheduledTransaction | null>(null);
@@ -84,7 +84,7 @@ export function CalendarScreen() {
     const found = scheduled.data?.find(s => s.id === sourceId);
     if (!found) return;
     setSelectedScheduled(found);
-    scheduledSheetRef.current?.expand();
+    scheduledSheetRef.current?.present();
   }
 
   const eventsByDate = useMemo((): Map<string, CalendarEvent[]> => {
@@ -113,7 +113,7 @@ export function CalendarScreen() {
 
   function openExecute(event: CalendarEvent) {
     setExecutingItem({ scheduledId: event.sourceId, description: event.description });
-    executeSheetRef.current?.expand();
+    executeSheetRef.current?.present();
   }
 
   const loading = scheduled.loading || transactions.loading;
@@ -294,7 +294,7 @@ export function CalendarScreen() {
           transactions.refetch();
         }}
         onDeleted={() => {
-          detailSheetRef.current?.close();
+          detailSheetRef.current?.dismiss();
           transactions.refetch();
         }}
       />
@@ -305,7 +305,7 @@ export function CalendarScreen() {
           scheduled.refetch();
         }}
         onDeleted={() => {
-          scheduledSheetRef.current?.close();
+          scheduledSheetRef.current?.dismiss();
           scheduled.refetch();
         }}
       />
@@ -314,7 +314,7 @@ export function CalendarScreen() {
         item={executingItem}
         accounts={accounts.data ?? []}
         onExecuted={() => {
-          executeSheetRef.current?.close();
+          executeSheetRef.current?.dismiss();
           scheduled.refetch();
           transactions.refetch();
         }}

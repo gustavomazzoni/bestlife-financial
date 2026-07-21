@@ -8,17 +8,19 @@ import {
   Text,
   View,
 } from 'react-native';
-import BottomSheet, {
+import {
+  BottomSheetModal,
   BottomSheetScrollView,
   BottomSheetTextInput,
 } from '@gorhom/bottom-sheet';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Feather } from '@expo/vector-icons';
 import { colors, fontFamily, fontSize, radius } from '../theme';
+import { AmountInput } from './AmountInput';
 import { api, ApiError } from '../lib/api';
 import { Debt } from '../types';
 
-export type DebtFormSheetRef = ElementRef<typeof BottomSheet>;
+export type DebtFormSheetRef = ElementRef<typeof BottomSheetModal>;
 
 interface Draft {
   name: string;
@@ -69,7 +71,7 @@ export const DebtFormSheet = forwardRef<DebtFormSheetRef, DebtFormSheetProps>(
       setDraft(prev => ({ ...prev, ...patch }));
     }
 
-    const balanceValue = Number(draft.balance.replace(',', '.'));
+    const balanceValue = Number(draft.balance || 0);
     const installmentTotalValue = draft.installmentTotal
       ? Number(draft.installmentTotal)
       : undefined;
@@ -140,9 +142,8 @@ export const DebtFormSheet = forwardRef<DebtFormSheetRef, DebtFormSheetProps>(
     }
 
     return (
-      <BottomSheet
+      <BottomSheetModal
         ref={ref}
-        index={-1}
         snapPoints={['75%']}
         enablePanDownToClose
         backgroundStyle={styles.sheetBackground}
@@ -160,11 +161,10 @@ export const DebtFormSheet = forwardRef<DebtFormSheetRef, DebtFormSheetProps>(
           />
 
           <Text style={styles.label}>Saldo devedor</Text>
-          <BottomSheetTextInput
+          <AmountInput
             style={styles.input}
-            keyboardType="decimal-pad"
             value={draft.balance}
-            onChangeText={t => update({ balance: t })}
+            onChangeValue={t => update({ balance: t })}
           />
 
           <Text style={styles.label}>Vencimento (opcional)</Text>
@@ -242,7 +242,7 @@ export const DebtFormSheet = forwardRef<DebtFormSheetRef, DebtFormSheetProps>(
             </Pressable>
           </View>
         </BottomSheetScrollView>
-      </BottomSheet>
+      </BottomSheetModal>
     );
   }
 );

@@ -1,13 +1,13 @@
 import { ElementRef, forwardRef, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import BottomSheet, { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { colors, fontFamily, fontSize, radius } from '../theme';
 import { Chip } from './Chip';
 import { api, ApiError } from '../lib/api';
 import { FinancialAccount } from '../types';
 
-export type ExecuteScheduledSheetRef = ElementRef<typeof BottomSheet>;
+export type ExecuteScheduledSheetRef = ElementRef<typeof BottomSheetModal>;
 
 interface ExecuteScheduledSheetItem {
   scheduledId: string;
@@ -44,9 +44,9 @@ export const ExecuteScheduledSheet = forwardRef<
 
   if (!item) {
     return (
-      <BottomSheet ref={ref} index={-1} snapPoints={['50%']} enablePanDownToClose>
+      <BottomSheetModal ref={ref} snapPoints={['50%']} enablePanDownToClose>
         <View style={styles.empty} />
-      </BottomSheet>
+      </BottomSheetModal>
     );
   }
 
@@ -70,9 +70,8 @@ export const ExecuteScheduledSheet = forwardRef<
   }
 
   return (
-    <BottomSheet
+    <BottomSheetModal
       ref={ref}
-      index={-1}
       snapPoints={['55%']}
       enablePanDownToClose
       backgroundStyle={styles.sheetBackground}
@@ -130,7 +129,7 @@ export const ExecuteScheduledSheet = forwardRef<
           )}
         </Pressable>
       </BottomSheetScrollView>
-    </BottomSheet>
+    </BottomSheetModal>
   );
 });
 

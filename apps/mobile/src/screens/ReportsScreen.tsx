@@ -77,16 +77,15 @@ export function ReportsScreen() {
   }
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={[styles.content, { paddingBottom: 20 }]}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={refetchAll} tintColor={colors.accent} />
-      }
-      testID="reports-screen"
-    >
+    <View style={styles.container} testID="reports-screen">
       <ScreenHeader eyebrow="Para onde vai o dinheiro" title="Relatório" />
 
+      <ScrollView
+        contentContainerStyle={[styles.content, { paddingBottom: 20 }]}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={refetchAll} tintColor={colors.accent} />
+        }
+      >
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.monthPicker}>
         <View style={styles.monthPickerRow}>
           {months.map(m => (
@@ -163,7 +162,8 @@ export function ReportsScreen() {
           </Card>
         ))
       )}
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 

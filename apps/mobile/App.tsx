@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
 import {
@@ -53,16 +54,18 @@ export default function App() {
       <GestureHandlerRootView style={{ flex: 1 }}>
         <SafeAreaProvider>
           <StatusBar style="dark" />
-          <AuthContext.Provider
-            value={{
-              signOut: () => {
-                signOut();
-                setStatus('idle');
-              },
-            }}
-          >
-            <RootNavigator />
-          </AuthContext.Provider>
+          <BottomSheetModalProvider>
+            <AuthContext.Provider
+              value={{
+                signOut: () => {
+                  signOut();
+                  setStatus('idle');
+                },
+              }}
+            >
+              <RootNavigator />
+            </AuthContext.Provider>
+          </BottomSheetModalProvider>
         </SafeAreaProvider>
       </GestureHandlerRootView>
     );

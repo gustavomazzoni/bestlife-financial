@@ -1,17 +1,19 @@
 import { ElementRef, forwardRef, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
-import BottomSheet, {
+import {
+  BottomSheetModal,
   BottomSheetScrollView,
   BottomSheetTextInput,
 } from '@gorhom/bottom-sheet';
 import { Feather } from '@expo/vector-icons';
 import { FinancialAccountType } from '@lifeos/shared';
 import { colors, fontFamily, fontSize, radius } from '../theme';
+import { AmountInput } from './AmountInput';
 import { Chip } from './Chip';
 import { api, ApiError } from '../lib/api';
 import { FinancialAccount } from '../types';
 
-export type AccountFormSheetRef = ElementRef<typeof BottomSheet>;
+export type AccountFormSheetRef = ElementRef<typeof BottomSheetModal>;
 
 const TYPE_OPTIONS: { value: FinancialAccountType; label: string }[] = [
   { value: 'CHECKING', label: 'Conta corrente' },
@@ -53,7 +55,7 @@ export const AccountFormSheet = forwardRef<AccountFormSheetRef, AccountFormSheet
       setDraft(prev => ({ ...prev, ...patch }));
     }
 
-    const balanceValue = Number(draft.balance.replace(',', '.'));
+    const balanceValue = Number(draft.balance || 0);
     const isValid = draft.name.trim().length > 0 && !Number.isNaN(balanceValue);
 
     async function handleSave() {
@@ -106,9 +108,8 @@ export const AccountFormSheet = forwardRef<AccountFormSheetRef, AccountFormSheet
     }
 
     return (
-      <BottomSheet
+      <BottomSheetModal
         ref={ref}
-        index={-1}
         snapPoints={['60%']}
         enablePanDownToClose
         backgroundStyle={styles.sheetBackground}
@@ -138,11 +139,10 @@ export const AccountFormSheet = forwardRef<AccountFormSheetRef, AccountFormSheet
           </View>
 
           <Text style={styles.label}>Saldo</Text>
-          <BottomSheetTextInput
+          <AmountInput
             style={styles.input}
-            keyboardType="decimal-pad"
             value={draft.balance}
-            onChangeText={t => update({ balance: t })}
+            onChangeValue={t => update({ balance: t })}
           />
 
           <View style={styles.actionsRow}>
@@ -174,7 +174,7 @@ export const AccountFormSheet = forwardRef<AccountFormSheetRef, AccountFormSheet
             </Pressable>
           </View>
         </BottomSheetScrollView>
-      </BottomSheet>
+      </BottomSheetModal>
     );
   }
 );

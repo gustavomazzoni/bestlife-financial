@@ -1,15 +1,17 @@
 import { ElementRef, forwardRef, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
-import BottomSheet, {
+import {
+  BottomSheetModal,
   BottomSheetScrollView,
   BottomSheetTextInput,
 } from '@gorhom/bottom-sheet';
 import { Feather } from '@expo/vector-icons';
 import { colors, fontFamily, fontSize, radius } from '../theme';
+import { AmountInput } from './AmountInput';
 import { api, ApiError } from '../lib/api';
 import { Investment } from '../types';
 
-export type InvestmentFormSheetRef = ElementRef<typeof BottomSheet>;
+export type InvestmentFormSheetRef = ElementRef<typeof BottomSheetModal>;
 
 interface Draft {
   name: string;
@@ -47,7 +49,7 @@ export const InvestmentFormSheet = forwardRef<
     setDraft(prev => ({ ...prev, ...patch }));
   }
 
-  const balanceValue = Number(draft.balance.replace(',', '.'));
+  const balanceValue = Number(draft.balance || 0);
   const isValid =
     draft.name.trim().length > 0 &&
     draft.category.trim().length > 0 &&
@@ -100,9 +102,8 @@ export const InvestmentFormSheet = forwardRef<
   }
 
   return (
-    <BottomSheet
+    <BottomSheetModal
       ref={ref}
-      index={-1}
       snapPoints={['55%']}
       enablePanDownToClose
       backgroundStyle={styles.sheetBackground}
@@ -129,11 +130,10 @@ export const InvestmentFormSheet = forwardRef<
         />
 
         <Text style={styles.label}>Saldo</Text>
-        <BottomSheetTextInput
+        <AmountInput
           style={styles.input}
-          keyboardType="decimal-pad"
           value={draft.balance}
-          onChangeText={t => update({ balance: t })}
+          onChangeValue={t => update({ balance: t })}
         />
 
         {balanceValue < 0 && (
@@ -171,7 +171,7 @@ export const InvestmentFormSheet = forwardRef<
           </Pressable>
         </View>
       </BottomSheetScrollView>
-    </BottomSheet>
+    </BottomSheetModal>
   );
 });
 
