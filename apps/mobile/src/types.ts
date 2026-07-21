@@ -45,6 +45,7 @@ export interface ScheduledTransaction {
   endDate: string | null;
   nextOccurrence: string;
   isActive: boolean;
+  accountId: string | null;
   category: Category | null;
 }
 
@@ -61,6 +62,7 @@ export interface UpcomingItem {
   categoryIcon?: string;
   categoryName?: string;
   scheduledId: string;
+  accountId: string | null;
 }
 
 export interface FinancialAccount {

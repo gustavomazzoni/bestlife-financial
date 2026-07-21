@@ -20,6 +20,7 @@ const commonFields = {
     .enum(Object.values(ValueAlignment) as [string, ...string[]])
     .optional() as z.ZodType<ValueAlignment | undefined>,
   notificationDaysBefore: z.coerce.number().int().min(0).max(30).optional(),
+  accountId: z.string().min(1).optional(),
   notes: z.string().max(1000).optional(),
 };
 
@@ -68,6 +69,7 @@ export const UpdateScheduledSchema = z.object({
       .optional() as z.ZodType<ValueAlignment | undefined>
   ).optional(),
   notificationDaysBefore: z.coerce.number().int().min(0).max(30).optional(),
+  accountId: z.string().min(1).optional().nullable(),
   notes: z.string().max(1000).optional().nullable(),
 });
 

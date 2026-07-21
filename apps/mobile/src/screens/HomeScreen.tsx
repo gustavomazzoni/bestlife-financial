@@ -12,6 +12,7 @@ import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { TransactionType } from '@lifeos/shared';
 import { colors, fontFamily, fontSize, radius, shadow } from '../theme';
 import { Card } from '../components/Card';
 import { IconBadge } from '../components/IconBadge';
@@ -67,11 +68,20 @@ export function HomeScreen() {
   const [executingItem, setExecutingItem] = useState<{
     scheduledId: string;
     description: string;
+    amount: string;
+    type: TransactionType;
+    accountId: string | null;
   } | null>(null);
   const executeSheetRef = useRef<ExecuteScheduledSheetRef>(null);
 
-  function openExecute(scheduledId: string, description: string) {
-    setExecutingItem({ scheduledId, description });
+  function openExecute(item: UpcomingItem) {
+    setExecutingItem({
+      scheduledId: item.scheduledId,
+      description: item.description,
+      amount: item.amount,
+      type: item.type,
+      accountId: item.accountId,
+    });
     executeSheetRef.current?.present();
   }
 
@@ -214,7 +224,7 @@ export function HomeScreen() {
               )}
             </View>
             <Pressable
-              onPress={() => openExecute(item.scheduledId, item.description)}
+              onPress={() => openExecute(item)}
               style={styles.executeButton}
               hitSlop={8}
               testID="upcoming-execute-btn"

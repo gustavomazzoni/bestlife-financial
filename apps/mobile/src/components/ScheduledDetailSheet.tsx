@@ -9,11 +9,12 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { Feather } from '@expo/vector-icons';
 import { ScheduleFrequency } from '@lifeos/shared';
 import { colors, fontFamily, fontSize, radius } from '../theme';
+import { AmountInput } from './AmountInput';
 import { Chip } from './Chip';
 import { IconBadge } from './IconBadge';
 import { api, ApiError } from '../lib/api';
 import { formatCurrency } from '../lib/format';
-import { Category, ScheduledTransaction } from '../types';
+import { Category, FinancialAccount, ScheduledTransaction } from '../types';
 
 export type ScheduledDetailSheetRef = ElementRef<typeof BottomSheetModal>;
 
@@ -43,6 +44,7 @@ function formatDateOnly(date: string): string {
 
 interface ScheduledDetailSheetProps {
   scheduled: ScheduledTransaction | null;
+  accounts: FinancialAccount[];
   /** Called after a successful edit — the sheet stays open showing the saved data. */
   onSaved: () => void;
   /** Called after a successful cancel/delete — the caller should close the sheet. */
@@ -52,7 +54,7 @@ interface ScheduledDetailSheetProps {
 export const ScheduledDetailSheet = forwardRef<
   ScheduledDetailSheetRef,
   ScheduledDetailSheetProps
->(({ scheduled, onSaved, onDeleted }, ref) => {
+>(({ scheduled, accounts, onSaved, onDeleted }, ref) => {
   const [mode, setMode] = useState<'view' | 'edit'>('view');
   const [draft, setDraft] = useState<ScheduledTransaction | null>(scheduled);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -95,6 +97,7 @@ export const ScheduledDetailSheet = forwardRef<
   const amountValue = Number(draft.amount);
   const isValid =
     !Number.isNaN(amountValue) && amountValue > 0 && draft.description.trim().length > 0;
+  const account = accounts.find(a => a.id === draft.accountId);
 
   async function handleSave() {
     if (!draft || !isValid) return;
@@ -104,9 +107,10 @@ export const ScheduledDetailSheet = forwardRef<
         amount: amountValue,
         description: draft.description,
         categoryId: draft.categoryId,
-        frequency: draft.frequency !== 'ONCE' ? draft.frequency : undefined,
+        frequency: draft.frequency,
         startDate: draft.startDate,
-        endDate: draft.endDate,
+        endDate: draft.frequency === 'ONCE' ? null : draft.endDate,
+        accountId: draft.accountId,
       });
       setMode('view');
       onSaved();
@@ -195,6 +199,12 @@ export const ScheduledDetailSheet = forwardRef<
                 <Text style={styles.detailValue}>{formatDateOnly(draft.endDate)}</Text>
               </View>
             )}
+            {account && (
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Conta (débito automático)</Text>
+                <Text style={styles.detailValue}>{account.name}</Text>
+              </View>
+            )}
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Status</Text>
               <Text style={styles.detailValue}>{draft.isActive ? 'Ativo' : 'Inativo'}</Text>
@@ -231,11 +241,10 @@ export const ScheduledDetailSheet = forwardRef<
             <Text style={styles.title}>Editar agendamento</Text>
 
             <Text style={styles.label}>Valor</Text>
-            <BottomSheetTextInput
+            <AmountInput
               style={styles.input}
-              keyboardType="decimal-pad"
               value={draft.amount}
-              onChangeText={t => update({ amount: t.replace(',', '.') })}
+              onChangeValue={t => update({ amount: t })}
             />
 
             <Text style={styles.label}>Descrição</Text>
@@ -285,6 +294,45 @@ export const ScheduledDetailSheet = forwardRef<
               </View>
             )}
 
+            {accounts.length > 0 && (
+              <>
+                <Text style={styles.label}>Conta (débito automático)</Text>
+                <View style={styles.chipRow}>
+                  {accounts.map(a => (
+                    <Chip
+                      key={a.id}
+                      label={a.name}
+                      selected={draft.accountId === a.id}
+                      onPress={() =>
+                        update({ accountId: draft.accountId === a.id ? null : a.id })
+                      }
+                    />
+                  ))}
+                </View>
+              </>
+            )}
+
+            <View style={styles.recurringHeader}>
+              <Text style={styles.label}>Recorrente</Text>
+              <Pressable
+                onPress={() => {
+                  const turningOn = draft.frequency === 'ONCE';
+                  update({
+                    frequency: turningOn ? 'MONTHLY' : 'ONCE',
+                    endDate: turningOn ? draft.endDate : null,
+                  });
+                }}
+                style={[styles.toggle, draft.frequency !== 'ONCE' && styles.toggleOn]}
+                testID="toggle-recurring"
+              >
+                <View
+                  style={[
+                    styles.toggleThumb,
+                    draft.frequency !== 'ONCE' && styles.toggleThumbOn,
+                  ]}
+                />
+              </Pressable>
+            </View>
             {draft.frequency !== 'ONCE' && (
               <>
                 <Text style={styles.label}>Frequência</Text>
@@ -466,6 +514,31 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
+  },
+  recurringHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  toggle: {
+    width: 44,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: colors.border,
+    padding: 2,
+    marginTop: 8,
+  },
+  toggleOn: {
+    backgroundColor: colors.accent,
+  },
+  toggleThumb: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#fff',
+  },
+  toggleThumbOn: {
+    transform: [{ translateX: 18 }],
   },
   fetchErrorRow: {
     flexDirection: 'row',

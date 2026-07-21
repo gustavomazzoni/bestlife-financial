@@ -2,7 +2,10 @@ import { ElementRef, forwardRef, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { Feather } from '@expo/vector-icons';
+import { TransactionType } from '@lifeos/shared';
 import { colors, fontFamily, fontSize, radius } from '../theme';
+import { AmountInput } from './AmountInput';
 import { Chip } from './Chip';
 import { api, ApiError } from '../lib/api';
 import { FinancialAccount } from '../types';
@@ -12,6 +15,9 @@ export type ExecuteScheduledSheetRef = ElementRef<typeof BottomSheetModal>;
 interface ExecuteScheduledSheetItem {
   scheduledId: string;
   description: string;
+  amount: string;
+  type: TransactionType;
+  accountId: string | null;
 }
 
 interface ExecuteScheduledSheetProps {
@@ -22,9 +28,11 @@ interface ExecuteScheduledSheetProps {
 
 /**
  * Confirms executing (marking as paid) a scheduled transaction — lets the
- * user pick the date it was actually paid (defaults to today) and which
- * account it came from. ScheduledTransaction itself has no account (that's
- * only known once it's paid), so this is the one place that field is set.
+ * user pick the date it was actually paid (defaults to today), override the
+ * amount for this occurrence only (e.g. a utility bill that varies month to
+ * month), and which account it came from — pre-filled from the schedule's
+ * own accountId when it has one ("automatic debit"), but always editable,
+ * since execution is still a deliberate manual action even for those.
  */
 export const ExecuteScheduledSheet = forwardRef<
   ExecuteScheduledSheetRef,
@@ -32,13 +40,15 @@ export const ExecuteScheduledSheet = forwardRef<
 >(({ item, accounts, onExecuted }, ref) => {
   const [date, setDate] = useState(new Date());
   const [accountId, setAccountId] = useState<string | null>(null);
+  const [amount, setAmount] = useState('0');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (item) {
       setDate(new Date());
-      setAccountId(null);
+      setAccountId(item.accountId);
+      setAmount(item.amount);
     }
   }, [item]);
 
@@ -50,6 +60,13 @@ export const ExecuteScheduledSheet = forwardRef<
     );
   }
 
+  const selectedAccount = accounts.find(a => a.id === accountId);
+  const amountValue = Number(amount || 0);
+  const insufficientFunds =
+    item.type === 'EXPENSE' &&
+    !!selectedAccount &&
+    Number(selectedAccount.balance) - amountValue < 0;
+
   async function handleConfirm() {
     if (!item) return;
     setSaving(true);
@@ -57,6 +74,7 @@ export const ExecuteScheduledSheet = forwardRef<
       await api.post(`/api/v1/scheduled/${item.scheduledId}/execute`, {
         date: date.toISOString().split('T')[0],
         accountId: accountId ?? undefined,
+        amount: amountValue,
       });
       onExecuted();
     } catch (err) {
@@ -72,7 +90,7 @@ export const ExecuteScheduledSheet = forwardRef<
   return (
     <BottomSheetModal
       ref={ref}
-      snapPoints={['55%']}
+      snapPoints={['60%']}
       enablePanDownToClose
       backgroundStyle={styles.sheetBackground}
     >
@@ -82,6 +100,9 @@ export const ExecuteScheduledSheet = forwardRef<
       >
         <Text style={styles.title}>Executar agendamento</Text>
         <Text style={styles.subtitle}>{item.description}</Text>
+
+        <Text style={styles.label}>Valor</Text>
+        <AmountInput style={styles.input} value={amount} onChangeValue={setAmount} />
 
         <Text style={styles.label}>Data</Text>
         <Pressable style={styles.dateButton} onPress={() => setShowDatePicker(true)}>
@@ -114,6 +135,15 @@ export const ExecuteScheduledSheet = forwardRef<
               ))}
             </View>
           </>
+        )}
+
+        {insufficientFunds && (
+          <View style={styles.warningBanner}>
+            <Feather name="alert-triangle" size={14} color={colors.danger} />
+            <Text style={styles.warningText}>
+              Saldo insuficiente em {selectedAccount?.name} para este valor.
+            </Text>
+          </View>
         )}
 
         <Pressable
@@ -169,6 +199,16 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 8,
   },
+  input: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    padding: 12,
+    fontFamily: fontFamily.body,
+    fontSize: fontSize.base,
+    color: colors.foreground,
+    backgroundColor: colors.background,
+  },
   dateButton: {
     borderWidth: 1,
     borderColor: colors.border,
@@ -180,6 +220,21 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.body,
     fontSize: fontSize.base,
     color: colors.foreground,
+  },
+  warningBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 12,
+    padding: 12,
+    borderRadius: radius.md,
+    backgroundColor: colors.warningSoft,
+  },
+  warningText: {
+    flex: 1,
+    fontFamily: fontFamily.body,
+    fontSize: fontSize.xs,
+    color: colors.danger,
   },
   confirmButton: {
     marginTop: 20,

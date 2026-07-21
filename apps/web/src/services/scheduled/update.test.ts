@@ -10,6 +10,7 @@ vi.mock('@/lib/db', () => ({
       findFirst: vi.fn(),
       update: vi.fn(),
     },
+    financialAccount: { count: vi.fn() },
   },
 }));
 
@@ -37,6 +38,7 @@ describe('updateScheduledTransaction', () => {
     notificationDaysBefore: 3,
     isActive: true,
     lastExecutedDate: null,
+    accountId: null,
     necessityLevel: null,
     valueAlignment: null,
     notes: null,
@@ -139,6 +141,43 @@ describe('updateScheduledTransaction', () => {
     expect(prisma.scheduledTransaction.update).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ endDate: null }),
+      })
+    );
+  });
+
+  it('persists accountId when it belongs to the user', async () => {
+    vi.mocked(prisma.financialAccount.count).mockResolvedValue(1);
+
+    await updateScheduledTransaction(userId, scheduledId, {
+      accountId: 'acc_1',
+    });
+
+    expect(prisma.financialAccount.count).toHaveBeenCalledWith({
+      where: { id: { in: ['acc_1'] }, userId },
+    });
+    expect(prisma.scheduledTransaction.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ accountId: 'acc_1' }),
+      })
+    );
+  });
+
+  it('rejects an accountId that does not belong to the user', async () => {
+    vi.mocked(prisma.financialAccount.count).mockResolvedValue(0);
+
+    await expect(
+      updateScheduledTransaction(userId, scheduledId, { accountId: 'not_mine' })
+    ).rejects.toThrow('Account not found');
+    expect(prisma.scheduledTransaction.update).not.toHaveBeenCalled();
+  });
+
+  it('allows clearing accountId by passing null', async () => {
+    await updateScheduledTransaction(userId, scheduledId, { accountId: null });
+
+    expect(prisma.financialAccount.count).not.toHaveBeenCalled();
+    expect(prisma.scheduledTransaction.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ accountId: null }),
       })
     );
   });

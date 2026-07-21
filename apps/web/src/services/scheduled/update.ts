@@ -7,6 +7,7 @@ import {
   ValueAlignment,
 } from '@/types';
 import { toUTCMidnight } from '@lifeos/shared';
+import { assertAccountsOwnedByUser } from '../transactions/validate-accounts';
 
 export interface UpdateScheduledInput {
   amount?: number;
@@ -19,6 +20,7 @@ export interface UpdateScheduledInput {
   necessityLevel?: NecessityLevel | null;
   valueAlignment?: ValueAlignment | null;
   notificationDaysBefore?: number;
+  accountId?: string | null;
   notes?: string | null;
 }
 
@@ -73,6 +75,10 @@ export async function updateScheduledTransaction(
     if (category.type !== effectiveType) {
       throw new Error('Category type does not match transaction type');
     }
+  }
+
+  if (data.accountId) {
+    await assertAccountsOwnedByUser(prisma, userId, [data.accountId]);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

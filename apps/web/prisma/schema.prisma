@@ -107,17 +107,20 @@ model ScheduledTransaction {
   notificationDaysBefore Int               @default(3)
   isActive               Boolean           @default(true)
   lastExecutedDate       DateTime?
+  accountId              String?
   notes                  String?
   createdAt              DateTime          @default(now())
   updatedAt              DateTime          @updatedAt
 
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  category     Category      @relation(fields: [categoryId], references: [id])
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category     Category          @relation(fields: [categoryId], references: [id])
+  account      FinancialAccount? @relation(fields: [accountId], references: [id])
   transactions Transaction[]
 
   @@index([userId, nextOccurrence])
   @@index([userId, frequency, isActive])
   @@index([categoryId])
+  @@index([accountId])
 }
 
 model Transaction {
@@ -216,9 +219,10 @@ model FinancialAccount {
   createdAt DateTime             @default(now())
   updatedAt DateTime             @updatedAt
 
-  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  transactionsFrom Transaction[] @relation("TransactionFromAccount")
-  transactionsTo   Transaction[] @relation("TransactionToAccount")
+  user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactionsFrom      Transaction[]          @relation("TransactionFromAccount")
+  transactionsTo        Transaction[]          @relation("TransactionToAccount")
+  scheduledTransactions ScheduledTransaction[]
 
   @@index([userId])
 }

@@ -7,6 +7,7 @@ vi.mock('@/lib/db', () => ({
   prisma: {
     category: { findUnique: vi.fn() },
     scheduledTransaction: { create: vi.fn() },
+    financialAccount: { count: vi.fn() },
   },
 }));
 
@@ -53,6 +54,7 @@ describe('createScheduledTransaction', () => {
     notificationDaysBefore: 3,
     isActive: true,
     lastExecutedDate: null,
+    accountId: null,
     necessityLevel: null,
     valueAlignment: null,
     notes: null,
@@ -66,6 +68,7 @@ describe('createScheduledTransaction', () => {
     vi.mocked(prisma.scheduledTransaction.create).mockResolvedValue(
       mockCreatedScheduled
     );
+    vi.mocked(prisma.financialAccount.count).mockResolvedValue(0);
   });
 
   it.each(['ONCE', 'WEEKLY', 'MONTHLY', 'YEARLY'] as const)(
@@ -149,5 +152,37 @@ describe('createScheduledTransaction', () => {
     await expect(
       createScheduledTransaction(userId, { ...baseInput, frequency: 'MONTHLY' })
     ).rejects.toThrow('Category type does not match transaction type');
+  });
+
+  it('persists accountId when it belongs to the user', async () => {
+    vi.mocked(prisma.financialAccount.count).mockResolvedValue(1);
+
+    await createScheduledTransaction(userId, {
+      ...baseInput,
+      frequency: 'MONTHLY',
+      accountId: 'acc_1',
+    });
+
+    expect(prisma.financialAccount.count).toHaveBeenCalledWith({
+      where: { id: { in: ['acc_1'] }, userId },
+    });
+    expect(prisma.scheduledTransaction.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ accountId: 'acc_1' }),
+      })
+    );
+  });
+
+  it('rejects an accountId that does not belong to the user', async () => {
+    vi.mocked(prisma.financialAccount.count).mockResolvedValue(0);
+
+    await expect(
+      createScheduledTransaction(userId, {
+        ...baseInput,
+        frequency: 'MONTHLY',
+        accountId: 'not_mine',
+      })
+    ).rejects.toThrow('Account not found');
+    expect(prisma.scheduledTransaction.create).not.toHaveBeenCalled();
   });
 });

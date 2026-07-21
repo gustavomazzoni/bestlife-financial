@@ -37,14 +37,17 @@ function calculateNextOccurrence(
  * An optional executionDate can override today's date. An optional
  * accountId records which account the (now-confirmed) transaction came
  * from — ScheduledTransaction itself has no account, since that's only
- * known once it's actually paid.
+ * known once it's actually paid. An optional amount overrides the
+ * template's own amount for this occurrence only (e.g. a utility bill
+ * whose value changes every month) — the template's amount is untouched.
  */
 export async function executeScheduledTransaction(
   userId: string,
   scheduledId: string,
   executionDate?: Date,
   accountId?: string,
-  toAccountId?: string
+  toAccountId?: string,
+  amount?: number
 ): Promise<Transaction> {
   const today = toUTCMidnight(new Date());
   const transactionDate = executionDate ? toUTCMidnight(executionDate) : today;
@@ -73,12 +76,16 @@ export async function executeScheduledTransaction(
 
     await assertAccountsOwnedByUser(tx, userId, [accountId, toAccountId]);
 
+    if (amount !== undefined && amount <= 0) {
+      throw new Error('Amount must be positive');
+    }
+
     // Create transaction record
     const transaction = await tx.transaction.create({
       data: {
         userId,
         date: transactionDate,
-        amount: scheduled.amount,
+        amount: amount ?? scheduled.amount,
         description: scheduled.description,
         type: scheduled.type,
         categoryId: scheduled.categoryId,

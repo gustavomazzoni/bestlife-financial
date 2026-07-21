@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db';
 import { ScheduledTransaction, ScheduleFrequency } from '@/types';
 import { toUTCMidnight } from '@lifeos/shared';
+import { assertAccountsOwnedByUser } from '../transactions/validate-accounts';
 
 export interface CreateScheduledInput {
   amount: number;
@@ -19,6 +20,7 @@ export interface CreateScheduledInput {
     | 'FREEDOM_ENABLING'
     | 'FREEDOM_LIMITING';
   notificationDaysBefore?: number;
+  accountId?: string;
   notes?: string;
 }
 
@@ -60,6 +62,8 @@ export async function createScheduledTransaction(
     throw new Error('Category type does not match transaction type');
   }
 
+  await assertAccountsOwnedByUser(prisma, userId, [data.accountId]);
+
   // The first occurrence of a new schedule is always startDate itself —
   // execute.ts is solely responsible for advancing nextOccurrence forward,
   // and only after that first occurrence has actually been executed.
@@ -79,6 +83,7 @@ export async function createScheduledTransaction(
       notificationDaysBefore: data.notificationDaysBefore ?? 3,
       necessityLevel: data.necessityLevel,
       valueAlignment: data.valueAlignment,
+      accountId: data.accountId,
       notes: data.notes,
     },
   });

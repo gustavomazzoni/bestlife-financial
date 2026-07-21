@@ -42,6 +42,7 @@ describe('executeScheduledTransaction', () => {
     notificationDaysBefore: 3,
     isActive: true,
     lastExecutedDate: null,
+    accountId: null,
     necessityLevel: null,
     valueAlignment: null,
     notes: null,
@@ -236,5 +237,74 @@ describe('executeScheduledTransaction', () => {
       where: { id: 'acc_2' },
       data: { balance: { increment: 180 } },
     });
+  });
+
+  it('uses the given amount override instead of the template amount, for this occurrence only', async () => {
+    vi.mocked(prisma.scheduledTransaction.findFirst).mockResolvedValue(
+      mockMonthlyScheduled
+    );
+    vi.mocked(prisma.financialAccount.count).mockResolvedValue(1);
+    vi.mocked(prisma.transaction.create).mockResolvedValue({
+      ...mockCreatedTransaction,
+      amount: new Prisma.Decimal(215.5),
+      accountId: 'acc_1',
+    });
+
+    await executeScheduledTransaction(
+      userId,
+      scheduledId,
+      dueToday,
+      'acc_1',
+      undefined,
+      215.5
+    );
+
+    expect(prisma.transaction.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ amount: 215.5 }),
+      })
+    );
+    // the template's own amount is untouched
+    expect(prisma.scheduledTransaction.update).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ amount: expect.anything() }),
+      })
+    );
+    expect(prisma.financialAccount.update).toHaveBeenCalledWith({
+      where: { id: 'acc_1' },
+      data: { balance: { increment: -215.5 } },
+    });
+  });
+
+  it('falls back to the template amount when no override is given', async () => {
+    vi.mocked(prisma.scheduledTransaction.findFirst).mockResolvedValue(
+      mockMonthlyScheduled
+    );
+
+    await executeScheduledTransaction(userId, scheduledId, dueToday);
+
+    expect(prisma.transaction.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ amount: mockMonthlyScheduled.amount }),
+      })
+    );
+  });
+
+  it('rejects a non-positive amount override', async () => {
+    vi.mocked(prisma.scheduledTransaction.findFirst).mockResolvedValue(
+      mockMonthlyScheduled
+    );
+
+    await expect(
+      executeScheduledTransaction(
+        userId,
+        scheduledId,
+        dueToday,
+        undefined,
+        undefined,
+        0
+      )
+    ).rejects.toThrow('Amount must be positive');
+    expect(prisma.transaction.create).not.toHaveBeenCalled();
   });
 });

@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Pressable,
   RefreshControl,
@@ -10,6 +10,7 @@ import {
 import { Feather } from '@expo/vector-icons';
 import { addMonths, endOfMonth, format, isSameMonth, isToday, startOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { TransactionType } from '@lifeos/shared';
 import { colors, fontFamily, fontSize, radius } from '../theme';
 import { Card } from '../components/Card';
 import { IconBadge } from '../components/IconBadge';
@@ -88,6 +89,19 @@ export function CalendarScreen() {
     scheduledSheetRef.current?.present();
   }
 
+  // Keep the open sheet's data in sync after a refetch (e.g. right after
+  // saving an edit) — without this, `selectedScheduled` keeps pointing at
+  // the pre-edit object even once `scheduled.data` has the fresh one,
+  // since setting it only ever happens inside openScheduled above.
+  useEffect(() => {
+    if (!selectedScheduled) return;
+    const fresh = scheduled.data?.find(s => s.id === selectedScheduled.id);
+    if (fresh && fresh !== selectedScheduled) {
+      setSelectedScheduled(fresh);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scheduled.data]);
+
   const eventsByDate = useMemo((): Map<string, CalendarEvent[]> => {
     if (!scheduled.data || !transactions.data) return new Map();
     const projected = projectScheduledOccurrences(scheduled.data, monthStart, monthEnd);
@@ -109,11 +123,21 @@ export function CalendarScreen() {
   const [executingItem, setExecutingItem] = useState<{
     scheduledId: string;
     description: string;
+    amount: string;
+    type: TransactionType;
+    accountId: string | null;
   } | null>(null);
   const executeSheetRef = useRef<ExecuteScheduledSheetRef>(null);
 
   function openExecute(event: CalendarEvent) {
-    setExecutingItem({ scheduledId: event.sourceId, description: event.description });
+    const source = scheduled.data?.find(s => s.id === event.sourceId);
+    setExecutingItem({
+      scheduledId: event.sourceId,
+      description: event.description,
+      amount: event.amount,
+      type: event.type as TransactionType,
+      accountId: source?.accountId ?? null,
+    });
     executeSheetRef.current?.present();
   }
 
@@ -306,6 +330,7 @@ export function CalendarScreen() {
       <ScheduledDetailSheet
         ref={scheduledSheetRef}
         scheduled={selectedScheduled}
+        accounts={accounts.data ?? []}
         onSaved={() => {
           scheduled.refetch();
         }}

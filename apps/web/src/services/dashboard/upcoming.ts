@@ -17,6 +17,7 @@ export interface UpcomingItem {
   categoryIcon?: string;
   categoryName?: string;
   scheduledId: string;
+  accountId: string | null;
 }
 
 export async function getUpcomingItems(
@@ -54,6 +55,7 @@ export async function getUpcomingItems(
       categoryIcon: s.category?.icon,
       categoryName: s.category?.name,
       scheduledId: s.id,
+      accountId: s.accountId,
     };
   });
 }

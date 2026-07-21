@@ -16,12 +16,14 @@ export async function POST(
       typeof body.accountId === 'string' ? body.accountId : undefined;
     const toAccountId =
       typeof body.toAccountId === 'string' ? body.toAccountId : undefined;
+    const amount = typeof body.amount === 'number' ? body.amount : undefined;
     const transaction = await executeScheduledTransaction(
       userId,
       id,
       executionDate,
       accountId,
-      toAccountId
+      toAccountId,
+      amount
     );
     return apiResponse(transaction, 201);
   } catch (error) {
