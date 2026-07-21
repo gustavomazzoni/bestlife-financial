@@ -200,6 +200,14 @@ const categories = [
     icon: '💰',
     color: '#10B981',
   },
+
+  // Transfer
+  {
+    name: 'Transferência entre contas',
+    type: TransactionType.TRANSFER,
+    icon: '🔁',
+    color: '#64748B',
+  },
 ];
 
 async function main() {

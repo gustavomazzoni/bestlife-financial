@@ -5,8 +5,11 @@ import { createTransaction } from './create';
 
 vi.mock('@/lib/db', () => ({
   prisma: {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    $transaction: vi.fn((callback: any) => callback(prisma)),
     category: { findUnique: vi.fn() },
     transaction: { create: vi.fn() },
+    financialAccount: { count: vi.fn(), update: vi.fn() },
   },
 }));
 
@@ -43,6 +46,7 @@ describe('createTransaction', () => {
     valueAlignment: null,
     scheduledId: null,
     accountId: null,
+    toAccountId: null,
     notes: null,
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -50,6 +54,7 @@ describe('createTransaction', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(prisma.financialAccount.count).mockResolvedValue(0);
   });
 
   it('should create transaction with valid data', async () => {
@@ -103,6 +108,102 @@ describe('createTransaction', () => {
     vi.mocked(prisma.category.findUnique).mockResolvedValue(null);
 
     await expect(createTransaction(userId, validData)).rejects.toThrow();
+    expect(prisma.transaction.create).not.toHaveBeenCalled();
+  });
+
+  it('should decrement the account balance when creating an EXPENSE linked to an account', async () => {
+    vi.mocked(prisma.category.findUnique).mockResolvedValue(mockCategory);
+    vi.mocked(prisma.financialAccount.count).mockResolvedValue(1);
+    vi.mocked(prisma.transaction.create).mockResolvedValue({
+      ...mockCreatedTransaction,
+      accountId: 'acc_1',
+    });
+
+    await createTransaction(userId, { ...validData, accountId: 'acc_1' });
+
+    expect(prisma.financialAccount.update).toHaveBeenCalledWith({
+      where: { id: 'acc_1' },
+      data: { balance: { increment: -100.5 } },
+    });
+  });
+
+  it('should increment the account balance when creating an INCOME linked to an account', async () => {
+    vi.mocked(prisma.category.findUnique).mockResolvedValue({
+      ...mockCategory,
+      type: 'INCOME' as const,
+    });
+    vi.mocked(prisma.financialAccount.count).mockResolvedValue(1);
+    vi.mocked(prisma.transaction.create).mockResolvedValue({
+      ...mockCreatedTransaction,
+      type: 'INCOME' as const,
+      accountId: 'acc_1',
+    });
+
+    await createTransaction(userId, {
+      ...validData,
+      type: 'INCOME',
+      accountId: 'acc_1',
+    });
+
+    expect(prisma.financialAccount.update).toHaveBeenCalledWith({
+      where: { id: 'acc_1' },
+      data: { balance: { increment: 100.5 } },
+    });
+  });
+
+  it('should move funds between both accounts for a TRANSFER', async () => {
+    vi.mocked(prisma.category.findUnique).mockResolvedValue({
+      ...mockCategory,
+      type: 'TRANSFER' as const,
+    });
+    vi.mocked(prisma.financialAccount.count).mockResolvedValue(2);
+    vi.mocked(prisma.transaction.create).mockResolvedValue({
+      ...mockCreatedTransaction,
+      type: 'TRANSFER' as const,
+      accountId: 'acc_1',
+      toAccountId: 'acc_2',
+    });
+
+    await createTransaction(userId, {
+      ...validData,
+      type: 'TRANSFER',
+      accountId: 'acc_1',
+      toAccountId: 'acc_2',
+    });
+
+    expect(prisma.financialAccount.update).toHaveBeenCalledWith({
+      where: { id: 'acc_1' },
+      data: { balance: { decrement: 100.5 } },
+    });
+    expect(prisma.financialAccount.update).toHaveBeenCalledWith({
+      where: { id: 'acc_2' },
+      data: { balance: { increment: 100.5 } },
+    });
+  });
+
+  it('should reject a TRANSFER missing a destination account', async () => {
+    vi.mocked(prisma.category.findUnique).mockResolvedValue({
+      ...mockCategory,
+      type: 'TRANSFER' as const,
+    });
+
+    await expect(
+      createTransaction(userId, {
+        ...validData,
+        type: 'TRANSFER',
+        accountId: 'acc_1',
+      })
+    ).rejects.toThrow('Transfer requires a destination toAccountId');
+    expect(prisma.transaction.create).not.toHaveBeenCalled();
+  });
+
+  it('should reject an accountId that does not belong to the user', async () => {
+    vi.mocked(prisma.category.findUnique).mockResolvedValue(mockCategory);
+    vi.mocked(prisma.financialAccount.count).mockResolvedValue(0);
+
+    await expect(
+      createTransaction(userId, { ...validData, accountId: 'not_mine' })
+    ).rejects.toThrow('Account not found');
     expect(prisma.transaction.create).not.toHaveBeenCalled();
   });
 });

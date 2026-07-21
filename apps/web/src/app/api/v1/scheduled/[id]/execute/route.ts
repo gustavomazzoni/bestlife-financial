@@ -14,11 +14,14 @@ export async function POST(
     const executionDate = body.date ? new Date(body.date) : undefined;
     const accountId =
       typeof body.accountId === 'string' ? body.accountId : undefined;
+    const toAccountId =
+      typeof body.toAccountId === 'string' ? body.toAccountId : undefined;
     const transaction = await executeScheduledTransaction(
       userId,
       id,
       executionDate,
-      accountId
+      accountId,
+      toAccountId
     );
     return apiResponse(transaction, 201);
   } catch (error) {

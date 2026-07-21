@@ -4,9 +4,14 @@ import { prisma } from '@/lib/db';
 
 vi.mock('@/lib/db', () => ({
   prisma: {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    $transaction: vi.fn((callback: any) => callback(prisma)),
     transaction: {
       findFirst: vi.fn(),
       delete: vi.fn(),
+    },
+    financialAccount: {
+      update: vi.fn(),
     },
   },
 }));
@@ -23,6 +28,10 @@ describe('deleteTransaction', () => {
     vi.mocked(prisma.transaction.findFirst as Mock).mockResolvedValue({
       id: transactionId,
       userId,
+      type: 'EXPENSE',
+      amount: 100,
+      accountId: null,
+      toAccountId: null,
     });
     vi.mocked(prisma.transaction.delete as Mock).mockResolvedValue({});
 
@@ -49,5 +58,47 @@ describe('deleteTransaction', () => {
     );
 
     expect(prisma.transaction.delete).not.toHaveBeenCalled();
+  });
+
+  it('should reverse the account balance effect when deleting an EXPENSE', async () => {
+    vi.mocked(prisma.transaction.findFirst as Mock).mockResolvedValue({
+      id: transactionId,
+      userId,
+      type: 'EXPENSE',
+      amount: 100,
+      accountId: 'acc_1',
+      toAccountId: null,
+    });
+    vi.mocked(prisma.transaction.delete as Mock).mockResolvedValue({});
+
+    await deleteTransaction(userId, transactionId);
+
+    expect(prisma.financialAccount.update).toHaveBeenCalledWith({
+      where: { id: 'acc_1' },
+      data: { balance: { increment: 100 } },
+    });
+  });
+
+  it('should reverse both accounts when deleting a TRANSFER', async () => {
+    vi.mocked(prisma.transaction.findFirst as Mock).mockResolvedValue({
+      id: transactionId,
+      userId,
+      type: 'TRANSFER',
+      amount: 100,
+      accountId: 'acc_1',
+      toAccountId: 'acc_2',
+    });
+    vi.mocked(prisma.transaction.delete as Mock).mockResolvedValue({});
+
+    await deleteTransaction(userId, transactionId);
+
+    expect(prisma.financialAccount.update).toHaveBeenCalledWith({
+      where: { id: 'acc_1' },
+      data: { balance: { decrement: -100 } },
+    });
+    expect(prisma.financialAccount.update).toHaveBeenCalledWith({
+      where: { id: 'acc_2' },
+      data: { balance: { increment: -100 } },
+    });
   });
 });

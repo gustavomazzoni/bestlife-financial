@@ -15,7 +15,8 @@ vi.mock('@/lib/db', () => ({
       create: vi.fn(),
     },
     financialAccount: {
-      findFirst: vi.fn(),
+      count: vi.fn(),
+      update: vi.fn(),
     },
   },
 }));
@@ -60,6 +61,7 @@ describe('executeScheduledTransaction', () => {
     valueAlignment: null,
     scheduledId,
     accountId: null,
+    toAccountId: null,
     notes: null,
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -73,6 +75,7 @@ describe('executeScheduledTransaction', () => {
     vi.mocked(prisma.scheduledTransaction.update).mockResolvedValue(
       mockMonthlyScheduled
     );
+    vi.mocked(prisma.financialAccount.count).mockResolvedValue(0);
   });
 
   it('advances nextOccurrence by exactly one period after executing a MONTHLY schedule', async () => {
@@ -147,21 +150,16 @@ describe('executeScheduledTransaction', () => {
     vi.mocked(prisma.scheduledTransaction.findFirst).mockResolvedValue(
       mockMonthlyScheduled
     );
-    vi.mocked(prisma.financialAccount.findFirst).mockResolvedValue({
-      id: 'acc_1',
-      userId,
-      name: 'Nubank',
-      type: 'CHECKING' as const,
-      balance: new Prisma.Decimal(0),
-      color: '#6B7280',
-      createdAt: new Date(),
-      updatedAt: new Date(),
+    vi.mocked(prisma.financialAccount.count).mockResolvedValue(1);
+    vi.mocked(prisma.transaction.create).mockResolvedValue({
+      ...mockCreatedTransaction,
+      accountId: 'acc_1',
     });
 
     await executeScheduledTransaction(userId, scheduledId, dueToday, 'acc_1');
 
-    expect(prisma.financialAccount.findFirst).toHaveBeenCalledWith({
-      where: { id: 'acc_1', userId },
+    expect(prisma.financialAccount.count).toHaveBeenCalledWith({
+      where: { id: { in: ['acc_1'] }, userId },
     });
     expect(prisma.transaction.create).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -174,7 +172,7 @@ describe('executeScheduledTransaction', () => {
     vi.mocked(prisma.scheduledTransaction.findFirst).mockResolvedValue(
       mockMonthlyScheduled
     );
-    vi.mocked(prisma.financialAccount.findFirst).mockResolvedValue(null);
+    vi.mocked(prisma.financialAccount.count).mockResolvedValue(0);
 
     await expect(
       executeScheduledTransaction(
@@ -185,5 +183,54 @@ describe('executeScheduledTransaction', () => {
       )
     ).rejects.toThrow('Account not found');
     expect(prisma.transaction.create).not.toHaveBeenCalled();
+  });
+
+  it('debits the linked account by the scheduled amount on execution', async () => {
+    vi.mocked(prisma.scheduledTransaction.findFirst).mockResolvedValue(
+      mockMonthlyScheduled
+    );
+    vi.mocked(prisma.financialAccount.count).mockResolvedValue(1);
+    vi.mocked(prisma.transaction.create).mockResolvedValue({
+      ...mockCreatedTransaction,
+      accountId: 'acc_1',
+    });
+
+    await executeScheduledTransaction(userId, scheduledId, dueToday, 'acc_1');
+
+    expect(prisma.financialAccount.update).toHaveBeenCalledWith({
+      where: { id: 'acc_1' },
+      data: { balance: { increment: -180 } },
+    });
+  });
+
+  it('moves funds between both accounts when executing a TRANSFER schedule', async () => {
+    vi.mocked(prisma.scheduledTransaction.findFirst).mockResolvedValue({
+      ...mockMonthlyScheduled,
+      type: 'TRANSFER' as const,
+    });
+    vi.mocked(prisma.financialAccount.count).mockResolvedValue(2);
+    vi.mocked(prisma.transaction.create).mockResolvedValue({
+      ...mockCreatedTransaction,
+      type: 'TRANSFER' as const,
+      accountId: 'acc_1',
+      toAccountId: 'acc_2',
+    });
+
+    await executeScheduledTransaction(
+      userId,
+      scheduledId,
+      dueToday,
+      'acc_1',
+      'acc_2'
+    );
+
+    expect(prisma.financialAccount.update).toHaveBeenCalledWith({
+      where: { id: 'acc_1' },
+      data: { balance: { decrement: 180 } },
+    });
+    expect(prisma.financialAccount.update).toHaveBeenCalledWith({
+      where: { id: 'acc_2' },
+      data: { balance: { increment: 180 } },
+    });
   });
 });

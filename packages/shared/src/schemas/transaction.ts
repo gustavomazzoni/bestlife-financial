@@ -13,10 +13,14 @@ export const CreateTransactionSchema = z.object({
   necessityLevel: z.enum(Object.values(NecessityLevel)).optional(),
   valueAlignment: z.enum(Object.values(ValueAlignment)).optional(),
   accountId: z.string().min(1).optional(),
+  toAccountId: z.string().min(1).optional(),
   notes: z.string().max(1000).optional(),
 });
 
-export const UpdateTransactionSchema = CreateTransactionSchema.partial();
+export const UpdateTransactionSchema = CreateTransactionSchema.partial().extend({
+  accountId: z.string().min(1).nullable().optional(),
+  toAccountId: z.string().min(1).nullable().optional(),
+});
 
 export const ListTransactionsQuerySchema = z.object({
   page: z.coerce.number().int().positive().default(1),

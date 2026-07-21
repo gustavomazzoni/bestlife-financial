@@ -2,6 +2,8 @@ import { prisma } from '@/lib/db';
 import { Transaction, ScheduleFrequency } from '@/types';
 import { addDays, addMonths, addYears } from 'date-fns';
 import { toUTCMidnight } from '@lifeos/shared';
+import { reconcileLedgerEffect } from '../transactions/ledger';
+import { assertAccountsOwnedByUser } from '../transactions/validate-accounts';
 
 /**
  * Calculate the next occurrence based on frequency.
@@ -41,7 +43,8 @@ export async function executeScheduledTransaction(
   userId: string,
   scheduledId: string,
   executionDate?: Date,
-  accountId?: string
+  accountId?: string,
+  toAccountId?: string
 ): Promise<Transaction> {
   const today = toUTCMidnight(new Date());
   const transactionDate = executionDate ? toUTCMidnight(executionDate) : today;
@@ -68,15 +71,7 @@ export async function executeScheduledTransaction(
       throw new Error('Scheduled transaction is not due yet');
     }
 
-    if (accountId) {
-      const account = await tx.financialAccount.findFirst({
-        where: { id: accountId, userId },
-      });
-
-      if (!account) {
-        throw new Error('Account not found');
-      }
-    }
+    await assertAccountsOwnedByUser(tx, userId, [accountId, toAccountId]);
 
     // Create transaction record
     const transaction = await tx.transaction.create({
@@ -91,9 +86,12 @@ export async function executeScheduledTransaction(
         valueAlignment: scheduled.valueAlignment,
         scheduledId,
         accountId,
+        toAccountId,
         notes: scheduled.notes,
       },
     });
+
+    await reconcileLedgerEffect(tx, null, transaction);
 
     if (scheduled.frequency === 'ONCE') {
       // One-time: mark as executed (inactive)
