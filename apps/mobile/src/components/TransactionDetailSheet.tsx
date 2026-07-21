@@ -14,7 +14,7 @@ import { Chip } from './Chip';
 import { IconBadge } from './IconBadge';
 import { api, ApiError } from '../lib/api';
 import { formatCurrency } from '../lib/format';
-import { Category, FinancialAccount, Transaction } from '../types';
+import { Category, CreditCard, FinancialAccount, Transaction } from '../types';
 
 export type TransactionDetailSheetRef = ElementRef<typeof BottomSheetModal>;
 
@@ -35,6 +35,7 @@ const typeColor: Record<string, string> = {
 interface TransactionDetailSheetProps {
   transaction: Transaction | null;
   accounts: FinancialAccount[];
+  creditCards: CreditCard[];
   /** Called after a successful edit — the sheet stays open showing the saved data. */
   onSaved: () => void;
   /** Called after a successful delete — the caller should close the sheet. */
@@ -44,7 +45,7 @@ interface TransactionDetailSheetProps {
 export const TransactionDetailSheet = forwardRef<
   TransactionDetailSheetRef,
   TransactionDetailSheetProps
->(({ transaction, accounts, onSaved, onDeleted }, ref) => {
+>(({ transaction, accounts, creditCards, onSaved, onDeleted }, ref) => {
   const [mode, setMode] = useState<'view' | 'edit'>('view');
   const [draft, setDraft] = useState<Transaction | null>(transaction);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -97,7 +98,9 @@ export const TransactionDetailSheet = forwardRef<
         date: draft.date,
         type: draft.type,
         categoryId: draft.categoryId,
-        accountId: draft.accountId ?? undefined,
+        accountId: draft.accountId,
+        toAccountId: draft.toAccountId,
+        creditCardId: draft.creditCardId,
       });
       setMode('view');
       onSaved();
@@ -138,6 +141,8 @@ export const TransactionDetailSheet = forwardRef<
   }
 
   const account = accounts.find(a => a.id === draft.accountId);
+  const toAccount = accounts.find(a => a.id === draft.toAccountId);
+  const creditCard = creditCards.find(c => c.id === draft.creditCardId);
 
   return (
     <BottomSheetModal
@@ -184,8 +189,29 @@ export const TransactionDetailSheet = forwardRef<
             </View>
             {account && (
               <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Conta</Text>
+                <Text style={styles.detailLabel}>
+                  {draft.type === 'TRANSFER' ? 'De' : 'Conta'}
+                </Text>
                 <Text style={styles.detailValue}>{account.name}</Text>
+              </View>
+            )}
+            {toAccount && (
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Para</Text>
+                <Text style={styles.detailValue}>{toAccount.name}</Text>
+              </View>
+            )}
+            {creditCard && (
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>
+                  {draft.type === 'TRANSFER' ? 'Para' : 'Cartão'}
+                </Text>
+                <Text style={styles.detailValue}>
+                  💳 {creditCard.name}
+                  {draft.installmentTotal
+                    ? ` (${draft.installmentCurrent}/${draft.installmentTotal})`
+                    : ''}
+                </Text>
               </View>
             )}
             {draft.notes && (
@@ -232,7 +258,16 @@ export const TransactionDetailSheet = forwardRef<
                   key={opt.value}
                   label={opt.label}
                   selected={draft.type === opt.value}
-                  onPress={() => update({ type: opt.value, categoryId: '', category: null })}
+                  onPress={() =>
+                    update({
+                      type: opt.value,
+                      categoryId: '',
+                      category: null,
+                      accountId: null,
+                      toAccountId: null,
+                      creditCardId: null,
+                    })
+                  }
                 />
               ))}
             </View>
@@ -273,22 +308,97 @@ export const TransactionDetailSheet = forwardRef<
               </View>
             )}
 
-            {accounts.length > 0 && (
+            {draft.type === 'TRANSFER' ? (
               <>
-                <Text style={styles.label}>Conta</Text>
-                <View style={styles.chipRow}>
-                  {accounts.map(a => (
-                    <Chip
-                      key={a.id}
-                      label={a.name}
-                      selected={draft.accountId === a.id}
-                      onPress={() =>
-                        update({ accountId: draft.accountId === a.id ? null : a.id })
-                      }
-                    />
-                  ))}
-                </View>
+                {accounts.length > 0 && (
+                  <>
+                    <Text style={styles.label}>De</Text>
+                    <View style={styles.chipRow}>
+                      {accounts.map(a => (
+                        <Chip
+                          key={a.id}
+                          label={a.name}
+                          selected={draft.accountId === a.id}
+                          onPress={() =>
+                            update({ accountId: draft.accountId === a.id ? null : a.id })
+                          }
+                        />
+                      ))}
+                    </View>
+                  </>
+                )}
+                {(accounts.length > 0 || creditCards.length > 0) && (
+                  <>
+                    <Text style={styles.label}>Para</Text>
+                    <View style={styles.chipRow}>
+                      {accounts.map(a => (
+                        <Chip
+                          key={a.id}
+                          label={a.name}
+                          selected={draft.toAccountId === a.id}
+                          onPress={() =>
+                            update({
+                              toAccountId: draft.toAccountId === a.id ? null : a.id,
+                              creditCardId: null,
+                            })
+                          }
+                        />
+                      ))}
+                      {creditCards.map(c => (
+                        <Chip
+                          key={c.id}
+                          icon="💳"
+                          label={c.name}
+                          selected={draft.creditCardId === c.id}
+                          onPress={() =>
+                            update({
+                              creditCardId: draft.creditCardId === c.id ? null : c.id,
+                              toAccountId: null,
+                            })
+                          }
+                        />
+                      ))}
+                    </View>
+                  </>
+                )}
               </>
+            ) : (
+              (accounts.length > 0 ||
+                (draft.type === 'EXPENSE' && creditCards.length > 0)) && (
+                <>
+                  <Text style={styles.label}>Conta</Text>
+                  <View style={styles.chipRow}>
+                    {accounts.map(a => (
+                      <Chip
+                        key={a.id}
+                        label={a.name}
+                        selected={draft.accountId === a.id}
+                        onPress={() =>
+                          update({
+                            accountId: draft.accountId === a.id ? null : a.id,
+                            creditCardId: null,
+                          })
+                        }
+                      />
+                    ))}
+                    {draft.type === 'EXPENSE' &&
+                      creditCards.map(c => (
+                        <Chip
+                          key={c.id}
+                          icon="💳"
+                          label={c.name}
+                          selected={draft.creditCardId === c.id}
+                          onPress={() =>
+                            update({
+                              creditCardId: draft.creditCardId === c.id ? null : c.id,
+                              accountId: null,
+                            })
+                          }
+                        />
+                      ))}
+                  </View>
+                </>
+              )
             )}
 
             <Text style={styles.label}>Data</Text>

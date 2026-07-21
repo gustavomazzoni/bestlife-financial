@@ -48,6 +48,7 @@ describe('GET /api/v1/calculations/net-worth', () => {
       accountsTotal: 2000,
       investmentsTotal: 10000,
       debtsTotal: 1500,
+      creditCardsTotal: 0,
       netWorth: 10500,
     });
   });
@@ -61,6 +62,7 @@ describe('GET /api/v1/calculations/net-worth', () => {
       accountsTotal: 0,
       investmentsTotal: 0,
       debtsTotal: 0,
+      creditCardsTotal: 0,
       netWorth: 0,
     });
   });

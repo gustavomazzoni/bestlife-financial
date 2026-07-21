@@ -6,4 +6,5 @@ export * from './category-budget';
 export * from './financial-account';
 export * from './investment';
 export * from './debt';
+export * from './credit-card';
 export * from './mobile-login';

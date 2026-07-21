@@ -6,6 +6,9 @@ function mockTx() {
     financialAccount: {
       update: vi.fn(),
     },
+    creditCard: {
+      update: vi.fn(),
+    },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } as any;
 }
@@ -114,6 +117,68 @@ describe('applyLedgerEffect', () => {
     expect(tx.financialAccount.update).toHaveBeenCalledWith({
       where: { id: 'acc_2' },
       data: { balance: { increment: -100 } },
+    });
+  });
+
+  it('increments the card balance when an EXPENSE is funded by a credit card', async () => {
+    const tx = mockTx();
+    await applyLedgerEffect(
+      tx,
+      {
+        type: 'EXPENSE',
+        amount: 100,
+        accountId: null,
+        toAccountId: null,
+        creditCardId: 'card_1',
+      },
+      1
+    );
+    expect(tx.creditCard.update).toHaveBeenCalledWith({
+      where: { id: 'card_1' },
+      data: { balance: { increment: 100 } },
+    });
+    expect(tx.financialAccount.update).not.toHaveBeenCalled();
+  });
+
+  it('reverses a card-funded EXPENSE by decrementing the card balance', async () => {
+    const tx = mockTx();
+    await applyLedgerEffect(
+      tx,
+      {
+        type: 'EXPENSE',
+        amount: 100,
+        accountId: null,
+        toAccountId: null,
+        creditCardId: 'card_1',
+      },
+      -1
+    );
+    expect(tx.creditCard.update).toHaveBeenCalledWith({
+      where: { id: 'card_1' },
+      data: { balance: { increment: -100 } },
+    });
+  });
+
+  it('decrements the card balance on a TRANSFER payoff (account to card)', async () => {
+    const tx = mockTx();
+    await applyLedgerEffect(
+      tx,
+      {
+        type: 'TRANSFER',
+        amount: 100,
+        accountId: 'acc_1',
+        toAccountId: null,
+        creditCardId: 'card_1',
+      },
+      1
+    );
+    expect(tx.financialAccount.update).toHaveBeenCalledWith({
+      where: { id: 'acc_1' },
+      data: { balance: { decrement: 100 } },
+    });
+    expect(tx.creditCard.update).toHaveBeenCalledWith({
+      where: { id: 'card_1' },
+      data: { balance: { decrement: 100 } },
     });
   });
 });

@@ -4,6 +4,7 @@ import { Transaction } from '@/types/transaction';
 import { assertValidFundingSource } from './funding-source';
 import { reconcileLedgerEffect } from './ledger';
 import { assertAccountsOwnedByUser } from './validate-accounts';
+import { assertCreditCardsOwnedByUser } from './validate-credit-cards';
 
 export async function createTransaction(
   userId: string,
@@ -24,6 +25,7 @@ export async function createTransaction(
       data.accountId,
       data.toAccountId,
     ]);
+    await assertCreditCardsOwnedByUser(tx, userId, [data.creditCardId]);
 
     const transaction = await tx.transaction.create({
       data: {

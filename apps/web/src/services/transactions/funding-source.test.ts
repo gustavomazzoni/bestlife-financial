@@ -41,7 +41,9 @@ describe('assertValidFundingSource', () => {
   it('rejects a TRANSFER missing a destination toAccountId', () => {
     expect(() =>
       assertValidFundingSource({ type: 'TRANSFER', accountId: 'acc_1' })
-    ).toThrow('Transfer requires a destination toAccountId');
+    ).toThrow(
+      'Transfer requires exactly one destination: toAccountId or creditCardId'
+    );
   });
 
   it('rejects a TRANSFER where source and destination are the same account', () => {
@@ -52,5 +54,52 @@ describe('assertValidFundingSource', () => {
         toAccountId: 'acc_1',
       })
     ).toThrow('Transfer accounts must differ');
+  });
+
+  it('allows an EXPENSE funded by a credit card with no accountId', () => {
+    expect(() =>
+      assertValidFundingSource({ type: 'EXPENSE', creditCardId: 'card_1' })
+    ).not.toThrow();
+  });
+
+  it('rejects a transaction funded by both an account and a credit card', () => {
+    expect(() =>
+      assertValidFundingSource({
+        type: 'EXPENSE',
+        accountId: 'acc_1',
+        creditCardId: 'card_1',
+      })
+    ).toThrow(
+      'A transaction cannot be funded by both an account and a credit card'
+    );
+  });
+
+  it('rejects a credit card funding anything other than an EXPENSE', () => {
+    expect(() =>
+      assertValidFundingSource({ type: 'INCOME', creditCardId: 'card_1' })
+    ).toThrow('A credit card can only fund an EXPENSE');
+  });
+
+  it('allows a TRANSFER whose destination is a credit card (payoff)', () => {
+    expect(() =>
+      assertValidFundingSource({
+        type: 'TRANSFER',
+        accountId: 'acc_1',
+        creditCardId: 'card_1',
+      })
+    ).not.toThrow();
+  });
+
+  it('rejects a TRANSFER with both an account and a credit card as destination', () => {
+    expect(() =>
+      assertValidFundingSource({
+        type: 'TRANSFER',
+        accountId: 'acc_1',
+        toAccountId: 'acc_2',
+        creditCardId: 'card_1',
+      })
+    ).toThrow(
+      'Transfer requires exactly one destination: toAccountId or creditCardId'
+    );
   });
 });

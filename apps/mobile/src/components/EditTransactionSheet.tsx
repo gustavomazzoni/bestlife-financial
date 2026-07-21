@@ -13,7 +13,7 @@ import { AmountInput } from './AmountInput';
 import { Chip } from './Chip';
 import { api } from '../lib/api';
 import { isInferredComplete } from '../lib/inferredTransaction';
-import { Category, FinancialAccount, InferredTransaction } from '../types';
+import { Category, CreditCard, FinancialAccount, InferredTransaction } from '../types';
 
 export type BottomSheetRef = ElementRef<typeof BottomSheetModal>;
 
@@ -33,6 +33,7 @@ const FREQUENCY_OPTIONS: { value: ScheduleFrequency; label: string }[] = [
 interface EditTransactionSheetProps {
   value: InferredTransaction | null;
   accounts: FinancialAccount[];
+  creditCards: CreditCard[];
   onConfirm: (updated: InferredTransaction) => void;
   onDelete: () => void;
 }
@@ -40,7 +41,7 @@ interface EditTransactionSheetProps {
 export const EditTransactionSheet = forwardRef<
   BottomSheetRef,
   EditTransactionSheetProps
->(({ value, accounts, onConfirm, onDelete }, ref) => {
+>(({ value, accounts, creditCards, onConfirm, onDelete }, ref) => {
   const [draft, setDraft] = useState<InferredTransaction | null>(value);
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoriesError, setCategoriesError] = useState(false);
@@ -114,7 +115,15 @@ export const EditTransactionSheet = forwardRef<
               key={opt.value}
               label={opt.label}
               selected={draft.type === opt.value}
-              onPress={() => update({ type: opt.value, category: null })}
+              onPress={() =>
+                update({
+                  type: opt.value,
+                  category: null,
+                  accountId: null,
+                  toAccountId: null,
+                  creditCardId: null,
+                })
+              }
             />
           ))}
         </View>
@@ -155,21 +164,125 @@ export const EditTransactionSheet = forwardRef<
           </View>
         )}
 
-        {accounts.length > 0 && (
+        {draft.type === 'TRANSFER' ? (
           <>
-            <Text style={styles.label}>Conta</Text>
-            <View style={styles.chipRow}>
-              {accounts.map(a => (
-                <Chip
-                  key={a.id}
-                  label={a.name}
-                  selected={draft.accountId === a.id}
-                  onPress={() =>
-                    update({ accountId: draft.accountId === a.id ? null : a.id })
-                  }
-                />
-              ))}
-            </View>
+            {accounts.length > 0 && (
+              <>
+                <Text style={styles.label}>De</Text>
+                <View style={styles.chipRow}>
+                  {accounts.map(a => (
+                    <Chip
+                      key={a.id}
+                      label={a.name}
+                      selected={draft.accountId === a.id}
+                      onPress={() =>
+                        update({ accountId: draft.accountId === a.id ? null : a.id })
+                      }
+                    />
+                  ))}
+                </View>
+              </>
+            )}
+            {(accounts.length > 0 || creditCards.length > 0) && (
+              <>
+                <Text style={styles.label}>Para</Text>
+                <View style={styles.chipRow}>
+                  {accounts.map(a => (
+                    <Chip
+                      key={a.id}
+                      label={a.name}
+                      selected={draft.toAccountId === a.id}
+                      onPress={() =>
+                        update({
+                          toAccountId: draft.toAccountId === a.id ? null : a.id,
+                          creditCardId: null,
+                        })
+                      }
+                    />
+                  ))}
+                  {creditCards.map(c => (
+                    <Chip
+                      key={c.id}
+                      icon="💳"
+                      label={c.name}
+                      selected={draft.creditCardId === c.id}
+                      onPress={() =>
+                        update({
+                          creditCardId: draft.creditCardId === c.id ? null : c.id,
+                          toAccountId: null,
+                        })
+                      }
+                    />
+                  ))}
+                </View>
+              </>
+            )}
+          </>
+        ) : (
+          <>
+            {(accounts.length > 0 ||
+              (draft.type === 'EXPENSE' && creditCards.length > 0)) && (
+              <>
+                <Text style={styles.label}>Conta</Text>
+                <View style={styles.chipRow}>
+                  {accounts.map(a => (
+                    <Chip
+                      key={a.id}
+                      label={a.name}
+                      selected={draft.accountId === a.id}
+                      onPress={() =>
+                        update({
+                          accountId: draft.accountId === a.id ? null : a.id,
+                          creditCardId: null,
+                        })
+                      }
+                    />
+                  ))}
+                  {draft.type === 'EXPENSE' &&
+                    creditCards.map(c => (
+                      <Chip
+                        key={c.id}
+                        icon="💳"
+                        label={c.name}
+                        selected={draft.creditCardId === c.id}
+                        onPress={() =>
+                          update({
+                            creditCardId: draft.creditCardId === c.id ? null : c.id,
+                            accountId: null,
+                            installments: 1,
+                          })
+                        }
+                      />
+                    ))}
+                </View>
+              </>
+            )}
+            {draft.type === 'EXPENSE' && draft.creditCardId && (
+              <>
+                <Text style={styles.label}>Parcelas</Text>
+                <View style={styles.stepperRow}>
+                  <Pressable
+                    onPress={() =>
+                      update({ installments: Math.max(1, draft.installments - 1) })
+                    }
+                    style={styles.stepperButton}
+                    hitSlop={8}
+                  >
+                    <Feather name="minus" size={16} color={colors.foreground} />
+                  </Pressable>
+                  <Text style={styles.stepperValue}>{draft.installments}x</Text>
+                  <Pressable
+                    onPress={() =>
+                      update({ installments: Math.min(24, draft.installments + 1) })
+                    }
+                    style={styles.stepperButton}
+                    hitSlop={8}
+                  >
+                    <Feather name="plus" size={16} color={colors.foreground} />
+                  </Pressable>
+                </View>
+              </>
+            )}
           </>
         )}
 
@@ -275,6 +388,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
+  },
+  stepperRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  stepperButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepperValue: {
+    fontFamily: fontFamily.displayBold,
+    fontSize: fontSize.base,
+    color: colors.foreground,
+    minWidth: 32,
+    textAlign: 'center',
   },
   fetchErrorRow: {
     flexDirection: 'row',

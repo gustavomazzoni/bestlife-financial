@@ -38,7 +38,7 @@ import {
   projectScheduledOccurrences,
   transactionsToCalendarEvents,
 } from '../lib/calendar';
-import { FinancialAccount, ScheduledTransaction, Transaction } from '../types';
+import { CreditCard, FinancialAccount, ScheduledTransaction, Transaction } from '../types';
 
 const typeColor: Record<string, string> = {
   INCOME: colors.income,
@@ -66,6 +66,7 @@ export function CalendarScreen() {
     )
   );
   const accounts = useApiData(() => api.get<FinancialAccount[]>('/api/v1/accounts'));
+  const creditCards = useApiData(() => api.get<CreditCard[]>('/api/v1/credit-cards'));
 
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const detailSheetRef = useRef<TransactionDetailSheetRef>(null);
@@ -124,6 +125,7 @@ export function CalendarScreen() {
     scheduled.refetch();
     transactions.refetch();
     accounts.refetch();
+    creditCards.refetch();
   }
 
   if (loading) return <LoadingState />;
@@ -290,12 +292,15 @@ export function CalendarScreen() {
         ref={detailSheetRef}
         transaction={selectedTransaction}
         accounts={accounts.data ?? []}
+        creditCards={creditCards.data ?? []}
         onSaved={() => {
           transactions.refetch();
+          creditCards.refetch();
         }}
         onDeleted={() => {
           detailSheetRef.current?.dismiss();
           transactions.refetch();
+          creditCards.refetch();
         }}
       />
       <ScheduledDetailSheet

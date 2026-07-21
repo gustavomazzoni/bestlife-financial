@@ -84,5 +84,6 @@ export interface NetWorth {
   accountsTotal: number;
   investmentsTotal: number;
   debtsTotal: number;
+  creditCardsTotal: number;
   netWorth: number;
 }

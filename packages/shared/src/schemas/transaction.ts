@@ -14,12 +14,14 @@ export const CreateTransactionSchema = z.object({
   valueAlignment: z.enum(Object.values(ValueAlignment)).optional(),
   accountId: z.string().min(1).optional(),
   toAccountId: z.string().min(1).optional(),
+  creditCardId: z.string().min(1).optional(),
   notes: z.string().max(1000).optional(),
 });
 
 export const UpdateTransactionSchema = CreateTransactionSchema.partial().extend({
   accountId: z.string().min(1).nullable().optional(),
   toAccountId: z.string().min(1).nullable().optional(),
+  creditCardId: z.string().min(1).nullable().optional(),
 });
 
 export const ListTransactionsQuerySchema = z.object({

@@ -47,6 +47,10 @@ describe('createTransaction', () => {
     scheduledId: null,
     accountId: null,
     toAccountId: null,
+    creditCardId: null,
+    installmentGroupId: null,
+    installmentCurrent: null,
+    installmentTotal: null,
     notes: null,
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -193,7 +197,9 @@ describe('createTransaction', () => {
         type: 'TRANSFER',
         accountId: 'acc_1',
       })
-    ).rejects.toThrow('Transfer requires a destination toAccountId');
+    ).rejects.toThrow(
+      'Transfer requires exactly one destination: toAccountId or creditCardId'
+    );
     expect(prisma.transaction.create).not.toHaveBeenCalled();
   });
 

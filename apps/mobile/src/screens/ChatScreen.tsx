@@ -20,7 +20,12 @@ import {
   BottomSheetRef,
 } from '../components/EditTransactionSheet';
 import { api, ApiError } from '../lib/api';
-import { FinancialAccount, InferTransactionResult, InferredTransaction } from '../types';
+import {
+  CreditCard,
+  FinancialAccount,
+  InferTransactionResult,
+  InferredTransaction,
+} from '../types';
 import { TAB_BAR_HEIGHT } from '../navigation/tabBarMetrics';
 
 const SUGGESTIONS: { text: string; icon: keyof typeof Feather.glyphMap; color: string }[] = [
@@ -53,6 +58,7 @@ export function ChatScreen() {
   const [sending, setSending] = useState(false);
   const [accounts, setAccounts] = useState<FinancialAccount[]>([]);
   const [accountsError, setAccountsError] = useState(false);
+  const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const sheetRef = useRef<BottomSheetRef>(null);
 
@@ -66,6 +72,7 @@ export function ChatScreen() {
 
   useEffect(() => {
     loadAccounts();
+    api.get<CreditCard[]>('/api/v1/credit-cards').then(setCreditCards).catch(() => {});
   }, []);
 
   async function sendText(text: string) {
@@ -81,9 +88,18 @@ export function ChatScreen() {
         '/api/v1/transactions/infer',
         { text: trimmed }
       );
+      const normalized: InferTransactionResult = {
+        ...result,
+        inferred: {
+          ...result.inferred,
+          toAccountId: result.inferred.toAccountId ?? null,
+          creditCardId: result.inferred.creditCardId ?? null,
+          installments: result.inferred.installments ?? 1,
+        },
+      };
       setMessages(prev => [
         ...prev,
-        { id: nextId(), role: 'assistant', result, status: 'pending' },
+        { id: nextId(), role: 'assistant', result: normalized, status: 'pending' },
       ]);
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Erro ao processar mensagem';
@@ -118,6 +134,20 @@ export function ChatScreen() {
           valueAlignment: inferred.valueAlignment ?? undefined,
           notes: inferred.notes,
         });
+      } else if (inferred.creditCardId) {
+        await api.post(
+          `/api/v1/credit-cards/${inferred.creditCardId}/installment-purchases`,
+          {
+            amount: inferred.amount,
+            description: inferred.description,
+            date: inferred.date,
+            categoryId: inferred.category?.id ?? '',
+            necessityLevel: inferred.necessityLevel ?? undefined,
+            valueAlignment: inferred.valueAlignment ?? undefined,
+            notes: inferred.notes,
+            installments: inferred.installments,
+          }
+        );
       } else {
         await api.post('/api/v1/transactions', {
           amount: inferred.amount,
@@ -128,6 +158,7 @@ export function ChatScreen() {
           necessityLevel: inferred.necessityLevel ?? undefined,
           valueAlignment: inferred.valueAlignment ?? undefined,
           accountId: inferred.accountId ?? undefined,
+          toAccountId: inferred.toAccountId ?? undefined,
           notes: inferred.notes,
         });
       }
@@ -266,6 +297,7 @@ export function ChatScreen() {
                   inferred={item.result.inferred}
                   confidence={item.result.confidence}
                   accounts={accounts}
+                  creditCards={creditCards}
                   status={item.status}
                   errorMessage={item.errorMessage}
                   onConfirm={() => confirmTransaction(item.id, item.result.inferred)}
@@ -301,6 +333,7 @@ export function ChatScreen() {
         ref={sheetRef}
         value={editingMessage?.result.inferred ?? null}
         accounts={accounts}
+        creditCards={creditCards}
         onConfirm={handleSheetConfirm}
         onDelete={handleSheetDelete}
       />

@@ -5,13 +5,17 @@ export interface LedgerFields {
   amount: Prisma.Decimal | number | string;
   accountId: string | null;
   toAccountId: string | null;
+  creditCardId?: string | null;
 }
 
 /**
- * Applies (sign=1) or reverses (sign=-1) the account balance effect implied
- * by a transaction's type/amount/accountId/toAccountId. EXPENSE debits the
- * account, INCOME/SAVING credit it, TRANSFER debits the source and credits
- * the destination.
+ * Applies (sign=1) or reverses (sign=-1) the balance effect implied by a
+ * transaction's type/amount/accountId/toAccountId/creditCardId.
+ * EXPENSE debits the account (or increments the card's owed balance, if
+ * funded by a credit card instead). INCOME/SAVING credit the account.
+ * TRANSFER debits the source account and credits the destination — which
+ * may be a second account or a credit card (a card payoff, which reduces
+ * what's owed).
  */
 export async function applyLedgerEffect(
   tx: Prisma.TransactionClient,
@@ -33,6 +37,20 @@ export async function applyLedgerEffect(
         data: { balance: { increment: amount } },
       });
     }
+    if (fields.creditCardId) {
+      await tx.creditCard.update({
+        where: { id: fields.creditCardId },
+        data: { balance: { decrement: amount } },
+      });
+    }
+    return;
+  }
+
+  if (fields.creditCardId) {
+    await tx.creditCard.update({
+      where: { id: fields.creditCardId },
+      data: { balance: { increment: amount } },
+    });
     return;
   }
 

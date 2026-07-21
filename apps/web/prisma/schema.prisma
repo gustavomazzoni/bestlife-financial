@@ -50,6 +50,7 @@ model User {
   financialAccounts      FinancialAccount[]
   investments            Investment[]
   debts                  Debt[]
+  creditCards            CreditCard[]
   categoryBudgets        CategoryBudget[]
 
   @@index([email])
@@ -129,18 +130,23 @@ model Transaction {
   categoryId     String
   necessityLevel NecessityLevel?
   valueAlignment ValueAlignment?
-  scheduledId    String?
-  accountId      String?
-  toAccountId    String?
-  notes          String?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @default(now()) @updatedAt
+  scheduledId        String?
+  accountId          String?
+  toAccountId        String?
+  creditCardId       String?
+  installmentGroupId String?
+  installmentCurrent Int?
+  installmentTotal   Int?
+  notes              String?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @default(now()) @updatedAt
 
-  user      User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  category  Category              @relation(fields: [categoryId], references: [id])
-  scheduled ScheduledTransaction? @relation(fields: [scheduledId], references: [id])
-  account   FinancialAccount?     @relation("TransactionFromAccount", fields: [accountId], references: [id])
-  toAccount FinancialAccount?     @relation("TransactionToAccount", fields: [toAccountId], references: [id])
+  user       User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category   Category              @relation(fields: [categoryId], references: [id])
+  scheduled  ScheduledTransaction? @relation(fields: [scheduledId], references: [id])
+  account    FinancialAccount?     @relation("TransactionFromAccount", fields: [accountId], references: [id])
+  toAccount  FinancialAccount?     @relation("TransactionToAccount", fields: [toAccountId], references: [id])
+  creditCard CreditCard?           @relation(fields: [creditCardId], references: [id])
 
   @@index([userId, date])
   @@index([userId, type])
@@ -149,6 +155,8 @@ model Transaction {
   @@index([scheduledId])
   @@index([accountId])
   @@index([toAccountId])
+  @@index([creditCardId])
+  @@index([installmentGroupId])
 }
 
 model Category {
@@ -241,6 +249,24 @@ model Debt {
   updatedAt          DateTime  @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model CreditCard {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  creditLimit Decimal  @db.Decimal(12, 2)
+  closingDay  Int
+  dueDay      Int
+  balance     Decimal  @default(0) @db.Decimal(12, 2)
+  color       String   @default("#6B7280")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
 
   @@index([userId])
 }

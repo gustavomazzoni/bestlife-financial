@@ -3,7 +3,7 @@ import { Feather } from '@expo/vector-icons';
 import { colors, fontFamily, fontSize, radius, shadow } from '../theme';
 import { formatCurrency } from '../lib/format';
 import { isInferredComplete } from '../lib/inferredTransaction';
-import { InferredTransaction, FinancialAccount } from '../types';
+import { InferredTransaction, FinancialAccount, CreditCard } from '../types';
 
 const typeColor: Record<string, string> = {
   INCOME: colors.income,
@@ -23,6 +23,7 @@ interface TransactionPreviewCardProps {
   inferred: InferredTransaction;
   confidence: number;
   accounts: FinancialAccount[];
+  creditCards: CreditCard[];
   status: 'pending' | 'saving' | 'confirmed' | 'error';
   errorMessage?: string;
   onConfirm: () => void;
@@ -33,12 +34,14 @@ export function TransactionPreviewCard({
   inferred,
   confidence,
   accounts,
+  creditCards,
   status,
   errorMessage,
   onConfirm,
   onEdit,
 }: TransactionPreviewCardProps) {
   const account = accounts.find(a => a.id === inferred.accountId);
+  const creditCard = creditCards.find(c => c.id === inferred.creditCardId);
   const confidenceColor =
     confidence >= 0.8 ? colors.income : confidence >= 0.5 ? colors.warning : colors.danger;
   const complete = isInferredComplete(inferred);
@@ -62,6 +65,12 @@ export function TransactionPreviewCard({
           {inferred.category ? `${inferred.category.name}` : 'Sem categoria'}
         </Text>
         {account && <Text style={styles.metaItem}>· {account.name}</Text>}
+        {creditCard && (
+          <Text style={styles.metaItem}>
+            · {creditCard.name}
+            {inferred.installments > 1 ? ` ${inferred.installments}x` : ''}
+          </Text>
+        )}
         <Text style={styles.metaItem}>
           · {new Date(inferred.date).toLocaleDateString('pt-BR')}
         </Text>

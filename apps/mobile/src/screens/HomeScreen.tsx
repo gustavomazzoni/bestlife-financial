@@ -28,7 +28,7 @@ import {
 import { useApiData } from '../hooks/useApiData';
 import { api } from '../lib/api';
 import { formatCurrency, formatRelativeDate } from '../lib/format';
-import { FinancialAccount, NetWorth, Transaction, UpcomingItem } from '../types';
+import { CreditCard, FinancialAccount, NetWorth, Transaction, UpcomingItem } from '../types';
 
 interface MonthlySummary {
   month: string;
@@ -48,6 +48,7 @@ export function HomeScreen() {
   const insets = useSafeAreaInsets();
   const netWorth = useApiData(() => api.get<NetWorth>('/api/v1/calculations/net-worth'));
   const accounts = useApiData(() => api.get<FinancialAccount[]>('/api/v1/accounts'));
+  const creditCards = useApiData(() => api.get<CreditCard[]>('/api/v1/credit-cards'));
   const summary = useApiData(() =>
     api.get<MonthlySummary[]>('/api/v1/transactions/summary?period=month&months=1')
   );
@@ -75,18 +76,31 @@ export function HomeScreen() {
   }
 
   const loading =
-    netWorth.loading || accounts.loading || summary.loading || upcoming.loading || recent.loading;
+    netWorth.loading ||
+    accounts.loading ||
+    creditCards.loading ||
+    summary.loading ||
+    upcoming.loading ||
+    recent.loading;
   const refreshing =
     netWorth.refreshing ||
     accounts.refreshing ||
+    creditCards.refreshing ||
     summary.refreshing ||
     upcoming.refreshing ||
     recent.refreshing;
-  const error = netWorth.error ?? accounts.error ?? summary.error ?? upcoming.error ?? recent.error;
+  const error =
+    netWorth.error ??
+    accounts.error ??
+    creditCards.error ??
+    summary.error ??
+    upcoming.error ??
+    recent.error;
 
   function refetchAll() {
     netWorth.refetch();
     accounts.refetch();
+    creditCards.refetch();
     summary.refetch();
     upcoming.refetch();
     recent.refetch();
@@ -255,15 +269,19 @@ export function HomeScreen() {
       ref={detailSheetRef}
       transaction={selectedTransaction}
       accounts={accounts.data ?? []}
+      creditCards={creditCards.data ?? []}
       onSaved={() => {
         recent.refetch();
         summary.refetch();
+        netWorth.refetch();
+        creditCards.refetch();
       }}
       onDeleted={() => {
         detailSheetRef.current?.dismiss();
         recent.refetch();
         summary.refetch();
         netWorth.refetch();
+        creditCards.refetch();
       }}
     />
     <ExecuteScheduledSheet
