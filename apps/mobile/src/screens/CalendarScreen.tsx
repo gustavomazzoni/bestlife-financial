@@ -8,7 +8,15 @@ import {
   View,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { addMonths, endOfMonth, format, isSameMonth, isToday, startOfMonth } from 'date-fns';
+import {
+  addMonths,
+  endOfMonth,
+  format,
+  isAfter,
+  isSameMonth,
+  isToday,
+  startOfMonth,
+} from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { TransactionType } from '@lifeos/shared';
 import { colors, fontFamily, fontSize, radius } from '../theme';
@@ -37,6 +45,7 @@ import {
   getMonthGridDates,
   groupEventsByDate,
   projectScheduledOccurrences,
+  sortDateGroups,
   transactionsToCalendarEvents,
 } from '../lib/calendar';
 import { FinancialAccount, ScheduledTransaction, Transaction } from '../types';
@@ -140,9 +149,11 @@ export function CalendarScreen() {
     [selectedMonth]
   );
 
+  const isFutureMonth = isAfter(monthStart, startOfMonth(new Date()));
+
   const monthGroups = useMemo(
-    () => Array.from(eventsByDate.entries()).sort(([a], [b]) => a.localeCompare(b)),
-    [eventsByDate]
+    () => sortDateGroups(Array.from(eventsByDate.entries()), isFutureMonth ? 'asc' : 'desc'),
+    [eventsByDate, isFutureMonth]
   );
 
   function goToMonth(delta: number) {

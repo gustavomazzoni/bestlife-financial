@@ -97,6 +97,19 @@ export function groupEventsByDate(
   return map;
 }
 
+export type DateGroup = [string, CalendarEvent[]];
+
+/** 'asc' = soonest date first (future months); 'desc' = most recent date
+ * first (current/past months). */
+export function sortDateGroups(
+  entries: DateGroup[],
+  direction: 'asc' | 'desc'
+): DateGroup[] {
+  return [...entries].sort(([a], [b]) =>
+    direction === 'asc' ? a.localeCompare(b) : b.localeCompare(a)
+  );
+}
+
 /** Returns 42 dates (6x7 grid) for the given month, Monday-start, padded with adjacent months. */
 export function getMonthGridDates(year: number, month: number): Date[] {
   const firstOfMonth = startOfMonth(new Date(year, month, 1));
