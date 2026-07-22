@@ -50,6 +50,18 @@ const typeColor: Record<string, string> = {
 
 const WEEKDAY_LABELS = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'];
 
+/** Net position for a list of events: income adds, expense subtracts.
+ * Saving/transfer don't change overall net position (they move money
+ * between the user's own buckets rather than in/out). */
+function sumEvents(events: CalendarEvent[]): number {
+  return events.reduce((sum, e) => {
+    const amount = Number(e.amount);
+    if (e.type === 'EXPENSE') return sum - amount;
+    if (e.type === 'INCOME') return sum + amount;
+    return sum;
+  }, 0);
+}
+
 export function CalendarScreen() {
   const [selectedMonth, setSelectedMonth] = useState(() => startOfMonth(new Date()));
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
@@ -115,6 +127,11 @@ export function CalendarScreen() {
     [selectedMonth]
   );
 
+  const monthGroups = useMemo(
+    () => Array.from(eventsByDate.entries()).sort(([a], [b]) => a.localeCompare(b)),
+    [eventsByDate]
+  );
+
   function goToMonth(delta: number) {
     setSelectedMonth(m => addMonths(m, delta));
     setSelectedDay(null);
@@ -158,6 +175,48 @@ export function CalendarScreen() {
   }
 
   const selectedEvents = selectedDay ? (eventsByDate.get(selectedDay) ?? []) : [];
+  const dayTotal = sumEvents(selectedEvents);
+  const monthTotal = sumEvents(monthGroups.flatMap(([, events]) => events));
+
+  function renderEventRow(e: CalendarEvent, key: string) {
+    return (
+      <Pressable
+        key={key}
+        onPress={() =>
+          e.kind === 'actual' ? openTransaction(e.sourceId) : openScheduled(e.sourceId)
+        }
+        testID={e.kind === 'actual' ? 'agenda-transaction-item' : 'agenda-scheduled-item'}
+      >
+        <Card style={styles.eventRow}>
+          <IconBadge
+            size={38}
+            color={e.categoryColor ?? colors.mutedForeground2}
+            letter={e.categoryName ?? e.description}
+          />
+          <View style={styles.rowMain}>
+            <Text style={styles.rowTitle}>{e.description}</Text>
+            <Text style={styles.rowSubtitle}>
+              {e.categoryName ?? '—'}
+              {e.kind === 'scheduled_projection' ? ' · Projetado' : ''}
+            </Text>
+          </View>
+          <Text style={[styles.rowAmount, { color: typeColor[e.type] }]}>
+            {formatCurrency(e.amount)}
+          </Text>
+          {e.kind === 'scheduled_projection' && (
+            <Pressable
+              onPress={() => openExecute(e)}
+              style={styles.executeButton}
+              hitSlop={8}
+              testID="agenda-execute-btn"
+            >
+              <Feather name="check-circle" size={20} color={colors.accent} />
+            </Pressable>
+          )}
+        </Card>
+      </Pressable>
+    );
+  }
 
   return (
     <View style={styles.container} testID="calendar-screen">
@@ -262,54 +321,52 @@ export function CalendarScreen() {
         </Card>
 
         <Text style={styles.agendaTitle}>
-          {selectedDay ? format(new Date(`${selectedDay}T00:00:00`), "EEEE, d 'de' MMMM", { locale: ptBR }) : 'Selecione um dia'}
+          {selectedDay
+            ? format(new Date(`${selectedDay}T00:00:00`), "EEEE, d 'de' MMMM", { locale: ptBR })
+            : format(selectedMonth, 'MMMM yyyy', { locale: ptBR })}
         </Text>
+
         {!selectedDay ? (
-          <Text style={styles.agendaEmpty}>Selecione um dia para ver os eventos</Text>
+          monthGroups.length === 0 ? (
+            <View style={styles.agendaEmptyCard}>
+              <Text style={styles.agendaEmpty}>Nenhuma transação neste mês</Text>
+            </View>
+          ) : (
+            <>
+              <View style={styles.totalRow} testID="month-total">
+                <Text style={styles.totalLabel}>Total do mês</Text>
+                <Text
+                  style={[styles.totalValue, monthTotal < 0 && styles.totalValueNegative]}
+                >
+                  {formatCurrency(monthTotal)}
+                </Text>
+              </View>
+              {monthGroups.map(([dateKey, events]) => (
+                <View key={dateKey}>
+                  <Text style={styles.dateGroupLabel}>
+                    {format(new Date(`${dateKey}T00:00:00`), "EEEE, d 'de' MMMM", {
+                      locale: ptBR,
+                    })}
+                  </Text>
+                  {events.map((e, i) => renderEventRow(e, `${dateKey}-${i}`))}
+                </View>
+              ))}
+            </>
+          )
         ) : selectedEvents.length === 0 ? (
           <View style={styles.agendaEmptyCard}>
             <Text style={styles.agendaEmpty}>Nenhuma transação neste dia</Text>
           </View>
         ) : (
-          selectedEvents.map((e, i) => (
-            <Pressable
-              key={i}
-              onPress={() =>
-                e.kind === 'actual'
-                  ? openTransaction(e.sourceId)
-                  : openScheduled(e.sourceId)
-              }
-              testID={e.kind === 'actual' ? 'agenda-transaction-item' : 'agenda-scheduled-item'}
-            >
-              <Card style={styles.eventRow}>
-                <IconBadge
-                  size={38}
-                  color={e.categoryColor ?? colors.mutedForeground2}
-                  letter={e.categoryName ?? e.description}
-                />
-                <View style={styles.rowMain}>
-                  <Text style={styles.rowTitle}>{e.description}</Text>
-                  <Text style={styles.rowSubtitle}>
-                    {e.categoryName ?? '—'}
-                    {e.kind === 'scheduled_projection' ? ' · Projetado' : ''}
-                  </Text>
-                </View>
-                <Text style={[styles.rowAmount, { color: typeColor[e.type] }]}>
-                  {formatCurrency(e.amount)}
-                </Text>
-                {e.kind === 'scheduled_projection' && (
-                  <Pressable
-                    onPress={() => openExecute(e)}
-                    style={styles.executeButton}
-                    hitSlop={8}
-                    testID="agenda-execute-btn"
-                  >
-                    <Feather name="check-circle" size={20} color={colors.accent} />
-                  </Pressable>
-                )}
-              </Card>
-            </Pressable>
-          ))
+          <>
+            <View style={styles.totalRow} testID="day-total">
+              <Text style={styles.totalLabel}>Total do dia</Text>
+              <Text style={[styles.totalValue, dayTotal < 0 && styles.totalValueNegative]}>
+                {formatCurrency(dayTotal)}
+              </Text>
+            </View>
+            {selectedEvents.map((e, i) => renderEventRow(e, String(i)))}
+          </>
         )}
       </ScrollView>
       <TransactionDetailSheet
@@ -490,6 +547,33 @@ const styles = StyleSheet.create({
     borderColor: colors.borderDashed,
     borderRadius: radius.lg,
     padding: 26,
+  },
+  totalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  totalLabel: {
+    fontFamily: fontFamily.bodyMedium,
+    fontSize: fontSize.sm,
+    color: colors.mutedForeground,
+  },
+  totalValue: {
+    fontFamily: fontFamily.displayBold,
+    fontSize: fontSize.base,
+    color: colors.income,
+  },
+  totalValueNegative: {
+    color: colors.expense,
+  },
+  dateGroupLabel: {
+    fontFamily: fontFamily.bodySemiBold,
+    fontSize: 12,
+    color: colors.mutedForeground2,
+    textTransform: 'capitalize',
+    marginTop: 14,
+    marginBottom: 8,
   },
   eventRow: {
     flexDirection: 'row',
