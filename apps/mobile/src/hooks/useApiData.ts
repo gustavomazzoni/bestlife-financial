@@ -27,6 +27,14 @@ export function useApiData<T>(fetcher: () => Promise<T>): UseApiDataResult<T> {
   const [refetchKey, setRefetchKey] = useState(0);
   const hasLoadedOnce = useRef(false);
 
+  // Callers pass a fresh `fetcher` closure every render (e.g. one that
+  // captures a date range derived from component state), but `load` below
+  // is only recreated when `refetchKey` changes — so it reads the fetcher
+  // through this ref, kept current every render, instead of closing over
+  // whatever `fetcher` happened to be at the last refetchKey change.
+  const fetcherRef = useRef(fetcher);
+  fetcherRef.current = fetcher;
+
   const load = useCallback(() => {
     let cancelled = false;
     if (hasLoadedOnce.current) {
@@ -36,7 +44,7 @@ export function useApiData<T>(fetcher: () => Promise<T>): UseApiDataResult<T> {
     }
     setError(null);
 
-    fetcher()
+    fetcherRef.current()
       .then(result => {
         if (!cancelled) setData(result);
       })

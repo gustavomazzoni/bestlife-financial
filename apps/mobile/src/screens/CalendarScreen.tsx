@@ -80,6 +80,20 @@ export function CalendarScreen() {
   );
   const accounts = useApiData(() => api.get<FinancialAccount[]>('/api/v1/accounts'));
 
+  // `transactions` is scoped server-side to the viewed month via
+  // startDate/endDate — refetch whenever that range moves, not just on
+  // mount/focus, otherwise navigating months keeps showing whichever
+  // month's transactions were first loaded.
+  const isFirstMonth = useRef(true);
+  useEffect(() => {
+    if (isFirstMonth.current) {
+      isFirstMonth.current = false;
+      return;
+    }
+    transactions.refetch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [monthKey]);
+
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const detailSheetRef = useRef<TransactionDetailSheetRef>(null);
 
