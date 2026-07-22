@@ -26,6 +26,7 @@ describe('createTransaction', () => {
     description: 'Grocery shopping',
     type: 'EXPENSE' as const,
     categoryId: 'cat_food_123',
+    accountId: 'acc_1',
   };
 
   const decimalAmount = new Prisma.Decimal(validData.amount);
@@ -61,7 +62,10 @@ describe('createTransaction', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(prisma.financialAccount.findMany).mockResolvedValue([]);
+    vi.mocked(prisma.financialAccount.findMany).mockResolvedValue([
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      { id: 'acc_1', type: 'CHECKING' } as any,
+    ]);
     // Ledger resolves account type per touched account — default to a
     // plain asset account (CHECKING) unless a test overrides it.
     vi.mocked(prisma.financialAccount.findUniqueOrThrow).mockResolvedValue({

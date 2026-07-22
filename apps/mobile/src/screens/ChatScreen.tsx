@@ -12,7 +12,6 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
-import { startOfDay } from 'date-fns';
 import { colors, fontFamily, fontSize, radius, shadow } from '../theme';
 import { TransactionPreviewCard } from '../components/TransactionPreviewCard';
 import {
@@ -20,6 +19,7 @@ import {
   BottomSheetRef,
 } from '../components/EditTransactionSheet';
 import { api, ApiError } from '../lib/api';
+import { isFutureDate } from '../lib/inferredTransaction';
 import {
   FinancialAccount,
   InferTransactionResult,
@@ -91,12 +91,13 @@ export function ChatScreen() {
         '/api/v1/transactions/infer',
         { text: trimmed }
       );
-      const isFuture = startOfDay(new Date(result.inferred.date)) > startOfDay(new Date());
       // Only EXPENSE gets an auto-filled account — INCOME/SAVING/TRANSFER
       // always require the user to pick one explicitly.
       const accountId =
         result.inferred.accountId ??
-        (result.inferred.type === 'EXPENSE' && !isFuture ? defaultExpenseAccountId : null);
+        (result.inferred.type === 'EXPENSE' && !isFutureDate(result.inferred.date)
+          ? defaultExpenseAccountId
+          : null);
       const normalized: InferTransactionResult = {
         ...result,
         inferred: {
@@ -128,8 +129,7 @@ export function ChatScreen() {
     updateMessage(messageId, { status: 'saving' });
 
     try {
-      const txDate = new Date(inferred.date);
-      const isFuture = startOfDay(txDate) > startOfDay(new Date());
+      const isFuture = isFutureDate(inferred.date);
 
       if (isFuture) {
         await api.post('/api/v1/scheduled', {

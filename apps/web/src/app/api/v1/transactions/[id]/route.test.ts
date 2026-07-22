@@ -86,6 +86,19 @@ describe('API v1 - Transactions [id] Operations', () => {
       expect(json.error.code).toBe('VALIDATION_ERROR');
     });
 
+    it('should return 400 when clearing accountId to null', async () => {
+      const req = createMockPatchRequest('/api/v1/transactions/:id', {
+        accountId: null,
+      });
+      const response = await PATCH(req, {
+        params: Promise.resolve({ id: transactionId }),
+      });
+      const json = await parseResponse(response);
+      expect(response.status).toBe(400);
+      expect(updateTransaction).not.toHaveBeenCalled();
+      expect(json.error.code).toBe('VALIDATION_ERROR');
+    });
+
     it('deve chamar o update com sucesso', async () => {
       const updateData = { description: 'Updated Name' };
       vi.mocked(updateTransaction as Mock).mockResolvedValue({

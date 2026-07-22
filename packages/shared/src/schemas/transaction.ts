@@ -12,15 +12,20 @@ export const CreateTransactionSchema = z.object({
   categoryId: z.string().min(1, 'Category required'),
   necessityLevel: z.enum(Object.values(NecessityLevel)).optional(),
   valueAlignment: z.enum(Object.values(ValueAlignment)).optional(),
-  accountId: z.string().min(1).optional(),
+  accountId: z.string().min(1, 'Conta é obrigatória'),
   toAccountId: z.string().min(1).optional(),
   notes: z.string().max(1000).optional(),
 });
 
-export const UpdateTransactionSchema = CreateTransactionSchema.partial().extend({
-  accountId: z.string().min(1).nullable().optional(),
-  toAccountId: z.string().min(1).nullable().optional(),
-});
+// .partial() makes accountId optional-to-omit on a PATCH while keeping it
+// non-nullable when present — an existing transaction's account can be
+// reassigned but never explicitly cleared to null. toAccountId keeps its
+// own nullable override since only the account requirement changed.
+export const UpdateTransactionSchema = CreateTransactionSchema.partial().extend(
+  {
+    toAccountId: z.string().min(1).nullable().optional(),
+  }
+);
 
 export const ListTransactionsQuerySchema = z.object({
   page: z.coerce.number().int().positive().default(1),

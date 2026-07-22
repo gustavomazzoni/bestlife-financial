@@ -13,10 +13,38 @@ describe('Transaction Validation', () => {
         description: 'Test transaction',
         type: 'EXPENSE',
         categoryId: 'cat_123',
+        accountId: 'acc_123',
       };
 
       const result = CreateTransactionSchema.parse(validData);
       expect(result).toEqual(validData);
+    });
+
+    it('should reject a missing accountId', () => {
+      const invalidData = {
+        date: new Date('2024-01-15'),
+        amount: 100,
+        description: 'Test transaction',
+        type: 'EXPENSE',
+        categoryId: 'cat_123',
+      };
+
+      expect(() => CreateTransactionSchema.parse(invalidData)).toThrow();
+    });
+
+    it('should reject an empty-string accountId', () => {
+      const invalidData = {
+        date: new Date('2024-01-15'),
+        amount: 100,
+        description: 'Test transaction',
+        type: 'EXPENSE',
+        categoryId: 'cat_123',
+        accountId: '',
+      };
+
+      expect(() => CreateTransactionSchema.parse(invalidData)).toThrow(
+        /Conta é obrigatória/
+      );
     });
 
     it('should reject negative amount', () => {
@@ -84,6 +112,7 @@ describe('Transaction Validation', () => {
         description: 'Test transaction',
         type: 'EXPENSE',
         categoryId: 'cat_123',
+        accountId: 'acc_123',
       };
 
       expect(() => CreateTransactionSchema.parse(futureData)).not.toThrow();
@@ -108,6 +137,7 @@ describe('Transaction Validation', () => {
           description: 'Test',
           type: 'EXPENSE',
           categoryId: 'cat_123',
+          accountId: 'acc_123',
           necessityLevel: 'NEEDS',
           valueAlignment: 'ALIGNED',
           notes: 'Some notes',
@@ -132,6 +162,26 @@ describe('Transaction Validation', () => {
       expect(() => UpdateTransactionSchema.parse(invalidData)).toThrow(
         /O valor deve ser positivo/
       );
+    });
+
+    it('should reject clearing accountId to null', () => {
+      const invalidData = { accountId: null };
+      expect(() => UpdateTransactionSchema.parse(invalidData)).toThrow();
+    });
+
+    it('should allow reassigning accountId to another account', () => {
+      const result = UpdateTransactionSchema.parse({ accountId: 'acc_456' });
+      expect(result.accountId).toBe('acc_456');
+    });
+
+    it('should allow omitting accountId entirely (leaves it unchanged)', () => {
+      const result = UpdateTransactionSchema.parse({ amount: '150' });
+      expect(result.accountId).toBeUndefined();
+    });
+
+    it('should still allow clearing toAccountId to null', () => {
+      const result = UpdateTransactionSchema.parse({ toAccountId: null });
+      expect(result.toAccountId).toBeNull();
     });
   });
 });

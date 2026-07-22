@@ -38,6 +38,7 @@ describe('API v1 - Transactions POST', () => {
     date: '2024-01-15T10:00:00Z', // String ISO
     type: TransactionType.EXPENSE,
     categoryId: '123_food',
+    accountId: 'acc_123',
     necessityLevel: NecessityLevel.NEEDS,
     valueAlignment: ValueAlignment.ALIGNED,
   };
@@ -97,6 +98,19 @@ describe('API v1 - Transactions POST', () => {
     expect(JSON.stringify(json)).toContain('O valor deve ser positivo');
 
     // GARANTIA: O Service NÃO deve ter sido chamado
+    expect(createTransaction).not.toHaveBeenCalled();
+  });
+
+  it('should return 400 when accountId is missing', async () => {
+    vi.mocked(getUserId).mockResolvedValue(mockUserId);
+
+    const { accountId: _accountId, ...payloadWithoutAccount } = validPayload;
+    const req = createPostRequest(payloadWithoutAccount);
+    const response = await POST(req);
+    const json = await parseResponse(response);
+
+    expect(response.status).toBe(400);
+    expect(json.error.code).toBe('VALIDATION_ERROR');
     expect(createTransaction).not.toHaveBeenCalled();
   });
 

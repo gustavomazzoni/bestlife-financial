@@ -7,13 +7,12 @@ import {
 } from '@gorhom/bottom-sheet';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Feather } from '@expo/vector-icons';
-import { startOfDay } from 'date-fns';
 import { TransactionType, ScheduleFrequency } from '@lifeos/shared';
 import { colors, fontFamily, fontSize, radius } from '../theme';
 import { AmountInput } from './AmountInput';
 import { Chip } from './Chip';
 import { api } from '../lib/api';
-import { isInferredComplete } from '../lib/inferredTransaction';
+import { isFutureDate, isInferredComplete } from '../lib/inferredTransaction';
 import { Category, FinancialAccount, InferredTransaction } from '../types';
 
 export type BottomSheetRef = ElementRef<typeof BottomSheetModal>;
@@ -51,8 +50,7 @@ export const EditTransactionSheet = forwardRef<
 
   useEffect(() => {
     if (value && value.type === 'EXPENSE' && value.accountId == null) {
-      const isFuture = startOfDay(new Date(value.date)) > startOfDay(new Date());
-      if (!isFuture && defaultExpenseAccountId) {
+      if (!isFutureDate(value.date) && defaultExpenseAccountId) {
         setDraft({ ...value, accountId: defaultExpenseAccountId });
         return;
       }
@@ -96,6 +94,7 @@ export const EditTransactionSheet = forwardRef<
 
   const nonCardAccounts = accounts.filter(a => a.type !== 'CREDIT_CARD');
   const selectedAccount = accounts.find(a => a.id === draft.accountId);
+  const accountRequired = !isFutureDate(draft.date);
 
   function handleDelete() {
     Alert.alert(
@@ -180,7 +179,7 @@ export const EditTransactionSheet = forwardRef<
           <>
             {nonCardAccounts.length > 0 && (
               <>
-                <Text style={styles.label}>De</Text>
+                <Text style={styles.label}>De{accountRequired ? ' *' : ''}</Text>
                 <View style={styles.chipRow}>
                   {nonCardAccounts.map(a => (
                     <Chip
@@ -218,7 +217,7 @@ export const EditTransactionSheet = forwardRef<
           <>
             {(draft.type === 'EXPENSE' ? accounts : nonCardAccounts).length > 0 && (
               <>
-                <Text style={styles.label}>Conta</Text>
+                <Text style={styles.label}>Conta{accountRequired ? ' *' : ''}</Text>
                 <View style={styles.chipRow}>
                   {(draft.type === 'EXPENSE' ? accounts : nonCardAccounts).map(a => (
                     <Chip
