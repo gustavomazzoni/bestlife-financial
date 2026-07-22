@@ -20,7 +20,12 @@ import {
   BottomSheetRef,
 } from '../components/EditTransactionSheet';
 import { api, ApiError } from '../lib/api';
-import { FinancialAccount, InferTransactionResult, InferredTransaction } from '../types';
+import {
+  FinancialAccount,
+  InferTransactionResult,
+  InferredTransaction,
+  UserPreferences,
+} from '../types';
 import { TAB_BAR_HEIGHT } from '../navigation/tabBarMetrics';
 
 const SUGGESTIONS: { text: string; icon: keyof typeof Feather.glyphMap; color: string }[] = [
@@ -53,6 +58,7 @@ export function ChatScreen() {
   const [sending, setSending] = useState(false);
   const [accounts, setAccounts] = useState<FinancialAccount[]>([]);
   const [accountsError, setAccountsError] = useState(false);
+  const [defaultExpenseAccountId, setDefaultExpenseAccountId] = useState<string | null>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const sheetRef = useRef<BottomSheetRef>(null);
 
@@ -66,6 +72,10 @@ export function ChatScreen() {
 
   useEffect(() => {
     loadAccounts();
+    api
+      .get<UserPreferences>('/api/v1/user/preferences')
+      .then(p => setDefaultExpenseAccountId(p.defaultExpenseAccountId))
+      .catch(() => {});
   }, []);
 
   async function sendText(text: string) {
@@ -81,10 +91,17 @@ export function ChatScreen() {
         '/api/v1/transactions/infer',
         { text: trimmed }
       );
+      const isFuture = startOfDay(new Date(result.inferred.date)) > startOfDay(new Date());
+      // Only EXPENSE gets an auto-filled account — INCOME/SAVING/TRANSFER
+      // always require the user to pick one explicitly.
+      const accountId =
+        result.inferred.accountId ??
+        (result.inferred.type === 'EXPENSE' && !isFuture ? defaultExpenseAccountId : null);
       const normalized: InferTransactionResult = {
         ...result,
         inferred: {
           ...result.inferred,
+          accountId,
           toAccountId: result.inferred.toAccountId ?? null,
           installments: result.inferred.installments ?? 1,
         },
@@ -325,6 +342,7 @@ export function ChatScreen() {
         ref={sheetRef}
         value={editingMessage?.result.inferred ?? null}
         accounts={accounts}
+        defaultExpenseAccountId={defaultExpenseAccountId}
         onConfirm={handleSheetConfirm}
         onDelete={handleSheetDelete}
       />

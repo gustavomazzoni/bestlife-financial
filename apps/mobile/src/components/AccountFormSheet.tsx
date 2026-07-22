@@ -30,6 +30,7 @@ interface Draft {
   creditLimit: string;
   closingDay: string;
   dueDay: string;
+  isDefaultExpense: boolean;
 }
 
 const EMPTY_DRAFT: Draft = {
@@ -39,6 +40,7 @@ const EMPTY_DRAFT: Draft = {
   creditLimit: '',
   closingDay: '',
   dueDay: '',
+  isDefaultExpense: false,
 };
 
 interface AccountFormSheetProps {
@@ -46,13 +48,15 @@ interface AccountFormSheetProps {
   account: FinancialAccount | null;
   /** All accounts, used as the funding-source picker for the credit card payoff sub-flow. */
   accounts: FinancialAccount[];
+  /** The user's current default-expense-account preference, if any. */
+  defaultExpenseAccountId: string | null;
   onSaved: () => void;
   onDeleted: () => void;
   onClose: () => void;
 }
 
 export const AccountFormSheet = forwardRef<AccountFormSheetRef, AccountFormSheetProps>(
-  ({ account, accounts, onSaved, onDeleted, onClose }, ref) => {
+  ({ account, accounts, defaultExpenseAccountId, onSaved, onDeleted, onClose }, ref) => {
     const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
     const [saving, setSaving] = useState(false);
     const [deleting, setDeleting] = useState(false);
@@ -61,6 +65,10 @@ export const AccountFormSheet = forwardRef<AccountFormSheetRef, AccountFormSheet
     const [payoffAccountId, setPayoffAccountId] = useState<string | null>(null);
     const [payoffAmount, setPayoffAmount] = useState('0');
     const [payingOff, setPayingOff] = useState(false);
+
+    // Creating the very first account always makes it the default — the
+    // toggle reflects that outcome (checked, disabled) rather than a choice.
+    const isFirstAccount = !account && accounts.length === 0;
 
     useEffect(() => {
       setDraft(
@@ -72,12 +80,14 @@ export const AccountFormSheet = forwardRef<AccountFormSheetRef, AccountFormSheet
               creditLimit: account.creditLimit ?? '',
               closingDay: account.closingDay != null ? String(account.closingDay) : '',
               dueDay: account.dueDay != null ? String(account.dueDay) : '',
+              isDefaultExpense: account.id === defaultExpenseAccountId,
             }
-          : EMPTY_DRAFT
+          : { ...EMPTY_DRAFT, isDefaultExpense: isFirstAccount }
       );
       setShowPayoff(false);
       setPayoffAccountId(null);
       setPayoffAmount(account?.balance ?? '0');
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [account]);
 
     function update(patch: Partial<Draft>) {
@@ -117,10 +127,19 @@ export const AccountFormSheet = forwardRef<AccountFormSheetRef, AccountFormSheet
               }
             : {}),
         };
+        let savedId = account?.id;
         if (account) {
           await api.patch(`/api/v1/accounts/${account.id}`, body);
         } else {
-          await api.post('/api/v1/accounts', body);
+          const created = await api.post<FinancialAccount>('/api/v1/accounts', body);
+          savedId = created.id;
+        }
+        // The very first account is already made the default server-side —
+        // only need an explicit call when the user opts in themselves.
+        if (draft.isDefaultExpense && !isFirstAccount && savedId !== defaultExpenseAccountId) {
+          await api.patch('/api/v1/user/preferences', {
+            defaultExpenseAccountId: savedId,
+          });
         }
         onSaved();
         onClose();
@@ -268,6 +287,26 @@ export const AccountFormSheet = forwardRef<AccountFormSheetRef, AccountFormSheet
               </View>
             </>
           )}
+
+          <View style={styles.defaultToggleRow}>
+            <Text style={styles.label}>Usar como conta padrão para gastos</Text>
+            <Pressable
+              onPress={() =>
+                !isFirstAccount && update({ isDefaultExpense: !draft.isDefaultExpense })
+              }
+              disabled={isFirstAccount}
+              style={[
+                styles.toggle,
+                draft.isDefaultExpense && styles.toggleOn,
+                isFirstAccount && styles.toggleDisabled,
+              ]}
+              testID="toggle-default-expense-account"
+            >
+              <View
+                style={[styles.toggleThumb, draft.isDefaultExpense && styles.toggleThumbOn]}
+              />
+            </Pressable>
+          </View>
 
           {account && isCreditCard && (
             <>
@@ -418,6 +457,34 @@ const styles = StyleSheet.create({
   },
   dayField: {
     flex: 1,
+  },
+  defaultToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 12,
+  },
+  toggle: {
+    width: 44,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: colors.border,
+    padding: 2,
+  },
+  toggleOn: {
+    backgroundColor: colors.accent,
+  },
+  toggleDisabled: {
+    opacity: 0.6,
+  },
+  toggleThumb: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#fff',
+  },
+  toggleThumbOn: {
+    transform: [{ translateX: 18 }],
   },
   payoffToggle: {
     flexDirection: 'row',

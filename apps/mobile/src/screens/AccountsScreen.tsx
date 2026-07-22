@@ -20,7 +20,7 @@ import { DebtFormSheet, DebtFormSheetRef } from '../components/DebtFormSheet';
 import { useApiData } from '../hooks/useApiData';
 import { api } from '../lib/api';
 import { formatCurrency } from '../lib/format';
-import { Debt, FinancialAccount, Investment, NetWorth } from '../types';
+import { Debt, FinancialAccount, Investment, NetWorth, UserPreferences } from '../types';
 import { AccountsStackParamList } from '../navigation/AccountsStack';
 
 type Props = NativeStackScreenProps<AccountsStackParamList, 'AccountsHome'>;
@@ -30,6 +30,9 @@ export function AccountsScreen({ navigation }: Props) {
   const accounts = useApiData(() => api.get<FinancialAccount[]>('/api/v1/accounts'));
   const investments = useApiData(() => api.get<Investment[]>('/api/v1/investments'));
   const debts = useApiData(() => api.get<Debt[]>('/api/v1/debts'));
+  const preferences = useApiData(() =>
+    api.get<UserPreferences>('/api/v1/user/preferences')
+  );
 
   const walletAccounts = (accounts.data ?? []).filter(a => a.type !== 'CREDIT_CARD');
   const creditCardAccounts = (accounts.data ?? []).filter(a => a.type === 'CREDIT_CARD');
@@ -55,16 +58,22 @@ export function AccountsScreen({ navigation }: Props) {
     debtSheetRef.current?.present();
   }
 
-  const loading = netWorth.loading || accounts.loading || investments.loading || debts.loading;
+  const loading =
+    netWorth.loading || accounts.loading || investments.loading || debts.loading || preferences.loading;
   const refreshing =
-    netWorth.refreshing || accounts.refreshing || investments.refreshing || debts.refreshing;
-  const error = netWorth.error ?? accounts.error ?? investments.error ?? debts.error;
+    netWorth.refreshing ||
+    accounts.refreshing ||
+    investments.refreshing ||
+    debts.refreshing ||
+    preferences.refreshing;
+  const error = netWorth.error ?? accounts.error ?? investments.error ?? debts.error ?? preferences.error;
 
   function refetchAll() {
     netWorth.refetch();
     accounts.refetch();
     investments.refetch();
     debts.refetch();
+    preferences.refetch();
   }
 
   if (loading) return <LoadingState />;
@@ -269,13 +278,16 @@ export function AccountsScreen({ navigation }: Props) {
         ref={accountSheetRef}
         account={selectedAccount}
         accounts={accounts.data ?? []}
+        defaultExpenseAccountId={preferences.data?.defaultExpenseAccountId ?? null}
         onSaved={() => {
           accounts.refetch();
           netWorth.refetch();
+          preferences.refetch();
         }}
         onDeleted={() => {
           accounts.refetch();
           netWorth.refetch();
+          preferences.refetch();
         }}
         onClose={() => accountSheetRef.current?.dismiss()}
       />

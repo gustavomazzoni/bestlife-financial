@@ -174,3 +174,7 @@ export interface UserProfile {
   dreamLifestyleCost: number | null;
   currentInvestments: number;
 }
+
+export interface UserPreferences {
+  defaultExpenseAccountId: string | null;
+}

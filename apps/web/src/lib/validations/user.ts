@@ -1,2 +1,2 @@
-export { UserProfileSchema } from '@lifeos/shared';
-export type { UserProfileInput } from '@lifeos/shared';
+export { UserProfileSchema, UserPreferencesSchema } from '@lifeos/shared';
+export type { UserProfileInput, UserPreferencesInput } from '@lifeos/shared';

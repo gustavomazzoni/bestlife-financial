@@ -15,7 +15,7 @@ export async function createFinancialAccount(
   userId: string,
   data: CreateFinancialAccountInput
 ): Promise<FinancialAccount> {
-  return prisma.financialAccount.create({
+  const account = await prisma.financialAccount.create({
     data: {
       userId,
       name: data.name,
@@ -27,4 +27,16 @@ export async function createFinancialAccount(
       dueDay: data.dueDay,
     },
   });
+
+  const accountCount = await prisma.financialAccount.count({
+    where: { userId },
+  });
+  if (accountCount === 1) {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { defaultExpenseAccountId: account.id },
+    });
+  }
+
+  return account;
 }

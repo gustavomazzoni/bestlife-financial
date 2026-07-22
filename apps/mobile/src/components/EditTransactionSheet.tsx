@@ -7,6 +7,7 @@ import {
 } from '@gorhom/bottom-sheet';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Feather } from '@expo/vector-icons';
+import { startOfDay } from 'date-fns';
 import { TransactionType, ScheduleFrequency } from '@lifeos/shared';
 import { colors, fontFamily, fontSize, radius } from '../theme';
 import { AmountInput } from './AmountInput';
@@ -33,6 +34,8 @@ const FREQUENCY_OPTIONS: { value: ScheduleFrequency; label: string }[] = [
 interface EditTransactionSheetProps {
   value: InferredTransaction | null;
   accounts: FinancialAccount[];
+  /** Used to auto-fill the account field for EXPENSE transactions when none is chosen. */
+  defaultExpenseAccountId?: string | null;
   onConfirm: (updated: InferredTransaction) => void;
   onDelete: () => void;
 }
@@ -40,14 +43,22 @@ interface EditTransactionSheetProps {
 export const EditTransactionSheet = forwardRef<
   BottomSheetRef,
   EditTransactionSheetProps
->(({ value, accounts, onConfirm, onDelete }, ref) => {
+>(({ value, accounts, defaultExpenseAccountId, onConfirm, onDelete }, ref) => {
   const [draft, setDraft] = useState<InferredTransaction | null>(value);
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoriesError, setCategoriesError] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   useEffect(() => {
+    if (value && value.type === 'EXPENSE' && value.accountId == null) {
+      const isFuture = startOfDay(new Date(value.date)) > startOfDay(new Date());
+      if (!isFuture && defaultExpenseAccountId) {
+        setDraft({ ...value, accountId: defaultExpenseAccountId });
+        return;
+      }
+    }
     setDraft(value);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
   function loadCategories(type: string) {

@@ -17,3 +17,9 @@ export const UserProfileSchema = z.object({
 });
 
 export type UserProfileInput = z.infer<typeof UserProfileSchema>;
+
+export const UserPreferencesSchema = z.object({
+  defaultExpenseAccountId: z.string().min(1).nullable().optional(),
+});
+
+export type UserPreferencesInput = z.infer<typeof UserPreferencesSchema>;

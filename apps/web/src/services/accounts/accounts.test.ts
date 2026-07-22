@@ -12,6 +12,7 @@ vi.mock('@/lib/db', () => ({
   prisma: {
     financialAccount: {
       create: vi.fn(),
+      count: vi.fn(),
       findFirst: vi.fn(),
       findMany: vi.fn(),
       update: vi.fn(),
@@ -19,6 +20,9 @@ vi.mock('@/lib/db', () => ({
     },
     transaction: {
       count: vi.fn(),
+    },
+    user: {
+      update: vi.fn(),
     },
   },
 }));
@@ -82,6 +86,39 @@ describe('createFinancialAccount', () => {
         }),
       })
     );
+  });
+
+  it("sets the new account as the default expense account when it is the user's first", async () => {
+    vi.mocked(prisma.financialAccount.create as Mock).mockResolvedValue({
+      id: 'acc_1',
+      userId,
+      name: 'Nubank',
+      type: 'CHECKING',
+      balance: 0,
+    });
+    vi.mocked(prisma.financialAccount.count as Mock).mockResolvedValue(1);
+
+    await createFinancialAccount(userId, { name: 'Nubank', type: 'CHECKING' });
+
+    expect(prisma.user.update).toHaveBeenCalledWith({
+      where: { id: userId },
+      data: { defaultExpenseAccountId: 'acc_1' },
+    });
+  });
+
+  it('does not change the default expense account for a second account', async () => {
+    vi.mocked(prisma.financialAccount.create as Mock).mockResolvedValue({
+      id: 'acc_2',
+      userId,
+      name: 'Itau',
+      type: 'CHECKING',
+      balance: 0,
+    });
+    vi.mocked(prisma.financialAccount.count as Mock).mockResolvedValue(2);
+
+    await createFinancialAccount(userId, { name: 'Itau', type: 'CHECKING' });
+
+    expect(prisma.user.update).not.toHaveBeenCalled();
   });
 });
 

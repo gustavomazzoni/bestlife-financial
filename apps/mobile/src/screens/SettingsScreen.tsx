@@ -15,10 +15,11 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { colors, fontFamily, fontSize, radius } from '../theme';
 import { LoadingState } from '../components/LoadingState';
 import { ErrorState } from '../components/ErrorState';
+import { Chip } from '../components/Chip';
 import { useApiData } from '../hooks/useApiData';
 import { useAuth } from '../lib/authContext';
 import { api, ApiError } from '../lib/api';
-import { UserProfile } from '../types';
+import { FinancialAccount, UserPreferences, UserProfile } from '../types';
 import { HomeStackParamList } from '../navigation/HomeStack';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'Settings'>;
@@ -34,8 +35,13 @@ export function SettingsScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { signOut } = useAuth();
   const profile = useApiData(() => api.get<UserProfile>('/api/v1/user/profile'));
+  const preferences = useApiData(() =>
+    api.get<UserPreferences>('/api/v1/user/preferences')
+  );
+  const accounts = useApiData(() => api.get<FinancialAccount[]>('/api/v1/accounts'));
   const [draft, setDraft] = useState<Draft | null>(null);
   const [saving, setSaving] = useState(false);
+  const [savingDefaultAccount, setSavingDefaultAccount] = useState(false);
 
   useEffect(() => {
     if (profile.data) {
@@ -54,9 +60,29 @@ export function SettingsScreen({ navigation }: Props) {
     setDraft(prev => (prev ? { ...prev, ...patch } : prev));
   }
 
-  if (profile.loading || !draft) return <LoadingState />;
+  if (profile.loading || accounts.loading || preferences.loading || !draft) {
+    return <LoadingState />;
+  }
   if (profile.error) {
     return <ErrorState message={profile.error} onRetry={profile.refetch} />;
+  }
+
+  async function handleSetDefaultAccount(accountId: string) {
+    setSavingDefaultAccount(true);
+    try {
+      await api.patch('/api/v1/user/preferences', {
+        defaultExpenseAccountId:
+          preferences.data?.defaultExpenseAccountId === accountId ? null : accountId,
+      });
+      preferences.refetch();
+    } catch (err) {
+      Alert.alert(
+        'Erro',
+        err instanceof ApiError ? err.message : 'Erro ao salvar conta padrão'
+      );
+    } finally {
+      setSavingDefaultAccount(false);
+    }
   }
 
   function parsed(value: string): number {
@@ -148,6 +174,22 @@ export function SettingsScreen({ navigation }: Props) {
           onChangeText={t => update({ currentInvestments: t })}
         />
 
+        <Text style={styles.label}>Conta padrão para gastos</Text>
+        {accounts.data && accounts.data.length > 0 ? (
+          <View style={styles.chipRow} testID="default-expense-account-picker">
+            {accounts.data.map(a => (
+              <Chip
+                key={a.id}
+                label={a.name}
+                selected={preferences.data?.defaultExpenseAccountId === a.id}
+                onPress={() => !savingDefaultAccount && handleSetDefaultAccount(a.id)}
+              />
+            ))}
+          </View>
+        ) : (
+          <Text style={styles.emptyText}>Nenhuma conta cadastrada</Text>
+        )}
+
         <Pressable
           style={[styles.saveButton, !isValid && styles.saveButtonDisabled]}
           onPress={handleSave}
@@ -231,6 +273,16 @@ const styles = StyleSheet.create({
     fontSize: fontSize.base,
     color: colors.foreground,
     backgroundColor: colors.surface,
+  },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  emptyText: {
+    fontFamily: fontFamily.body,
+    fontSize: fontSize.sm,
+    color: colors.mutedForeground,
   },
   saveButton: {
     marginTop: 28,
