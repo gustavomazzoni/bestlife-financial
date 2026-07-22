@@ -46,6 +46,7 @@ import {
   groupEventsByDate,
   projectScheduledOccurrences,
   sortDateGroups,
+  splitUpcomingFromPast,
   transactionsToCalendarEvents,
 } from '../lib/calendar';
 import { FinancialAccount, ScheduledTransaction, Transaction } from '../types';
@@ -74,6 +75,7 @@ function sumEvents(events: CalendarEvent[]): number {
 export function CalendarScreen() {
   const [selectedMonth, setSelectedMonth] = useState(() => startOfMonth(new Date()));
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [upcomingExpanded, setUpcomingExpanded] = useState(false);
 
   const monthStart = startOfMonth(selectedMonth);
   const monthEnd = endOfMonth(selectedMonth);
@@ -150,11 +152,19 @@ export function CalendarScreen() {
   );
 
   const isFutureMonth = isAfter(monthStart, startOfMonth(new Date()));
+  const isCurrentMonth = isSameMonth(selectedMonth, new Date());
+  const todayKey = format(new Date(), 'yyyy-MM-dd');
 
   const monthGroups = useMemo(
     () => sortDateGroups(Array.from(eventsByDate.entries()), isFutureMonth ? 'asc' : 'desc'),
     [eventsByDate, isFutureMonth]
   );
+
+  const { upcomingGroups, pastGroups } = useMemo(() => {
+    if (!isCurrentMonth) return { upcomingGroups: [], pastGroups: monthGroups };
+    const { upcoming, past } = splitUpcomingFromPast(monthGroups, todayKey);
+    return { upcomingGroups: upcoming, pastGroups: past };
+  }, [monthGroups, isCurrentMonth, todayKey]);
 
   function goToMonth(delta: number) {
     setSelectedMonth(m => addMonths(m, delta));
@@ -377,7 +387,36 @@ export function CalendarScreen() {
                   {formatCurrency(monthTotal)}
                 </Text>
               </View>
-              {monthGroups.map(([dateKey, events]) => (
+              {isCurrentMonth && upcomingGroups.length > 0 && (
+                <>
+                  <Pressable
+                    style={styles.upcomingToggle}
+                    onPress={() => setUpcomingExpanded(v => !v)}
+                    testID="upcoming-toggle"
+                  >
+                    <Text style={styles.upcomingToggleLabel}>
+                      Próximos ({upcomingGroups.flatMap(([, e]) => e).length})
+                    </Text>
+                    <Feather
+                      name={upcomingExpanded ? 'chevron-up' : 'chevron-down'}
+                      size={15}
+                      color={colors.mutedForeground}
+                    />
+                  </Pressable>
+                  {upcomingExpanded &&
+                    upcomingGroups.map(([dateKey, events]) => (
+                      <View key={dateKey}>
+                        <Text style={styles.dateGroupLabel}>
+                          {format(new Date(`${dateKey}T00:00:00`), "EEEE, d 'de' MMMM", {
+                            locale: ptBR,
+                          })}
+                        </Text>
+                        {events.map((e, i) => renderEventRow(e, `${dateKey}-${i}`))}
+                      </View>
+                    ))}
+                </>
+              )}
+              {pastGroups.map(([dateKey, events]) => (
                 <View key={dateKey}>
                   <Text style={styles.dateGroupLabel}>
                     {format(new Date(`${dateKey}T00:00:00`), "EEEE, d 'de' MMMM", {
@@ -619,6 +658,17 @@ const styles = StyleSheet.create({
     textTransform: 'capitalize',
     marginTop: 14,
     marginBottom: 8,
+  },
+  upcomingToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+  },
+  upcomingToggleLabel: {
+    fontFamily: fontFamily.bodySemiBold,
+    fontSize: fontSize.sm,
+    color: colors.accent,
   },
   eventRow: {
     flexDirection: 'row',

@@ -110,6 +110,19 @@ export function sortDateGroups(
   );
 }
 
+/** Splits the current month's date groups into today-or-future ("upcoming")
+ * and strictly-past groups. Upcoming reads soonest-first regardless of the
+ * input order, since it's a forward-looking list; past keeps the input
+ * order (the month's own desc/asc sort already applied by the caller). */
+export function splitUpcomingFromPast(
+  monthGroups: DateGroup[],
+  todayKey: string
+): { upcoming: DateGroup[]; past: DateGroup[] } {
+  const upcoming = monthGroups.filter(([date]) => date >= todayKey);
+  const past = monthGroups.filter(([date]) => date < todayKey);
+  return { upcoming: sortDateGroups(upcoming, 'asc'), past };
+}
+
 /** Returns 42 dates (6x7 grid) for the given month, Monday-start, padded with adjacent months. */
 export function getMonthGridDates(year: number, month: number): Date[] {
   const firstOfMonth = startOfMonth(new Date(year, month, 1));
