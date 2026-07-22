@@ -200,6 +200,12 @@ const categories = [
     icon: '💰',
     color: '#10B981',
   },
+  {
+    name: 'Renda de Aluguel',
+    type: TransactionType.INCOME,
+    icon: '🔑',
+    color: '#065F46',
+  },
 
   // Transfer
   {
