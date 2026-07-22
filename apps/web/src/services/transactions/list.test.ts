@@ -88,6 +88,19 @@ describe('listTransactions', () => {
     expect(result.totalPages).toBe(3);
   });
 
+  it('should include the account relation alongside category', async () => {
+    vi.mocked(prisma.transaction.findMany).mockResolvedValue([]);
+    vi.mocked(prisma.transaction.count).mockResolvedValue(0);
+
+    await listTransactions(userId, defaultQuery);
+
+    expect(prisma.transaction.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        include: { category: true, account: true },
+      })
+    );
+  });
+
   it('should filter by type', async () => {
     vi.mocked(prisma.transaction.findMany).mockResolvedValue([]);
     vi.mocked(prisma.transaction.count).mockResolvedValue(0);

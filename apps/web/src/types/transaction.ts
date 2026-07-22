@@ -1,6 +1,7 @@
 import {
   Transaction,
   Category,
+  FinancialAccount,
   TransactionType,
   NecessityLevel,
   ValueAlignment,
@@ -9,9 +10,10 @@ import {
 export type { Transaction };
 export { TransactionType, NecessityLevel, ValueAlignment };
 
-/** Transaction as returned by listTransactions (always includes category relation). */
+/** Transaction as returned by listTransactions (always includes category + account relations). */
 export type TransactionRow = Transaction & {
   category: Category | null;
+  account: FinancialAccount | null;
 };
 
 export interface TransactionListResult {

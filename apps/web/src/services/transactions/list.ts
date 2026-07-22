@@ -29,7 +29,7 @@ export async function listTransactions(
       skip: (page - 1) * limit,
       take: limit,
       orderBy: { [sortBy]: sortOrder },
-      include: { category: true },
+      include: { category: true, account: true },
     }),
     prisma.transaction.count({ where }),
   ]);

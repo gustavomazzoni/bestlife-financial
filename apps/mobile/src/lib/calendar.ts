@@ -21,6 +21,9 @@ export interface CalendarEvent {
   categoryIcon?: string;
   categoryName?: string;
   categoryColor?: string;
+  accountId?: string | null;
+  accountName?: string;
+  accountType?: string;
 }
 
 export function projectScheduledOccurrences(
@@ -48,6 +51,9 @@ export function projectScheduledOccurrences(
           categoryIcon: s.category?.icon,
           categoryName: s.category?.name,
           categoryColor: s.category?.color,
+          accountId: s.accountId,
+          accountName: s.account?.name,
+          accountType: s.account?.type,
         });
       }
 
@@ -79,6 +85,9 @@ export function transactionsToCalendarEvents(
     categoryIcon: t.category?.icon,
     categoryName: t.category?.name,
     categoryColor: t.category?.color,
+    accountId: t.accountId,
+    accountName: t.account?.name,
+    accountType: t.account?.type,
   }));
 }
 

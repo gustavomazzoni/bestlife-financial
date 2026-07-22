@@ -211,7 +211,21 @@ export function CalendarScreen() {
   const dayTotal = sumEvents(selectedEvents);
   const monthTotal = sumEvents(monthGroups.flatMap(([, events]) => events));
 
+  // Historical rows without an account (created before accounts existed,
+  // or before Phase 3 made accountId required) fall back to the first
+  // account the user ever added — /api/v1/accounts already orders by
+  // createdAt asc, so accounts.data[0] is exactly that.
+  function resolveAccountLabel(e: CalendarEvent): string | null {
+    if (e.accountId && e.accountName) {
+      return e.accountType === 'CREDIT_CARD' ? `💳 ${e.accountName}` : e.accountName;
+    }
+    const fallback = accounts.data?.[0];
+    if (!fallback) return null;
+    return fallback.type === 'CREDIT_CARD' ? `💳 ${fallback.name}` : fallback.name;
+  }
+
   function renderEventRow(e: CalendarEvent, key: string) {
+    const accountLabel = resolveAccountLabel(e);
     return (
       <Pressable
         key={key}
@@ -230,6 +244,7 @@ export function CalendarScreen() {
             <Text style={styles.rowTitle}>{e.description}</Text>
             <Text style={styles.rowSubtitle}>
               {e.categoryName ?? '—'}
+              {accountLabel ? ` · ${accountLabel}` : ''}
               {e.kind === 'scheduled_projection' ? ' · Projetado' : ''}
             </Text>
           </View>

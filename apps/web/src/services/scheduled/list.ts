@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db';
 import {
+  FinancialAccount,
   ScheduledTransaction,
   TransactionType,
   ScheduleFrequency,
@@ -16,6 +17,7 @@ export interface ListScheduledQuery {
 export interface ScheduledListResult {
   data: (ScheduledTransaction & {
     category: { id: string; name: string; icon: string; color: string } | null;
+    account: FinancialAccount | null;
   })[];
   total: number;
   page: number;
@@ -46,7 +48,7 @@ export async function listScheduledTransactions(
       skip: (page - 1) * limit,
       take: limit,
       orderBy: { nextOccurrence: 'asc' },
-      include: { category: true },
+      include: { category: true, account: true },
     }),
     prisma.scheduledTransaction.count({ where }),
   ]);

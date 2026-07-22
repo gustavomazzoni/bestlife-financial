@@ -31,6 +31,7 @@ export interface Transaction {
   installmentTotal: number | null;
   notes: string | null;
   category: Category | null;
+  account: FinancialAccount | null;
 }
 
 export interface ScheduledTransaction {
@@ -46,6 +47,7 @@ export interface ScheduledTransaction {
   isActive: boolean;
   accountId: string | null;
   category: Category | null;
+  account: FinancialAccount | null;
 }
 
 export interface UpcomingItem {
