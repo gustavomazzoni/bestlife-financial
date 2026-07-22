@@ -119,17 +119,35 @@ export function sortDateGroups(
   );
 }
 
-/** Splits the current month's date groups into today-or-future ("upcoming")
- * and strictly-past groups. Upcoming reads soonest-first regardless of the
- * input order, since it's a forward-looking list; past keeps the input
- * order (the month's own desc/asc sort already applied by the caller). */
+/** Splits the current month's events into "upcoming" (not-yet-executed
+ * scheduled items strictly after today) and everything else. Executed
+ * ("actual") transactions never count as upcoming regardless of date —
+ * they're historical facts — and a scheduled item due exactly today isn't
+ * "upcoming" either, only ones due after today. Upcoming reads soonest-first;
+ * the rest preserves the month's own desc/asc sort already applied by the
+ * caller (a date can land in both buckets if it mixes actual and
+ * not-yet-due scheduled events, though todayKey rules that out for today). */
 export function splitUpcomingFromPast(
   monthGroups: DateGroup[],
   todayKey: string
 ): { upcoming: DateGroup[]; past: DateGroup[] } {
-  const upcoming = monthGroups.filter(([date]) => date >= todayKey);
-  const past = monthGroups.filter(([date]) => date < todayKey);
-  return { upcoming: sortDateGroups(upcoming, 'asc'), past };
+  const upcomingByDate = new Map<string, CalendarEvent[]>();
+  const pastByDate = new Map<string, CalendarEvent[]>();
+
+  for (const [date, dateEvents] of monthGroups) {
+    for (const event of dateEvents) {
+      const isUpcoming = event.kind === 'scheduled_projection' && date > todayKey;
+      const bucket = isUpcoming ? upcomingByDate : pastByDate;
+      const existing = bucket.get(date);
+      if (existing) existing.push(event);
+      else bucket.set(date, [event]);
+    }
+  }
+
+  return {
+    upcoming: sortDateGroups(Array.from(upcomingByDate.entries()), 'asc'),
+    past: Array.from(pastByDate.entries()),
+  };
 }
 
 /** Returns 42 dates (6x7 grid) for the given month, Monday-start, padded with adjacent months. */
