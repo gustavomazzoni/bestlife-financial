@@ -277,7 +277,9 @@ export function CalendarScreen() {
                 <Pressable
                   key={dateKey}
                   style={styles.dayCell}
-                  onPress={() => setSelectedDay(dateKey)}
+                  onPress={() =>
+                    setSelectedDay(d => (d === dateKey ? null : dateKey))
+                  }
                   testID={`calendar-day-${dateKey}`}
                 >
                   <View
@@ -332,11 +334,22 @@ export function CalendarScreen() {
           </View>
         </Card>
 
-        <Text style={styles.agendaTitle}>
-          {selectedDay
-            ? format(new Date(`${selectedDay}T00:00:00`), "EEEE, d 'de' MMMM", { locale: ptBR })
-            : format(selectedMonth, 'MMMM yyyy', { locale: ptBR })}
-        </Text>
+        <View style={styles.agendaTitleRow}>
+          <Text style={styles.agendaTitle}>
+            {selectedDay
+              ? format(new Date(`${selectedDay}T00:00:00`), "EEEE, d 'de' MMMM", { locale: ptBR })
+              : format(selectedMonth, 'MMMM yyyy', { locale: ptBR })}
+          </Text>
+          {selectedDay && (
+            <Pressable
+              onPress={() => setSelectedDay(null)}
+              hitSlop={8}
+              testID="clear-day-selection"
+            >
+              <Text style={styles.agendaClearLabel}>Ver mês inteiro ✕</Text>
+            </Pressable>
+          )}
+        </View>
 
         {!selectedDay ? (
           monthGroups.length === 0 ? (
@@ -539,13 +552,23 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.mutedForeground,
   },
+  agendaTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 24,
+    marginBottom: 12,
+  },
   agendaTitle: {
     fontFamily: fontFamily.bodyBold,
     fontSize: fontSize.sm,
     color: colors.foreground,
     textTransform: 'capitalize',
-    marginTop: 24,
-    marginBottom: 12,
+  },
+  agendaClearLabel: {
+    fontFamily: fontFamily.bodySemiBold,
+    fontSize: 12,
+    color: colors.accent,
   },
   agendaEmpty: {
     fontFamily: fontFamily.bodyMedium,
