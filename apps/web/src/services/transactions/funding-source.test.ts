@@ -4,7 +4,11 @@ import { assertValidFundingSource } from './funding-source';
 describe('assertValidFundingSource', () => {
   it('allows a non-transfer with an accountId and no toAccountId', () => {
     expect(() =>
-      assertValidFundingSource({ type: 'EXPENSE', accountId: 'acc_1' })
+      assertValidFundingSource({
+        type: 'EXPENSE',
+        accountId: 'acc_1',
+        accountType: 'CHECKING',
+      })
     ).not.toThrow();
   });
 
@@ -17,6 +21,7 @@ describe('assertValidFundingSource', () => {
       assertValidFundingSource({
         type: 'EXPENSE',
         accountId: 'acc_1',
+        accountType: 'CHECKING',
         toAccountId: 'acc_2',
       })
     ).toThrow('toAccountId is only valid for TRANSFER');
@@ -27,7 +32,9 @@ describe('assertValidFundingSource', () => {
       assertValidFundingSource({
         type: 'TRANSFER',
         accountId: 'acc_1',
+        accountType: 'CHECKING',
         toAccountId: 'acc_2',
+        toAccountType: 'SAVINGS',
       })
     ).not.toThrow();
   });
@@ -38,12 +45,25 @@ describe('assertValidFundingSource', () => {
     ).toThrow('Transfer requires a source accountId');
   });
 
+  it('rejects a TRANSFER whose source is a credit card', () => {
+    expect(() =>
+      assertValidFundingSource({
+        type: 'TRANSFER',
+        accountId: 'card_1',
+        accountType: 'CREDIT_CARD',
+        toAccountId: 'acc_2',
+      })
+    ).toThrow('A credit card cannot be a transfer source');
+  });
+
   it('rejects a TRANSFER missing a destination toAccountId', () => {
     expect(() =>
-      assertValidFundingSource({ type: 'TRANSFER', accountId: 'acc_1' })
-    ).toThrow(
-      'Transfer requires exactly one destination: toAccountId or creditCardId'
-    );
+      assertValidFundingSource({
+        type: 'TRANSFER',
+        accountId: 'acc_1',
+        accountType: 'CHECKING',
+      })
+    ).toThrow('Transfer requires a destination toAccountId');
   });
 
   it('rejects a TRANSFER where source and destination are the same account', () => {
@@ -51,55 +71,41 @@ describe('assertValidFundingSource', () => {
       assertValidFundingSource({
         type: 'TRANSFER',
         accountId: 'acc_1',
+        accountType: 'CHECKING',
         toAccountId: 'acc_1',
       })
     ).toThrow('Transfer accounts must differ');
   });
 
-  it('allows an EXPENSE funded by a credit card with no accountId', () => {
-    expect(() =>
-      assertValidFundingSource({ type: 'EXPENSE', creditCardId: 'card_1' })
-    ).not.toThrow();
-  });
-
-  it('rejects a transaction funded by both an account and a credit card', () => {
+  it('allows an EXPENSE funded by a credit-card-type account', () => {
     expect(() =>
       assertValidFundingSource({
         type: 'EXPENSE',
-        accountId: 'acc_1',
-        creditCardId: 'card_1',
+        accountId: 'card_1',
+        accountType: 'CREDIT_CARD',
       })
-    ).toThrow(
-      'A transaction cannot be funded by both an account and a credit card'
-    );
+    ).not.toThrow();
   });
 
   it('rejects a credit card funding anything other than an EXPENSE', () => {
     expect(() =>
-      assertValidFundingSource({ type: 'INCOME', creditCardId: 'card_1' })
+      assertValidFundingSource({
+        type: 'INCOME',
+        accountId: 'card_1',
+        accountType: 'CREDIT_CARD',
+      })
     ).toThrow('A credit card can only fund an EXPENSE');
   });
 
-  it('allows a TRANSFER whose destination is a credit card (payoff)', () => {
+  it('allows a TRANSFER whose destination resolves as a credit card (payoff)', () => {
     expect(() =>
       assertValidFundingSource({
         type: 'TRANSFER',
         accountId: 'acc_1',
-        creditCardId: 'card_1',
+        accountType: 'CHECKING',
+        toAccountId: 'card_1',
+        toAccountType: 'CREDIT_CARD',
       })
     ).not.toThrow();
-  });
-
-  it('rejects a TRANSFER with both an account and a credit card as destination', () => {
-    expect(() =>
-      assertValidFundingSource({
-        type: 'TRANSFER',
-        accountId: 'acc_1',
-        toAccountId: 'acc_2',
-        creditCardId: 'card_1',
-      })
-    ).toThrow(
-      'Transfer requires exactly one destination: toAccountId or creditCardId'
-    );
   });
 });

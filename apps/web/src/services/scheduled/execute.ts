@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db';
 import { Transaction, ScheduleFrequency } from '@/types';
 import { addDays, addMonths, addYears } from 'date-fns';
 import { toUTCMidnight } from '@lifeos/shared';
+import { assertValidFundingSource } from '../transactions/funding-source';
 import { reconcileLedgerEffect } from '../transactions/ledger';
 import { assertAccountsOwnedByUser } from '../transactions/validate-accounts';
 
@@ -74,7 +75,17 @@ export async function executeScheduledTransaction(
       throw new Error('Scheduled transaction is not due yet');
     }
 
-    await assertAccountsOwnedByUser(tx, userId, [accountId, toAccountId]);
+    const types = await assertAccountsOwnedByUser(tx, userId, [
+      accountId,
+      toAccountId,
+    ]);
+    assertValidFundingSource({
+      type: scheduled.type,
+      accountId,
+      toAccountId,
+      accountType: accountId ? types.get(accountId) : null,
+      toAccountType: toAccountId ? types.get(toAccountId) : null,
+    });
 
     if (amount !== undefined && amount <= 0) {
       throw new Error('Amount must be positive');

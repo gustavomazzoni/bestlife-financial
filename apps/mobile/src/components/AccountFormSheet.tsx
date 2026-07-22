@@ -11,7 +11,8 @@ import { colors, fontFamily, fontSize, radius } from '../theme';
 import { AmountInput } from './AmountInput';
 import { Chip } from './Chip';
 import { api, ApiError } from '../lib/api';
-import { FinancialAccount } from '../types';
+import { formatCurrency } from '../lib/format';
+import { Category, FinancialAccount } from '../types';
 
 export type AccountFormSheetRef = ElementRef<typeof BottomSheetModal>;
 
@@ -19,50 +20,103 @@ const TYPE_OPTIONS: { value: FinancialAccountType; label: string }[] = [
   { value: 'CHECKING', label: 'Conta corrente' },
   { value: 'SAVINGS', label: 'Poupança' },
   { value: 'WALLET', label: 'Carteira' },
+  { value: 'CREDIT_CARD', label: 'Cartão de crédito' },
 ];
 
 interface Draft {
   name: string;
   type: FinancialAccountType;
   balance: string;
+  creditLimit: string;
+  closingDay: string;
+  dueDay: string;
 }
 
-const EMPTY_DRAFT: Draft = { name: '', type: 'CHECKING', balance: '0' };
+const EMPTY_DRAFT: Draft = {
+  name: '',
+  type: 'CHECKING',
+  balance: '0',
+  creditLimit: '',
+  closingDay: '',
+  dueDay: '',
+};
 
 interface AccountFormSheetProps {
   /** null = create mode; an existing account = edit mode. */
   account: FinancialAccount | null;
+  /** All accounts, used as the funding-source picker for the credit card payoff sub-flow. */
+  accounts: FinancialAccount[];
   onSaved: () => void;
   onDeleted: () => void;
   onClose: () => void;
 }
 
 export const AccountFormSheet = forwardRef<AccountFormSheetRef, AccountFormSheetProps>(
-  ({ account, onSaved, onDeleted, onClose }, ref) => {
+  ({ account, accounts, onSaved, onDeleted, onClose }, ref) => {
     const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
     const [saving, setSaving] = useState(false);
     const [deleting, setDeleting] = useState(false);
 
+    const [showPayoff, setShowPayoff] = useState(false);
+    const [payoffAccountId, setPayoffAccountId] = useState<string | null>(null);
+    const [payoffAmount, setPayoffAmount] = useState('0');
+    const [payingOff, setPayingOff] = useState(false);
+
     useEffect(() => {
       setDraft(
         account
-          ? { name: account.name, type: account.type, balance: account.balance }
+          ? {
+              name: account.name,
+              type: account.type,
+              balance: account.balance,
+              creditLimit: account.creditLimit ?? '',
+              closingDay: account.closingDay != null ? String(account.closingDay) : '',
+              dueDay: account.dueDay != null ? String(account.dueDay) : '',
+            }
           : EMPTY_DRAFT
       );
+      setShowPayoff(false);
+      setPayoffAccountId(null);
+      setPayoffAmount(account?.balance ?? '0');
     }, [account]);
 
     function update(patch: Partial<Draft>) {
       setDraft(prev => ({ ...prev, ...patch }));
     }
 
+    const isCreditCard = draft.type === 'CREDIT_CARD';
     const balanceValue = Number(draft.balance || 0);
-    const isValid = draft.name.trim().length > 0 && !Number.isNaN(balanceValue);
+    const creditLimitValue = Number(draft.creditLimit || 0);
+    const closingDayValue = Number(draft.closingDay);
+    const dueDayValue = Number(draft.dueDay);
+    const isValid =
+      draft.name.trim().length > 0 &&
+      !Number.isNaN(balanceValue) &&
+      (!isCreditCard ||
+        (creditLimitValue > 0 &&
+          Number.isInteger(closingDayValue) &&
+          closingDayValue >= 1 &&
+          closingDayValue <= 31 &&
+          Number.isInteger(dueDayValue) &&
+          dueDayValue >= 1 &&
+          dueDayValue <= 31));
 
     async function handleSave() {
       if (!isValid) return;
       setSaving(true);
       try {
-        const body = { name: draft.name, type: draft.type, balance: balanceValue };
+        const body = {
+          name: draft.name,
+          type: draft.type,
+          balance: balanceValue,
+          ...(isCreditCard
+            ? {
+                creditLimit: creditLimitValue,
+                closingDay: closingDayValue,
+                dueDay: dueDayValue,
+              }
+            : {}),
+        };
         if (account) {
           await api.patch(`/api/v1/accounts/${account.id}`, body);
         } else {
@@ -107,10 +161,44 @@ export const AccountFormSheet = forwardRef<AccountFormSheetRef, AccountFormSheet
       );
     }
 
+    async function handlePayoff() {
+      if (!account || !payoffAccountId) return;
+      const amount = Number(payoffAmount || 0);
+      if (!(amount > 0)) return;
+
+      setPayingOff(true);
+      try {
+        const categories = await api.get<Category[]>('/api/v1/categories?type=TRANSFER');
+        const categoryId = categories[0]?.id;
+        if (!categoryId) {
+          throw new Error('Categoria de transferência não encontrada');
+        }
+        await api.post('/api/v1/transactions', {
+          amount,
+          description: `Pagamento fatura ${account.name}`,
+          date: new Date().toISOString(),
+          type: 'TRANSFER',
+          categoryId,
+          accountId: payoffAccountId,
+          toAccountId: account.id,
+        });
+        setShowPayoff(false);
+        onSaved();
+      } catch (err) {
+        Alert.alert('Erro', err instanceof ApiError ? err.message : 'Erro ao pagar fatura');
+      } finally {
+        setPayingOff(false);
+      }
+    }
+
+    const payoffSourceAccounts = accounts.filter(
+      a => a.type !== 'CREDIT_CARD' && a.id !== account?.id
+    );
+
     return (
       <BottomSheetModal
         ref={ref}
-        snapPoints={['60%']}
+        snapPoints={['80%']}
         enablePanDownToClose
         backgroundStyle={styles.sheetBackground}
       >
@@ -138,12 +226,115 @@ export const AccountFormSheet = forwardRef<AccountFormSheetRef, AccountFormSheet
             ))}
           </View>
 
-          <Text style={styles.label}>Saldo</Text>
+          <Text style={styles.label}>{isCreditCard ? 'Saldo devedor atual' : 'Saldo'}</Text>
           <AmountInput
             style={styles.input}
             value={draft.balance}
             onChangeValue={t => update({ balance: t })}
           />
+
+          {isCreditCard && (
+            <>
+              <Text style={styles.label}>Limite</Text>
+              <AmountInput
+                style={styles.input}
+                value={draft.creditLimit}
+                onChangeValue={t => update({ creditLimit: t })}
+              />
+
+              <View style={styles.dayRow}>
+                <View style={styles.dayField}>
+                  <Text style={styles.label}>Dia de fechamento</Text>
+                  <BottomSheetTextInput
+                    style={styles.input}
+                    keyboardType="number-pad"
+                    value={draft.closingDay}
+                    onChangeText={t => update({ closingDay: t.replace(/[^0-9]/g, '') })}
+                    placeholder="10"
+                    placeholderTextColor={colors.mutedForeground}
+                  />
+                </View>
+                <View style={styles.dayField}>
+                  <Text style={styles.label}>Dia de vencimento</Text>
+                  <BottomSheetTextInput
+                    style={styles.input}
+                    keyboardType="number-pad"
+                    value={draft.dueDay}
+                    onChangeText={t => update({ dueDay: t.replace(/[^0-9]/g, '') })}
+                    placeholder="17"
+                    placeholderTextColor={colors.mutedForeground}
+                  />
+                </View>
+              </View>
+            </>
+          )}
+
+          {account && isCreditCard && (
+            <>
+              <Pressable
+                style={styles.payoffToggle}
+                onPress={() => setShowPayoff(v => !v)}
+                testID="toggle-payoff"
+              >
+                <Feather name="credit-card" size={15} color={colors.accent} />
+                <Text style={styles.payoffToggleLabel}>Pagar fatura</Text>
+                <Feather
+                  name={showPayoff ? 'chevron-up' : 'chevron-down'}
+                  size={15}
+                  color={colors.mutedForeground}
+                />
+              </Pressable>
+
+              {showPayoff && (
+                <View style={styles.payoffBox}>
+                  {payoffSourceAccounts.length === 0 ? (
+                    <Text style={styles.emptyText}>Nenhuma conta cadastrada</Text>
+                  ) : (
+                    <>
+                      <Text style={styles.label}>Pagar com</Text>
+                      <View style={styles.chipRow}>
+                        {payoffSourceAccounts.map(a => (
+                          <Chip
+                            key={a.id}
+                            label={a.name}
+                            selected={payoffAccountId === a.id}
+                            onPress={() =>
+                              setPayoffAccountId(payoffAccountId === a.id ? null : a.id)
+                            }
+                          />
+                        ))}
+                      </View>
+
+                      <Text style={styles.label}>Valor</Text>
+                      <AmountInput
+                        style={styles.input}
+                        value={payoffAmount}
+                        onChangeValue={setPayoffAmount}
+                      />
+
+                      <Pressable
+                        style={[
+                          styles.payoffButton,
+                          (!payoffAccountId || payingOff) && styles.saveButtonDisabled,
+                        ]}
+                        onPress={handlePayoff}
+                        disabled={!payoffAccountId || payingOff}
+                        testID="confirm-payoff-button"
+                      >
+                        {payingOff ? (
+                          <ActivityIndicator color={colors.accentForeground} size="small" />
+                        ) : (
+                          <Text style={styles.saveButtonLabel}>
+                            Confirmar pagamento de {formatCurrency(payoffAmount || '0')}
+                          </Text>
+                        )}
+                      </Pressable>
+                    </>
+                  )}
+                </View>
+              )}
+            </>
+          )}
 
           <View style={styles.actionsRow}>
             {account && (
@@ -207,6 +398,10 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 8,
   },
+  emptyText: {
+    fontFamily: fontFamily.body,
+    color: colors.mutedForeground,
+  },
   input: {
     borderWidth: 1,
     borderColor: colors.border,
@@ -216,6 +411,42 @@ const styles = StyleSheet.create({
     fontSize: fontSize.base,
     color: colors.foreground,
     backgroundColor: colors.background,
+  },
+  dayRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  dayField: {
+    flex: 1,
+  },
+  payoffToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 16,
+    paddingVertical: 10,
+  },
+  payoffToggleLabel: {
+    flex: 1,
+    fontFamily: fontFamily.bodySemiBold,
+    fontSize: fontSize.sm,
+    color: colors.accent,
+  },
+  payoffBox: {
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    borderRadius: radius.md,
+    padding: 14,
+    gap: 4,
+    backgroundColor: colors.background,
+  },
+  payoffButton: {
+    marginTop: 12,
+    paddingVertical: 14,
+    borderRadius: radius.sm,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   actionsRow: {
     flexDirection: 'row',

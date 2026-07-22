@@ -10,7 +10,7 @@ vi.mock('@/lib/db', () => ({
       findFirst: vi.fn(),
       update: vi.fn(),
     },
-    financialAccount: { count: vi.fn() },
+    financialAccount: { findMany: vi.fn() },
   },
 }));
 
@@ -67,6 +67,7 @@ describe('updateScheduledTransaction', () => {
       ...mockExisting,
       nextOccurrence: dueDay,
     });
+    vi.mocked(prisma.financialAccount.findMany).mockResolvedValue([]);
   });
 
   it('recalculates nextOccurrence as the new startDate itself when startDate changes (not one period later)', async () => {
@@ -146,14 +147,18 @@ describe('updateScheduledTransaction', () => {
   });
 
   it('persists accountId when it belongs to the user', async () => {
-    vi.mocked(prisma.financialAccount.count).mockResolvedValue(1);
+    vi.mocked(prisma.financialAccount.findMany).mockResolvedValue([
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      { id: 'acc_1', type: 'CHECKING' } as any,
+    ]);
 
     await updateScheduledTransaction(userId, scheduledId, {
       accountId: 'acc_1',
     });
 
-    expect(prisma.financialAccount.count).toHaveBeenCalledWith({
+    expect(prisma.financialAccount.findMany).toHaveBeenCalledWith({
       where: { id: { in: ['acc_1'] }, userId },
+      select: { id: true, type: true },
     });
     expect(prisma.scheduledTransaction.update).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -163,7 +168,7 @@ describe('updateScheduledTransaction', () => {
   });
 
   it('rejects an accountId that does not belong to the user', async () => {
-    vi.mocked(prisma.financialAccount.count).mockResolvedValue(0);
+    vi.mocked(prisma.financialAccount.findMany).mockResolvedValue([]);
 
     await expect(
       updateScheduledTransaction(userId, scheduledId, { accountId: 'not_mine' })
@@ -174,7 +179,7 @@ describe('updateScheduledTransaction', () => {
   it('allows clearing accountId by passing null', async () => {
     await updateScheduledTransaction(userId, scheduledId, { accountId: null });
 
-    expect(prisma.financialAccount.count).not.toHaveBeenCalled();
+    expect(prisma.financialAccount.findMany).not.toHaveBeenCalled();
     expect(prisma.scheduledTransaction.update).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ accountId: null }),

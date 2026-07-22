@@ -20,12 +20,7 @@ import {
   BottomSheetRef,
 } from '../components/EditTransactionSheet';
 import { api, ApiError } from '../lib/api';
-import {
-  CreditCard,
-  FinancialAccount,
-  InferTransactionResult,
-  InferredTransaction,
-} from '../types';
+import { FinancialAccount, InferTransactionResult, InferredTransaction } from '../types';
 import { TAB_BAR_HEIGHT } from '../navigation/tabBarMetrics';
 
 const SUGGESTIONS: { text: string; icon: keyof typeof Feather.glyphMap; color: string }[] = [
@@ -58,7 +53,6 @@ export function ChatScreen() {
   const [sending, setSending] = useState(false);
   const [accounts, setAccounts] = useState<FinancialAccount[]>([]);
   const [accountsError, setAccountsError] = useState(false);
-  const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const sheetRef = useRef<BottomSheetRef>(null);
 
@@ -72,7 +66,6 @@ export function ChatScreen() {
 
   useEffect(() => {
     loadAccounts();
-    api.get<CreditCard[]>('/api/v1/credit-cards').then(setCreditCards).catch(() => {});
   }, []);
 
   async function sendText(text: string) {
@@ -93,7 +86,6 @@ export function ChatScreen() {
         inferred: {
           ...result.inferred,
           toAccountId: result.inferred.toAccountId ?? null,
-          creditCardId: result.inferred.creditCardId ?? null,
           installments: result.inferred.installments ?? 1,
         },
       };
@@ -132,11 +124,12 @@ export function ChatScreen() {
           startDate: inferred.date,
           necessityLevel: inferred.necessityLevel ?? undefined,
           valueAlignment: inferred.valueAlignment ?? undefined,
+          accountId: inferred.accountId ?? undefined,
           notes: inferred.notes,
         });
-      } else if (inferred.creditCardId) {
+      } else if (accounts.find(a => a.id === inferred.accountId)?.type === 'CREDIT_CARD') {
         await api.post(
-          `/api/v1/credit-cards/${inferred.creditCardId}/installment-purchases`,
+          `/api/v1/credit-cards/${inferred.accountId}/installment-purchases`,
           {
             amount: inferred.amount,
             description: inferred.description,
@@ -297,7 +290,6 @@ export function ChatScreen() {
                   inferred={item.result.inferred}
                   confidence={item.result.confidence}
                   accounts={accounts}
-                  creditCards={creditCards}
                   status={item.status}
                   errorMessage={item.errorMessage}
                   onConfirm={() => confirmTransaction(item.id, item.result.inferred)}
@@ -333,7 +325,6 @@ export function ChatScreen() {
         ref={sheetRef}
         value={editingMessage?.result.inferred ?? null}
         accounts={accounts}
-        creditCards={creditCards}
         onConfirm={handleSheetConfirm}
         onDelete={handleSheetDelete}
       />

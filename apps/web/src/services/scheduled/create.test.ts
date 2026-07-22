@@ -7,7 +7,7 @@ vi.mock('@/lib/db', () => ({
   prisma: {
     category: { findUnique: vi.fn() },
     scheduledTransaction: { create: vi.fn() },
-    financialAccount: { count: vi.fn() },
+    financialAccount: { findMany: vi.fn() },
   },
 }));
 
@@ -68,7 +68,7 @@ describe('createScheduledTransaction', () => {
     vi.mocked(prisma.scheduledTransaction.create).mockResolvedValue(
       mockCreatedScheduled
     );
-    vi.mocked(prisma.financialAccount.count).mockResolvedValue(0);
+    vi.mocked(prisma.financialAccount.findMany).mockResolvedValue([]);
   });
 
   it.each(['ONCE', 'WEEKLY', 'MONTHLY', 'YEARLY'] as const)(
@@ -155,7 +155,10 @@ describe('createScheduledTransaction', () => {
   });
 
   it('persists accountId when it belongs to the user', async () => {
-    vi.mocked(prisma.financialAccount.count).mockResolvedValue(1);
+    vi.mocked(prisma.financialAccount.findMany).mockResolvedValue([
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      { id: 'acc_1', type: 'CHECKING' } as any,
+    ]);
 
     await createScheduledTransaction(userId, {
       ...baseInput,
@@ -163,8 +166,9 @@ describe('createScheduledTransaction', () => {
       accountId: 'acc_1',
     });
 
-    expect(prisma.financialAccount.count).toHaveBeenCalledWith({
+    expect(prisma.financialAccount.findMany).toHaveBeenCalledWith({
       where: { id: { in: ['acc_1'] }, userId },
+      select: { id: true, type: true },
     });
     expect(prisma.scheduledTransaction.create).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -174,7 +178,7 @@ describe('createScheduledTransaction', () => {
   });
 
   it('rejects an accountId that does not belong to the user', async () => {
-    vi.mocked(prisma.financialAccount.count).mockResolvedValue(0);
+    vi.mocked(prisma.financialAccount.findMany).mockResolvedValue([]);
 
     await expect(
       createScheduledTransaction(userId, {
@@ -184,5 +188,25 @@ describe('createScheduledTransaction', () => {
       })
     ).rejects.toThrow('Account not found');
     expect(prisma.scheduledTransaction.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects a credit-card-type account funding a non-EXPENSE schedule', async () => {
+    vi.mocked(prisma.category.findUnique).mockResolvedValue({
+      ...mockCategory,
+      type: 'INCOME' as const,
+    });
+    vi.mocked(prisma.financialAccount.findMany).mockResolvedValue([
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      { id: 'card_1', type: 'CREDIT_CARD' } as any,
+    ]);
+
+    await expect(
+      createScheduledTransaction(userId, {
+        ...baseInput,
+        type: 'INCOME',
+        frequency: 'MONTHLY',
+        accountId: 'card_1',
+      })
+    ).rejects.toThrow('A credit card can only fund an EXPENSE');
   });
 });

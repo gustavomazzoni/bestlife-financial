@@ -65,6 +65,34 @@ describe('Financial Accounts Integration Tests', () => {
       const response = await POST(request);
       expect(response.status).toBe(400);
     });
+
+    it('creates a CREDIT_CARD account with its card-only fields', async () => {
+      const request = createMockPostRequest('api/v1/accounts', {
+        name: 'Nubank Card',
+        type: 'CREDIT_CARD',
+        creditLimit: 5000,
+        closingDay: 10,
+        dueDay: 17,
+      });
+
+      const response = await POST(request);
+      const json = await parseResponse(response);
+
+      expect(response.status).toBe(201);
+      expect(json.data.type).toBe('CREDIT_CARD');
+      expect(json.data.creditLimit).toBe('5000');
+      expect(json.data.balance).toBe('0');
+    });
+
+    it('returns 400 for a CREDIT_CARD account missing creditLimit/closingDay/dueDay', async () => {
+      const request = createMockPostRequest('api/v1/accounts', {
+        name: 'Nubank Card',
+        type: 'CREDIT_CARD',
+      });
+
+      const response = await POST(request);
+      expect(response.status).toBe(400);
+    });
   });
 
   describe('GET /api/v1/accounts', () => {

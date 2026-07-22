@@ -8,6 +8,5 @@ export * from './calendar';
 export * from './financial-account';
 export * from './investment';
 export * from './debt';
-export * from './credit-card';
 export * from './category-budget';
 export * from './mobile-login-code';

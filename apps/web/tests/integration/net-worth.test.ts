@@ -53,6 +53,35 @@ describe('GET /api/v1/calculations/net-worth', () => {
     });
   });
 
+  it('separates a CREDIT_CARD-type account into creditCardsTotal, not accountsTotal', async () => {
+    await prisma.financialAccount.create({
+      data: {
+        userId: testUser.id,
+        name: 'Nubank',
+        type: 'CHECKING',
+        balance: 2000,
+      },
+    });
+    await prisma.financialAccount.create({
+      data: {
+        userId: testUser.id,
+        name: 'Nubank Card',
+        type: 'CREDIT_CARD',
+        balance: 300,
+        creditLimit: 5000,
+        closingDay: 10,
+        dueDay: 17,
+      },
+    });
+
+    const response = await GET();
+    const json = await parseResponse(response);
+
+    expect(json.data.accountsTotal).toBe(2000);
+    expect(json.data.creditCardsTotal).toBe(300);
+    expect(json.data.netWorth).toBe(1700);
+  });
+
   it('returns all zeros for a user with no financial data', async () => {
     const response = await GET();
     const json = await parseResponse(response);

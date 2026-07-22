@@ -13,7 +13,7 @@ import { AmountInput } from './AmountInput';
 import { Chip } from './Chip';
 import { api } from '../lib/api';
 import { isInferredComplete } from '../lib/inferredTransaction';
-import { Category, CreditCard, FinancialAccount, InferredTransaction } from '../types';
+import { Category, FinancialAccount, InferredTransaction } from '../types';
 
 export type BottomSheetRef = ElementRef<typeof BottomSheetModal>;
 
@@ -33,7 +33,6 @@ const FREQUENCY_OPTIONS: { value: ScheduleFrequency; label: string }[] = [
 interface EditTransactionSheetProps {
   value: InferredTransaction | null;
   accounts: FinancialAccount[];
-  creditCards: CreditCard[];
   onConfirm: (updated: InferredTransaction) => void;
   onDelete: () => void;
 }
@@ -41,7 +40,7 @@ interface EditTransactionSheetProps {
 export const EditTransactionSheet = forwardRef<
   BottomSheetRef,
   EditTransactionSheetProps
->(({ value, accounts, creditCards, onConfirm, onDelete }, ref) => {
+>(({ value, accounts, onConfirm, onDelete }, ref) => {
   const [draft, setDraft] = useState<InferredTransaction | null>(value);
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoriesError, setCategoriesError] = useState(false);
@@ -84,6 +83,9 @@ export const EditTransactionSheet = forwardRef<
     draft.amount > 0 &&
     draft.description.trim().length > 0;
 
+  const nonCardAccounts = accounts.filter(a => a.type !== 'CREDIT_CARD');
+  const selectedAccount = accounts.find(a => a.id === draft.accountId);
+
   function handleDelete() {
     Alert.alert(
       'Excluir mensagem',
@@ -121,7 +123,6 @@ export const EditTransactionSheet = forwardRef<
                   category: null,
                   accountId: null,
                   toAccountId: null,
-                  creditCardId: null,
                 })
               }
             />
@@ -166,11 +167,11 @@ export const EditTransactionSheet = forwardRef<
 
         {draft.type === 'TRANSFER' ? (
           <>
-            {accounts.length > 0 && (
+            {nonCardAccounts.length > 0 && (
               <>
                 <Text style={styles.label}>De</Text>
                 <View style={styles.chipRow}>
-                  {accounts.map(a => (
+                  {nonCardAccounts.map(a => (
                     <Chip
                       key={a.id}
                       label={a.name}
@@ -183,34 +184,18 @@ export const EditTransactionSheet = forwardRef<
                 </View>
               </>
             )}
-            {(accounts.length > 0 || creditCards.length > 0) && (
+            {accounts.length > 0 && (
               <>
                 <Text style={styles.label}>Para</Text>
                 <View style={styles.chipRow}>
                   {accounts.map(a => (
                     <Chip
                       key={a.id}
+                      icon={a.type === 'CREDIT_CARD' ? '💳' : undefined}
                       label={a.name}
                       selected={draft.toAccountId === a.id}
                       onPress={() =>
-                        update({
-                          toAccountId: draft.toAccountId === a.id ? null : a.id,
-                          creditCardId: null,
-                        })
-                      }
-                    />
-                  ))}
-                  {creditCards.map(c => (
-                    <Chip
-                      key={c.id}
-                      icon="💳"
-                      label={c.name}
-                      selected={draft.creditCardId === c.id}
-                      onPress={() =>
-                        update({
-                          creditCardId: draft.creditCardId === c.id ? null : c.id,
-                          toAccountId: null,
-                        })
+                        update({ toAccountId: draft.toAccountId === a.id ? null : a.id })
                       }
                     />
                   ))}
@@ -220,44 +205,28 @@ export const EditTransactionSheet = forwardRef<
           </>
         ) : (
           <>
-            {(accounts.length > 0 ||
-              (draft.type === 'EXPENSE' && creditCards.length > 0)) && (
+            {(draft.type === 'EXPENSE' ? accounts : nonCardAccounts).length > 0 && (
               <>
                 <Text style={styles.label}>Conta</Text>
                 <View style={styles.chipRow}>
-                  {accounts.map(a => (
+                  {(draft.type === 'EXPENSE' ? accounts : nonCardAccounts).map(a => (
                     <Chip
                       key={a.id}
+                      icon={a.type === 'CREDIT_CARD' ? '💳' : undefined}
                       label={a.name}
                       selected={draft.accountId === a.id}
                       onPress={() =>
                         update({
                           accountId: draft.accountId === a.id ? null : a.id,
-                          creditCardId: null,
+                          installments: 1,
                         })
                       }
                     />
                   ))}
-                  {draft.type === 'EXPENSE' &&
-                    creditCards.map(c => (
-                      <Chip
-                        key={c.id}
-                        icon="💳"
-                        label={c.name}
-                        selected={draft.creditCardId === c.id}
-                        onPress={() =>
-                          update({
-                            creditCardId: draft.creditCardId === c.id ? null : c.id,
-                            accountId: null,
-                            installments: 1,
-                          })
-                        }
-                      />
-                    ))}
                 </View>
               </>
             )}
-            {draft.type === 'EXPENSE' && draft.creditCardId && (
+            {draft.type === 'EXPENSE' && selectedAccount?.type === 'CREDIT_CARD' && (
               <>
                 <Text style={styles.label}>Parcelas</Text>
                 <View style={styles.stepperRow}>

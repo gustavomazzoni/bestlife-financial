@@ -15,7 +15,8 @@ vi.mock('@/lib/db', () => ({
       create: vi.fn(),
     },
     financialAccount: {
-      count: vi.fn(),
+      findMany: vi.fn(),
+      findUniqueOrThrow: vi.fn(),
       update: vi.fn(),
     },
   },
@@ -63,7 +64,6 @@ describe('executeScheduledTransaction', () => {
     scheduledId,
     accountId: null,
     toAccountId: null,
-    creditCardId: null,
     installmentGroupId: null,
     installmentCurrent: null,
     installmentTotal: null,
@@ -80,7 +80,11 @@ describe('executeScheduledTransaction', () => {
     vi.mocked(prisma.scheduledTransaction.update).mockResolvedValue(
       mockMonthlyScheduled
     );
-    vi.mocked(prisma.financialAccount.count).mockResolvedValue(0);
+    vi.mocked(prisma.financialAccount.findMany).mockResolvedValue([]);
+    vi.mocked(prisma.financialAccount.findUniqueOrThrow).mockResolvedValue({
+      type: 'CHECKING',
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any);
   });
 
   it('advances nextOccurrence by exactly one period after executing a MONTHLY schedule', async () => {
@@ -155,7 +159,10 @@ describe('executeScheduledTransaction', () => {
     vi.mocked(prisma.scheduledTransaction.findFirst).mockResolvedValue(
       mockMonthlyScheduled
     );
-    vi.mocked(prisma.financialAccount.count).mockResolvedValue(1);
+    vi.mocked(prisma.financialAccount.findMany).mockResolvedValue([
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      { id: 'acc_1', type: 'CHECKING' } as any,
+    ]);
     vi.mocked(prisma.transaction.create).mockResolvedValue({
       ...mockCreatedTransaction,
       accountId: 'acc_1',
@@ -163,8 +170,9 @@ describe('executeScheduledTransaction', () => {
 
     await executeScheduledTransaction(userId, scheduledId, dueToday, 'acc_1');
 
-    expect(prisma.financialAccount.count).toHaveBeenCalledWith({
+    expect(prisma.financialAccount.findMany).toHaveBeenCalledWith({
       where: { id: { in: ['acc_1'] }, userId },
+      select: { id: true, type: true },
     });
     expect(prisma.transaction.create).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -177,7 +185,7 @@ describe('executeScheduledTransaction', () => {
     vi.mocked(prisma.scheduledTransaction.findFirst).mockResolvedValue(
       mockMonthlyScheduled
     );
-    vi.mocked(prisma.financialAccount.count).mockResolvedValue(0);
+    vi.mocked(prisma.financialAccount.findMany).mockResolvedValue([]);
 
     await expect(
       executeScheduledTransaction(
@@ -194,7 +202,10 @@ describe('executeScheduledTransaction', () => {
     vi.mocked(prisma.scheduledTransaction.findFirst).mockResolvedValue(
       mockMonthlyScheduled
     );
-    vi.mocked(prisma.financialAccount.count).mockResolvedValue(1);
+    vi.mocked(prisma.financialAccount.findMany).mockResolvedValue([
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      { id: 'acc_1', type: 'CHECKING' } as any,
+    ]);
     vi.mocked(prisma.transaction.create).mockResolvedValue({
       ...mockCreatedTransaction,
       accountId: 'acc_1',
@@ -208,12 +219,58 @@ describe('executeScheduledTransaction', () => {
     });
   });
 
+  it('increments the owed balance when executing a schedule against a credit-card account', async () => {
+    vi.mocked(prisma.scheduledTransaction.findFirst).mockResolvedValue(
+      mockMonthlyScheduled
+    );
+    vi.mocked(prisma.financialAccount.findMany).mockResolvedValue([
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      { id: 'card_1', type: 'CREDIT_CARD' } as any,
+    ]);
+    vi.mocked(prisma.financialAccount.findUniqueOrThrow).mockResolvedValue({
+      type: 'CREDIT_CARD',
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any);
+    vi.mocked(prisma.transaction.create).mockResolvedValue({
+      ...mockCreatedTransaction,
+      accountId: 'card_1',
+    });
+
+    await executeScheduledTransaction(userId, scheduledId, dueToday, 'card_1');
+
+    expect(prisma.financialAccount.update).toHaveBeenCalledWith({
+      where: { id: 'card_1' },
+      data: { balance: { increment: 180 } },
+    });
+  });
+
+  it('rejects executing a non-EXPENSE schedule against a credit-card account', async () => {
+    vi.mocked(prisma.scheduledTransaction.findFirst).mockResolvedValue({
+      ...mockMonthlyScheduled,
+      type: 'INCOME' as const,
+    });
+    vi.mocked(prisma.financialAccount.findMany).mockResolvedValue([
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      { id: 'card_1', type: 'CREDIT_CARD' } as any,
+    ]);
+
+    await expect(
+      executeScheduledTransaction(userId, scheduledId, dueToday, 'card_1')
+    ).rejects.toThrow('A credit card can only fund an EXPENSE');
+    expect(prisma.transaction.create).not.toHaveBeenCalled();
+  });
+
   it('moves funds between both accounts when executing a TRANSFER schedule', async () => {
     vi.mocked(prisma.scheduledTransaction.findFirst).mockResolvedValue({
       ...mockMonthlyScheduled,
       type: 'TRANSFER' as const,
     });
-    vi.mocked(prisma.financialAccount.count).mockResolvedValue(2);
+    vi.mocked(prisma.financialAccount.findMany).mockResolvedValue([
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      { id: 'acc_1', type: 'CHECKING' } as any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      { id: 'acc_2', type: 'SAVINGS' } as any,
+    ]);
     vi.mocked(prisma.transaction.create).mockResolvedValue({
       ...mockCreatedTransaction,
       type: 'TRANSFER' as const,
@@ -243,7 +300,10 @@ describe('executeScheduledTransaction', () => {
     vi.mocked(prisma.scheduledTransaction.findFirst).mockResolvedValue(
       mockMonthlyScheduled
     );
-    vi.mocked(prisma.financialAccount.count).mockResolvedValue(1);
+    vi.mocked(prisma.financialAccount.findMany).mockResolvedValue([
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      { id: 'acc_1', type: 'CHECKING' } as any,
+    ]);
     vi.mocked(prisma.transaction.create).mockResolvedValue({
       ...mockCreatedTransaction,
       amount: new Prisma.Decimal(215.5),

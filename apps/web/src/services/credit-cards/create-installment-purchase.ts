@@ -17,26 +17,26 @@ export interface CreateInstallmentPurchaseInput {
 }
 
 /**
- * Records an expense funded by a credit card, optionally split into N
- * installments. All N Transaction rows are created immediately (dated one
- * month apart), and the full purchase amount is applied to the card's
- * owed balance right away via the shared ledger — even though later
- * installments are dated in the future, there's no "apply on due date"
- * concept in this app, so eager creation is what makes the card balance
- * correctly reflect the whole purchase.
+ * Records an expense funded by a credit-card-type account, optionally
+ * split into N installments. All N Transaction rows are created
+ * immediately (dated one month apart), and the full purchase amount is
+ * applied to the card's owed balance right away via the shared ledger —
+ * even though later installments are dated in the future, there's no
+ * "apply on due date" concept in this app, so eager creation is what
+ * makes the card balance correctly reflect the whole purchase.
  */
 export async function createInstallmentPurchase(
   userId: string,
-  creditCardId: string,
+  accountId: string,
   data: CreateInstallmentPurchaseInput
 ): Promise<Transaction[]> {
   return prisma.$transaction(async tx => {
-    const card = await tx.creditCard.findFirst({
-      where: { id: creditCardId, userId },
+    const card = await tx.financialAccount.findFirst({
+      where: { id: accountId, userId, type: 'CREDIT_CARD' },
     });
 
     if (!card) {
-      throw new Error('Credit card not found');
+      throw new Error('Credit card account not found');
     }
 
     const category = await tx.category.findUnique({
@@ -66,7 +66,7 @@ export async function createInstallmentPurchase(
           categoryId: data.categoryId,
           necessityLevel: data.necessityLevel,
           valueAlignment: data.valueAlignment,
-          creditCardId,
+          accountId,
           installmentGroupId: groupId,
           installmentCurrent: installments > 1 ? i + 1 : null,
           installmentTotal: installments > 1 ? installments : null,

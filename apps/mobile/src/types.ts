@@ -26,7 +26,6 @@ export interface Transaction {
   scheduledId: string | null;
   accountId: string | null;
   toAccountId: string | null;
-  creditCardId: string | null;
   installmentGroupId: string | null;
   installmentCurrent: number | null;
   installmentTotal: number | null;
@@ -71,6 +70,9 @@ export interface FinancialAccount {
   type: FinancialAccountType;
   balance: string;
   color: string;
+  creditLimit?: string | null;
+  closingDay?: number | null;
+  dueDay?: number | null;
 }
 
 export interface Investment {
@@ -87,16 +89,6 @@ export interface Debt {
   dueDate: string | null;
   installmentCurrent: number | null;
   installmentTotal: number | null;
-}
-
-export interface CreditCard {
-  id: string;
-  name: string;
-  creditLimit: string;
-  balance: string;
-  closingDay: number;
-  dueDay: number;
-  color: string;
 }
 
 export interface NetWorth {
@@ -153,7 +145,6 @@ export interface InferredTransaction {
   valueAlignment: ValueAlignment | null;
   accountId: string | null;
   toAccountId: string | null;
-  creditCardId: string | null;
   installments: number;
   isRecurring: boolean;
   frequency: ScheduleFrequency | null;

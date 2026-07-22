@@ -4,7 +4,6 @@ import { Transaction } from '@/types/transaction';
 import { assertValidFundingSource } from './funding-source';
 import { reconcileLedgerEffect } from './ledger';
 import { assertAccountsOwnedByUser } from './validate-accounts';
-import { assertCreditCardsOwnedByUser } from './validate-credit-cards';
 
 export async function updateTransaction(
   userId: string,
@@ -22,12 +21,15 @@ export async function updateTransaction(
     }
 
     const merged = { ...existing, ...data };
-    assertValidFundingSource(merged);
-    await assertAccountsOwnedByUser(tx, userId, [
-      data.accountId,
-      data.toAccountId,
+    const types = await assertAccountsOwnedByUser(tx, userId, [
+      merged.accountId,
+      merged.toAccountId,
     ]);
-    await assertCreditCardsOwnedByUser(tx, userId, [data.creditCardId]);
+    assertValidFundingSource({
+      ...merged,
+      accountType: merged.accountId ? types.get(merged.accountId) : null,
+      toAccountType: merged.toAccountId ? types.get(merged.toAccountId) : null,
+    });
 
     await reconcileLedgerEffect(tx, existing, null);
 

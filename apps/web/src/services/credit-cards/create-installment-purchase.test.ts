@@ -7,8 +7,9 @@ vi.mock('@/lib/db', () => ({
   prisma: {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     $transaction: vi.fn((callback: any) => callback(prisma)),
-    creditCard: {
+    financialAccount: {
       findFirst: vi.fn(),
+      findUniqueOrThrow: vi.fn(),
       update: vi.fn(),
     },
     category: {
@@ -21,12 +22,13 @@ vi.mock('@/lib/db', () => ({
 }));
 
 const userId = 'user_test_123';
-const creditCardId = 'card_1';
+const accountId = 'card_1';
 
 const mockCard = {
-  id: creditCardId,
+  id: accountId,
   userId,
   name: 'Nubank',
+  type: 'CREDIT_CARD' as const,
   creditLimit: new Prisma.Decimal(5000),
   closingDay: 10,
   dueDay: 17,
@@ -48,7 +50,11 @@ const mockCategory = {
 describe('createInstallmentPurchase', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(prisma.creditCard.findFirst).mockResolvedValue(mockCard);
+    vi.mocked(prisma.financialAccount.findFirst).mockResolvedValue(mockCard);
+    vi.mocked(prisma.financialAccount.findUniqueOrThrow).mockResolvedValue({
+      type: 'CREDIT_CARD',
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any);
     vi.mocked(prisma.category.findUnique).mockResolvedValue(mockCategory);
     let counter = 0;
     vi.mocked(prisma.transaction.create).mockImplementation(
@@ -60,18 +66,18 @@ describe('createInstallmentPurchase', () => {
     );
   });
 
-  it('throws when the credit card does not belong to the user', async () => {
-    vi.mocked(prisma.creditCard.findFirst).mockResolvedValue(null);
+  it('throws when the credit card account does not belong to the user', async () => {
+    vi.mocked(prisma.financialAccount.findFirst).mockResolvedValue(null);
 
     await expect(
-      createInstallmentPurchase(userId, creditCardId, {
+      createInstallmentPurchase(userId, accountId, {
         amount: 300,
         description: 'Notebook',
         date: new Date('2026-01-10'),
         categoryId: mockCategory.id,
         installments: 3,
       })
-    ).rejects.toThrow('Credit card not found');
+    ).rejects.toThrow('Credit card account not found');
     expect(prisma.transaction.create).not.toHaveBeenCalled();
   });
 
@@ -79,7 +85,7 @@ describe('createInstallmentPurchase', () => {
     vi.mocked(prisma.category.findUnique).mockResolvedValue(null);
 
     await expect(
-      createInstallmentPurchase(userId, creditCardId, {
+      createInstallmentPurchase(userId, accountId, {
         amount: 300,
         description: 'Notebook',
         date: new Date('2026-01-10'),
@@ -90,7 +96,7 @@ describe('createInstallmentPurchase', () => {
   });
 
   it('creates a single transaction for a 1x (full) purchase with no installment metadata', async () => {
-    const [row] = await createInstallmentPurchase(userId, creditCardId, {
+    const [row] = await createInstallmentPurchase(userId, accountId, {
       amount: 300,
       description: 'Notebook',
       date: new Date('2026-01-10'),
@@ -106,7 +112,7 @@ describe('createInstallmentPurchase', () => {
   });
 
   it('creates N transactions dated one month apart with matching installment metadata', async () => {
-    const rows = await createInstallmentPurchase(userId, creditCardId, {
+    const rows = await createInstallmentPurchase(userId, accountId, {
       amount: 300,
       description: 'Notebook',
       date: new Date('2026-01-10'),
@@ -128,7 +134,7 @@ describe('createInstallmentPurchase', () => {
   });
 
   it('splits the amount cent-exact across installments', async () => {
-    const rows = await createInstallmentPurchase(userId, creditCardId, {
+    const rows = await createInstallmentPurchase(userId, accountId, {
       amount: 100,
       description: 'Fone de ouvido',
       date: new Date('2026-01-10'),
@@ -140,7 +146,7 @@ describe('createInstallmentPurchase', () => {
   });
 
   it('applies the full purchase amount to the card balance immediately', async () => {
-    await createInstallmentPurchase(userId, creditCardId, {
+    await createInstallmentPurchase(userId, accountId, {
       amount: 300,
       description: 'Notebook',
       date: new Date('2026-01-10'),
@@ -149,9 +155,9 @@ describe('createInstallmentPurchase', () => {
     });
 
     const totalIncremented = vi
-      .mocked(prisma.creditCard.update)
+      .mocked(prisma.financialAccount.update)
       .mock.calls.reduce(
-        (sum, call) =>
+        (sum: number, call) =>
           sum + (call[0].data.balance as { increment: number }).increment,
         0
       );

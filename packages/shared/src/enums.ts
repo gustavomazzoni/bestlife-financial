@@ -41,5 +41,6 @@ export const FinancialAccountType = {
   CHECKING: 'CHECKING',
   SAVINGS: 'SAVINGS',
   WALLET: 'WALLET',
+  CREDIT_CARD: 'CREDIT_CARD',
 } as const;
 export type FinancialAccountType = (typeof FinancialAccountType)[keyof typeof FinancialAccountType];

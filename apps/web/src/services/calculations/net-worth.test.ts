@@ -7,7 +7,6 @@ vi.mock('@/lib/db', () => ({
     financialAccount: { findMany: vi.fn() },
     investment: { findMany: vi.fn() },
     debt: { findMany: vi.fn() },
-    creditCard: { findMany: vi.fn() },
   },
 }));
 
@@ -15,14 +14,13 @@ const userId = 'user_test_123';
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.mocked(prisma.creditCard.findMany as Mock).mockResolvedValue([]);
 });
 
 describe('calculateNetWorth', () => {
   it('computes netWorth = accountsTotal + investmentsTotal - debtsTotal - creditCardsTotal', async () => {
     vi.mocked(prisma.financialAccount.findMany as Mock).mockResolvedValue([
-      { balance: 1000 },
-      { balance: 500 },
+      { balance: 1000, type: 'CHECKING' },
+      { balance: 500, type: 'SAVINGS' },
     ]);
     vi.mocked(prisma.investment.findMany as Mock).mockResolvedValue([
       { balance: 5000 },
@@ -60,7 +58,7 @@ describe('calculateNetWorth', () => {
 
   it('allows a negative netWorth when debts exceed assets', async () => {
     vi.mocked(prisma.financialAccount.findMany as Mock).mockResolvedValue([
-      { balance: 100 },
+      { balance: 100, type: 'CHECKING' },
     ]);
     vi.mocked(prisma.investment.findMany as Mock).mockResolvedValue([]);
     vi.mocked(prisma.debt.findMany as Mock).mockResolvedValue([
@@ -72,19 +70,18 @@ describe('calculateNetWorth', () => {
     expect(result.netWorth).toBe(-4900);
   });
 
-  it('subtracts credit card balances from net worth', async () => {
+  it('subtracts credit-card-type account balances from net worth', async () => {
     vi.mocked(prisma.financialAccount.findMany as Mock).mockResolvedValue([
-      { balance: 1000 },
+      { balance: 1000, type: 'CHECKING' },
+      { balance: 300, type: 'CREDIT_CARD' },
+      { balance: 150, type: 'CREDIT_CARD' },
     ]);
     vi.mocked(prisma.investment.findMany as Mock).mockResolvedValue([]);
     vi.mocked(prisma.debt.findMany as Mock).mockResolvedValue([]);
-    vi.mocked(prisma.creditCard.findMany as Mock).mockResolvedValue([
-      { balance: 300 },
-      { balance: 150 },
-    ]);
 
     const result = await calculateNetWorth(userId);
 
+    expect(result.accountsTotal).toBe(1000);
     expect(result.creditCardsTotal).toBe(450);
     expect(result.netWorth).toBe(550);
   });

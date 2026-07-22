@@ -11,7 +11,8 @@ vi.mock('@/lib/db', () => ({
       update: vi.fn(),
     },
     financialAccount: {
-      count: vi.fn(),
+      findMany: vi.fn(),
+      findUniqueOrThrow: vi.fn(),
       update: vi.fn(),
     },
   },
@@ -34,7 +35,12 @@ describe('updateTransaction', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(prisma.financialAccount.count as Mock).mockResolvedValue(0);
+    vi.mocked(prisma.financialAccount.findMany as Mock).mockResolvedValue([]);
+    vi.mocked(
+      prisma.financialAccount.findUniqueOrThrow as Mock
+    ).mockResolvedValue({
+      type: 'CHECKING',
+    });
   });
 
   it('should update transaction successfully', async () => {
@@ -78,7 +84,9 @@ describe('updateTransaction', () => {
       ...existingTransaction,
       accountId: 'acc_1',
     });
-    vi.mocked(prisma.financialAccount.count as Mock).mockResolvedValue(1);
+    vi.mocked(prisma.financialAccount.findMany as Mock).mockResolvedValue([
+      { id: 'acc_1', type: 'CHECKING' },
+    ]);
     vi.mocked(prisma.transaction.update as Mock).mockResolvedValue({
       ...existingTransaction,
       accountId: 'acc_1',
@@ -103,7 +111,9 @@ describe('updateTransaction', () => {
       ...existingTransaction,
       accountId: 'acc_old',
     });
-    vi.mocked(prisma.financialAccount.count as Mock).mockResolvedValue(1);
+    vi.mocked(prisma.financialAccount.findMany as Mock).mockResolvedValue([
+      { id: 'acc_new', type: 'CHECKING' },
+    ]);
     vi.mocked(prisma.transaction.update as Mock).mockResolvedValue({
       ...existingTransaction,
       accountId: 'acc_new',
@@ -125,7 +135,7 @@ describe('updateTransaction', () => {
     vi.mocked(prisma.transaction.findFirst as Mock).mockResolvedValue(
       existingTransaction
     );
-    vi.mocked(prisma.financialAccount.count as Mock).mockResolvedValue(0);
+    vi.mocked(prisma.financialAccount.findMany as Mock).mockResolvedValue([]);
 
     await expect(
       updateTransaction(userId, transactionId, { accountId: 'not_mine' })

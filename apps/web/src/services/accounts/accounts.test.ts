@@ -17,6 +17,9 @@ vi.mock('@/lib/db', () => ({
       update: vi.fn(),
       delete: vi.fn(),
     },
+    transaction: {
+      count: vi.fn(),
+    },
   },
 }));
 
@@ -24,6 +27,7 @@ const userId = 'user_test_123';
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(prisma.transaction.count as Mock).mockResolvedValue(0);
 });
 
 describe('createFinancialAccount', () => {
@@ -45,6 +49,37 @@ describe('createFinancialAccount', () => {
     expect(prisma.financialAccount.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ userId, name: 'Nubank', balance: 0 }),
+      })
+    );
+  });
+
+  it('persists the credit-card-only fields for a CREDIT_CARD account', async () => {
+    vi.mocked(prisma.financialAccount.create as Mock).mockResolvedValue({
+      id: 'card_1',
+      userId,
+      name: 'Nubank Card',
+      type: 'CREDIT_CARD',
+      balance: 0,
+      creditLimit: 5000,
+      closingDay: 10,
+      dueDay: 17,
+    });
+
+    await createFinancialAccount(userId, {
+      name: 'Nubank Card',
+      type: 'CREDIT_CARD',
+      creditLimit: 5000,
+      closingDay: 10,
+      dueDay: 17,
+    });
+
+    expect(prisma.financialAccount.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          creditLimit: 5000,
+          closingDay: 10,
+          dueDay: 17,
+        }),
       })
     );
   });
@@ -88,6 +123,7 @@ describe('updateFinancialAccount', () => {
     vi.mocked(prisma.financialAccount.findFirst as Mock).mockResolvedValue({
       id: 'acc_1',
       userId,
+      type: 'CHECKING',
     });
     vi.mocked(prisma.financialAccount.update as Mock).mockResolvedValue({
       id: 'acc_1',
@@ -109,6 +145,61 @@ describe('updateFinancialAccount', () => {
     await expect(
       updateFinancialAccount(userId, 'acc_missing', { balance: 1000 })
     ).rejects.toThrow('Account not found');
+  });
+
+  it('allows changing type within the asset bucket even with transactions', async () => {
+    vi.mocked(prisma.financialAccount.findFirst as Mock).mockResolvedValue({
+      id: 'acc_1',
+      userId,
+      type: 'CHECKING',
+    });
+    vi.mocked(prisma.transaction.count as Mock).mockResolvedValue(5);
+    vi.mocked(prisma.financialAccount.update as Mock).mockResolvedValue({
+      id: 'acc_1',
+      userId,
+      type: 'SAVINGS',
+    });
+
+    const result = await updateFinancialAccount(userId, 'acc_1', {
+      type: 'SAVINGS',
+    });
+    expect(result.type).toBe('SAVINGS');
+    expect(prisma.transaction.count).not.toHaveBeenCalled();
+  });
+
+  it('rejects flipping between asset and CREDIT_CARD once the account has transactions', async () => {
+    vi.mocked(prisma.financialAccount.findFirst as Mock).mockResolvedValue({
+      id: 'acc_1',
+      userId,
+      type: 'CHECKING',
+    });
+    vi.mocked(prisma.transaction.count as Mock).mockResolvedValue(3);
+
+    await expect(
+      updateFinancialAccount(userId, 'acc_1', { type: 'CREDIT_CARD' })
+    ).rejects.toThrow(
+      'Cannot change an account between asset and credit-card type once it has transactions'
+    );
+    expect(prisma.financialAccount.update).not.toHaveBeenCalled();
+  });
+
+  it('allows flipping between asset and CREDIT_CARD when the account has no transactions', async () => {
+    vi.mocked(prisma.financialAccount.findFirst as Mock).mockResolvedValue({
+      id: 'acc_1',
+      userId,
+      type: 'CHECKING',
+    });
+    vi.mocked(prisma.transaction.count as Mock).mockResolvedValue(0);
+    vi.mocked(prisma.financialAccount.update as Mock).mockResolvedValue({
+      id: 'acc_1',
+      userId,
+      type: 'CREDIT_CARD',
+    });
+
+    const result = await updateFinancialAccount(userId, 'acc_1', {
+      type: 'CREDIT_CARD',
+    });
+    expect(result.type).toBe('CREDIT_CARD');
   });
 });
 

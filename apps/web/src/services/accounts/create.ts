@@ -6,6 +6,9 @@ export interface CreateFinancialAccountInput {
   type: FinancialAccountType;
   balance?: number;
   color?: string;
+  creditLimit?: number;
+  closingDay?: number;
+  dueDay?: number;
 }
 
 export async function createFinancialAccount(
@@ -19,6 +22,9 @@ export async function createFinancialAccount(
       type: data.type,
       balance: data.balance ?? 0,
       color: data.color,
+      creditLimit: data.creditLimit,
+      closingDay: data.closingDay,
+      dueDay: data.dueDay,
     },
   });
 }

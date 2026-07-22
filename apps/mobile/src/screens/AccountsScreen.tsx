@@ -17,14 +17,10 @@ import {
   InvestmentFormSheetRef,
 } from '../components/InvestmentFormSheet';
 import { DebtFormSheet, DebtFormSheetRef } from '../components/DebtFormSheet';
-import {
-  CreditCardFormSheet,
-  CreditCardFormSheetRef,
-} from '../components/CreditCardFormSheet';
 import { useApiData } from '../hooks/useApiData';
 import { api } from '../lib/api';
 import { formatCurrency } from '../lib/format';
-import { CreditCard, Debt, FinancialAccount, Investment, NetWorth } from '../types';
+import { Debt, FinancialAccount, Investment, NetWorth } from '../types';
 import { AccountsStackParamList } from '../navigation/AccountsStack';
 
 type Props = NativeStackScreenProps<AccountsStackParamList, 'AccountsHome'>;
@@ -34,7 +30,9 @@ export function AccountsScreen({ navigation }: Props) {
   const accounts = useApiData(() => api.get<FinancialAccount[]>('/api/v1/accounts'));
   const investments = useApiData(() => api.get<Investment[]>('/api/v1/investments'));
   const debts = useApiData(() => api.get<Debt[]>('/api/v1/debts'));
-  const creditCards = useApiData(() => api.get<CreditCard[]>('/api/v1/credit-cards'));
+
+  const walletAccounts = (accounts.data ?? []).filter(a => a.type !== 'CREDIT_CARD');
+  const creditCardAccounts = (accounts.data ?? []).filter(a => a.type === 'CREDIT_CARD');
 
   const [selectedAccount, setSelectedAccount] = useState<FinancialAccount | null>(null);
   const accountSheetRef = useRef<AccountFormSheetRef>(null);
@@ -57,34 +55,16 @@ export function AccountsScreen({ navigation }: Props) {
     debtSheetRef.current?.present();
   }
 
-  const [selectedCreditCard, setSelectedCreditCard] = useState<CreditCard | null>(null);
-  const creditCardSheetRef = useRef<CreditCardFormSheetRef>(null);
-  function openCreditCard(c: CreditCard | null) {
-    setSelectedCreditCard(c);
-    creditCardSheetRef.current?.present();
-  }
-
-  const loading =
-    netWorth.loading ||
-    accounts.loading ||
-    investments.loading ||
-    debts.loading ||
-    creditCards.loading;
+  const loading = netWorth.loading || accounts.loading || investments.loading || debts.loading;
   const refreshing =
-    netWorth.refreshing ||
-    accounts.refreshing ||
-    investments.refreshing ||
-    debts.refreshing ||
-    creditCards.refreshing;
-  const error =
-    netWorth.error ?? accounts.error ?? investments.error ?? debts.error ?? creditCards.error;
+    netWorth.refreshing || accounts.refreshing || investments.refreshing || debts.refreshing;
+  const error = netWorth.error ?? accounts.error ?? investments.error ?? debts.error;
 
   function refetchAll() {
     netWorth.refetch();
     accounts.refetch();
     investments.refetch();
     debts.refetch();
-    creditCards.refetch();
   }
 
   if (loading) return <LoadingState />;
@@ -128,13 +108,13 @@ export function AccountsScreen({ navigation }: Props) {
             </Pressable>
           </View>
         </View>
-        {!accounts.data || accounts.data.length === 0 ? (
+        {walletAccounts.length === 0 ? (
           <Card>
             <Text style={styles.emptyText}>Nenhuma conta cadastrada</Text>
           </Card>
         ) : (
           <Card style={styles.listCard}>
-            {accounts.data.map((a, i) => (
+            {walletAccounts.map((a, i) => (
               <Pressable
                 key={a.id}
                 style={[styles.itemRow, i > 0 && styles.itemRowBorder]}
@@ -195,7 +175,7 @@ export function AccountsScreen({ navigation }: Props) {
               {formatCurrency(netWorth.data?.creditCardsTotal ?? 0)}
             </Text>
             <Pressable
-              onPress={() => openCreditCard(null)}
+              onPress={() => openAccount(null)}
               style={styles.addButton}
               hitSlop={8}
               testID="add-credit-card-button"
@@ -204,23 +184,23 @@ export function AccountsScreen({ navigation }: Props) {
             </Pressable>
           </View>
         </View>
-        {!creditCards.data || creditCards.data.length === 0 ? (
+        {creditCardAccounts.length === 0 ? (
           <Card>
             <Text style={styles.emptyText}>Nenhum cartão cadastrado</Text>
           </Card>
         ) : (
           <Card style={styles.listCard}>
-            {creditCards.data.map((c, i) => (
+            {creditCardAccounts.map((c, i) => (
               <Pressable
                 key={c.id}
                 style={[styles.itemRow, i > 0 && styles.itemRowBorder]}
-                onPress={() => openCreditCard(c)}
+                onPress={() => openAccount(c)}
                 testID="credit-card-item"
               >
                 <IconBadge size={38} color={colors.expense} letter={c.name} />
                 <Text style={styles.itemLabel}>{c.name}</Text>
                 <Text style={[styles.itemValue, { color: colors.expense }]}>
-                  {formatCurrency(c.balance)} / {formatCurrency(c.creditLimit)}
+                  {formatCurrency(c.balance)} / {formatCurrency(c.creditLimit ?? 0)}
                 </Text>
               </Pressable>
             ))}
@@ -288,6 +268,7 @@ export function AccountsScreen({ navigation }: Props) {
       <AccountFormSheet
         ref={accountSheetRef}
         account={selectedAccount}
+        accounts={accounts.data ?? []}
         onSaved={() => {
           accounts.refetch();
           netWorth.refetch();
@@ -323,21 +304,6 @@ export function AccountsScreen({ navigation }: Props) {
           netWorth.refetch();
         }}
         onClose={() => debtSheetRef.current?.dismiss()}
-      />
-      <CreditCardFormSheet
-        ref={creditCardSheetRef}
-        creditCard={selectedCreditCard}
-        accounts={accounts.data ?? []}
-        onSaved={() => {
-          creditCards.refetch();
-          accounts.refetch();
-          netWorth.refetch();
-        }}
-        onDeleted={() => {
-          creditCards.refetch();
-          netWorth.refetch();
-        }}
-        onClose={() => creditCardSheetRef.current?.dismiss()}
       />
     </View>
   );

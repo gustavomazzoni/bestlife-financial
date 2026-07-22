@@ -7,6 +7,7 @@ import {
   ValueAlignment,
 } from '@/types';
 import { toUTCMidnight } from '@lifeos/shared';
+import { assertValidFundingSource } from '../transactions/funding-source';
 import { assertAccountsOwnedByUser } from '../transactions/validate-accounts';
 
 export interface UpdateScheduledInput {
@@ -77,9 +78,16 @@ export async function updateScheduledTransaction(
     }
   }
 
-  if (data.accountId) {
-    await assertAccountsOwnedByUser(prisma, userId, [data.accountId]);
-  }
+  const effectiveAccountId =
+    data.accountId !== undefined ? data.accountId : existing.accountId;
+  const types = await assertAccountsOwnedByUser(prisma, userId, [
+    effectiveAccountId,
+  ]);
+  assertValidFundingSource({
+    type: data.type || existing.type,
+    accountId: effectiveAccountId,
+    accountType: effectiveAccountId ? types.get(effectiveAccountId) : null,
+  });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const updateData: any = { ...data };

@@ -1,13 +1,14 @@
 import { describe, it, expect, vi } from 'vitest';
 import { applyLedgerEffect, reconcileLedgerEffect } from './ledger';
 
-function mockTx() {
+/** `types` maps accountId -> FinancialAccountType for findUniqueOrThrow; defaults to CHECKING. */
+function mockTx(types: Record<string, string> = {}) {
   return {
     financialAccount: {
       update: vi.fn(),
-    },
-    creditCard: {
-      update: vi.fn(),
+      findUniqueOrThrow: vi.fn(({ where }: { where: { id: string } }) =>
+        Promise.resolve({ type: types[where.id] ?? 'CHECKING' })
+      ),
     },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } as any;
@@ -120,55 +121,41 @@ describe('applyLedgerEffect', () => {
     });
   });
 
-  it('increments the card balance when an EXPENSE is funded by a credit card', async () => {
-    const tx = mockTx();
+  it('increments the owed balance when an EXPENSE is funded by a credit-card-type account', async () => {
+    const tx = mockTx({ card_1: 'CREDIT_CARD' });
     await applyLedgerEffect(
       tx,
-      {
-        type: 'EXPENSE',
-        amount: 100,
-        accountId: null,
-        toAccountId: null,
-        creditCardId: 'card_1',
-      },
+      { type: 'EXPENSE', amount: 100, accountId: 'card_1', toAccountId: null },
       1
     );
-    expect(tx.creditCard.update).toHaveBeenCalledWith({
+    expect(tx.financialAccount.update).toHaveBeenCalledWith({
       where: { id: 'card_1' },
       data: { balance: { increment: 100 } },
     });
-    expect(tx.financialAccount.update).not.toHaveBeenCalled();
   });
 
-  it('reverses a card-funded EXPENSE by decrementing the card balance', async () => {
-    const tx = mockTx();
+  it('reverses a card-funded EXPENSE by decrementing the owed balance', async () => {
+    const tx = mockTx({ card_1: 'CREDIT_CARD' });
     await applyLedgerEffect(
       tx,
-      {
-        type: 'EXPENSE',
-        amount: 100,
-        accountId: null,
-        toAccountId: null,
-        creditCardId: 'card_1',
-      },
+      { type: 'EXPENSE', amount: 100, accountId: 'card_1', toAccountId: null },
       -1
     );
-    expect(tx.creditCard.update).toHaveBeenCalledWith({
+    expect(tx.financialAccount.update).toHaveBeenCalledWith({
       where: { id: 'card_1' },
       data: { balance: { increment: -100 } },
     });
   });
 
-  it('decrements the card balance on a TRANSFER payoff (account to card)', async () => {
-    const tx = mockTx();
+  it('decrements the owed balance on a TRANSFER payoff (account to card)', async () => {
+    const tx = mockTx({ card_1: 'CREDIT_CARD' });
     await applyLedgerEffect(
       tx,
       {
         type: 'TRANSFER',
         amount: 100,
         accountId: 'acc_1',
-        toAccountId: null,
-        creditCardId: 'card_1',
+        toAccountId: 'card_1',
       },
       1
     );
@@ -176,7 +163,7 @@ describe('applyLedgerEffect', () => {
       where: { id: 'acc_1' },
       data: { balance: { decrement: 100 } },
     });
-    expect(tx.creditCard.update).toHaveBeenCalledWith({
+    expect(tx.financialAccount.update).toHaveBeenCalledWith({
       where: { id: 'card_1' },
       data: { balance: { decrement: 100 } },
     });

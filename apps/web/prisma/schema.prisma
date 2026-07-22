@@ -50,7 +50,6 @@ model User {
   financialAccounts      FinancialAccount[]
   investments            Investment[]
   debts                  Debt[]
-  creditCards            CreditCard[]
   categoryBudgets        CategoryBudget[]
 
   @@index([email])
@@ -89,6 +88,7 @@ enum FinancialAccountType {
   CHECKING
   SAVINGS
   WALLET
+  CREDIT_CARD
 }
 
 model ScheduledTransaction {
@@ -136,7 +136,6 @@ model Transaction {
   scheduledId        String?
   accountId          String?
   toAccountId        String?
-  creditCardId       String?
   installmentGroupId String?
   installmentCurrent Int?
   installmentTotal   Int?
@@ -144,12 +143,11 @@ model Transaction {
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @default(now()) @updatedAt
 
-  user       User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  category   Category              @relation(fields: [categoryId], references: [id])
-  scheduled  ScheduledTransaction? @relation(fields: [scheduledId], references: [id])
-  account    FinancialAccount?     @relation("TransactionFromAccount", fields: [accountId], references: [id])
-  toAccount  FinancialAccount?     @relation("TransactionToAccount", fields: [toAccountId], references: [id])
-  creditCard CreditCard?           @relation(fields: [creditCardId], references: [id])
+  user      User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category  Category              @relation(fields: [categoryId], references: [id])
+  scheduled ScheduledTransaction? @relation(fields: [scheduledId], references: [id])
+  account   FinancialAccount?     @relation("TransactionFromAccount", fields: [accountId], references: [id])
+  toAccount FinancialAccount?     @relation("TransactionToAccount", fields: [toAccountId], references: [id])
 
   @@index([userId, date])
   @@index([userId, type])
@@ -158,7 +156,6 @@ model Transaction {
   @@index([scheduledId])
   @@index([accountId])
   @@index([toAccountId])
-  @@index([creditCardId])
   @@index([installmentGroupId])
 }
 
@@ -216,6 +213,12 @@ model FinancialAccount {
   type      FinancialAccountType
   balance   Decimal              @default(0) @db.Decimal(12, 2)
   color     String               @default("#6B7280")
+  // Credit-card-only fields — NULL for every other type. Required-when-
+  // CREDIT_CARD is enforced in the Zod schema/service layer, not the DB,
+  // matching how validation already works everywhere else in this app.
+  creditLimit Decimal?           @db.Decimal(12, 2)
+  closingDay  Int?
+  dueDay      Int?
   createdAt DateTime             @default(now())
   updatedAt DateTime             @updatedAt
 
@@ -253,24 +256,6 @@ model Debt {
   updatedAt          DateTime  @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-}
-
-model CreditCard {
-  id          String   @id @default(cuid())
-  userId      String
-  name        String
-  creditLimit Decimal  @db.Decimal(12, 2)
-  closingDay  Int
-  dueDay      Int
-  balance     Decimal  @default(0) @db.Decimal(12, 2)
-  color       String   @default("#6B7280")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  transactions Transaction[]
 
   @@index([userId])
 }

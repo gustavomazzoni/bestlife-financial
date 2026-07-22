@@ -11,6 +11,7 @@ vi.mock('@/lib/db', () => ({
       delete: vi.fn(),
     },
     financialAccount: {
+      findUniqueOrThrow: vi.fn(),
       update: vi.fn(),
     },
   },
@@ -22,6 +23,11 @@ describe('deleteTransaction', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(
+      prisma.financialAccount.findUniqueOrThrow as Mock
+    ).mockResolvedValue({
+      type: 'CHECKING',
+    });
   });
 
   it('should delete transaction successfully', async () => {

@@ -5,16 +5,30 @@ export interface LedgerFields {
   amount: Prisma.Decimal | number | string;
   accountId: string | null;
   toAccountId: string | null;
-  creditCardId?: string | null;
+}
+
+async function isLiabilityAccount(
+  tx: Prisma.TransactionClient,
+  accountId: string
+): Promise<boolean> {
+  const account = await tx.financialAccount.findUniqueOrThrow({
+    where: { id: accountId },
+    select: { type: true },
+  });
+  return account.type === 'CREDIT_CARD';
 }
 
 /**
  * Applies (sign=1) or reverses (sign=-1) the balance effect implied by a
- * transaction's type/amount/accountId/toAccountId/creditCardId.
- * EXPENSE debits the account (or increments the card's owed balance, if
- * funded by a credit card instead). INCOME/SAVING credit the account.
- * TRANSFER debits the source account and credits the destination — which
- * may be a second account or a credit card (a card payoff, which reduces
+ * transaction's type/amount/accountId/toAccountId. Every FinancialAccount
+ * is either asset-style (CHECKING/SAVINGS/WALLET — a positive balance is
+ * money the user has) or liability-style (CREDIT_CARD — a positive
+ * balance is money the user owes), resolved here per touched account.
+ * EXPENSE debits an asset account, or increments what's owed on a
+ * liability account. INCOME/SAVING credit an asset account (never legal
+ * against a liability one — enforced by funding-source.ts, not here).
+ * TRANSFER debits the source (always asset-side) and credits the
+ * destination — decrementing it if liability (a card payoff, reducing
  * what's owed).
  */
 export async function applyLedgerEffect(
@@ -32,30 +46,26 @@ export async function applyLedgerEffect(
       });
     }
     if (fields.toAccountId) {
+      const payoff = await isLiabilityAccount(tx, fields.toAccountId);
       await tx.financialAccount.update({
         where: { id: fields.toAccountId },
-        data: { balance: { increment: amount } },
+        data: payoff
+          ? { balance: { decrement: amount } }
+          : { balance: { increment: amount } },
       });
     }
-    if (fields.creditCardId) {
-      await tx.creditCard.update({
-        where: { id: fields.creditCardId },
-        data: { balance: { decrement: amount } },
-      });
-    }
-    return;
-  }
-
-  if (fields.creditCardId) {
-    await tx.creditCard.update({
-      where: { id: fields.creditCardId },
-      data: { balance: { increment: amount } },
-    });
     return;
   }
 
   if (fields.accountId) {
-    const delta = fields.type === 'EXPENSE' ? -amount : amount;
+    const liability = await isLiabilityAccount(tx, fields.accountId);
+    const delta = liability
+      ? fields.type === 'EXPENSE'
+        ? amount
+        : -amount
+      : fields.type === 'EXPENSE'
+        ? -amount
+        : amount;
     await tx.financialAccount.update({
       where: { id: fields.accountId },
       data: { balance: { increment: delta } },
