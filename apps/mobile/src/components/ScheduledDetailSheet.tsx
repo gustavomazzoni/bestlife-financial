@@ -38,6 +38,15 @@ const typeColor: Record<string, string> = {
   TRANSFER: colors.transfer,
 };
 
+/** "Débito automático" only makes sense for money leaving an account —
+ * for INCOME the account is where money arrives, so the label differs. */
+const ACCOUNT_LABEL: Partial<Record<string, string>> = {
+  INCOME: 'Conta (recebimento)',
+};
+function accountLabel(type: string): string {
+  return ACCOUNT_LABEL[type] ?? 'Conta (débito automático)';
+}
+
 function formatDateOnly(date: string): string {
   return new Date(`${date.slice(0, 10)}T00:00:00`).toLocaleDateString('pt-BR');
 }
@@ -201,7 +210,7 @@ export const ScheduledDetailSheet = forwardRef<
             )}
             {account && (
               <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Conta (débito automático)</Text>
+                <Text style={styles.detailLabel}>{accountLabel(draft.type)}</Text>
                 <Text style={styles.detailValue}>{account.name}</Text>
               </View>
             )}
@@ -296,7 +305,7 @@ export const ScheduledDetailSheet = forwardRef<
 
             {accounts.length > 0 && (
               <>
-                <Text style={styles.label}>Conta (débito automático)</Text>
+                <Text style={styles.label}>{accountLabel(draft.type)}</Text>
                 <View style={styles.chipRow}>
                   {accounts.map(a => (
                     <Chip
