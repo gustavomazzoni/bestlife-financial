@@ -236,76 +236,78 @@ async function main() {
     });
   }
 
-  // 2. Criar Usuário de Teste
-  console.log('👤 Criando usuário de teste...');
-  const user = await prisma.user.upsert({
-    where: { email: 'demo@lifeos.com' },
-    update: {},
-    create: {
-      email: 'demo@lifeos.com',
-      name: 'Usuário Demo',
-      image: 'https://github.com/shadcn.png',
-      // Dados financeiros iniciais
-      currentInvestments: 50000,
-      emergencyFund: 15000,
-      dreamLifestyleCost: 12000,
-    },
-  });
-
-  // 3. Criar algumas transações de exemplo
-  console.log('💸 Criando transações de exemplo...');
-  const transactionsCheck = await prisma.transaction.count({
-    where: { userId: user.id },
-  });
-
-  if (transactionsCheck === 0) {
-    const catSalary = await prisma.category.findFirstOrThrow({
-      where: { name: 'Salary', type: TransactionType.INCOME },
-      select: { id: true },
-    });
-    const catHousing = await prisma.category.findFirstOrThrow({
-      where: { name: 'Housing', type: TransactionType.EXPENSE },
-      select: { id: true },
-    });
-    const catFood = await prisma.category.findFirstOrThrow({
-      where: { name: 'Food', type: TransactionType.EXPENSE },
-      select: { id: true },
+  if (process.env.SEED_DEMO_USER === 'true') {
+    // 2. Criar Usuário de Teste
+    console.log('👤 Criando usuário de teste...');
+    const user = await prisma.user.upsert({
+      where: { email: 'demo@lifeos.com' },
+      update: {},
+      create: {
+        email: 'demo@lifeos.com',
+        name: 'Usuário Demo',
+        image: 'https://github.com/shadcn.png',
+        // Dados financeiros iniciais
+        currentInvestments: 50000,
+        emergencyFund: 15000,
+        dreamLifestyleCost: 12000,
+      },
     });
 
-    await prisma.transaction.createMany({
-      data: [
-        {
-          userId: user.id,
-          date: new Date(),
-          amount: 8500,
-          description: 'Salário Mensal',
-          type: TransactionType.INCOME,
-          categoryId: catSalary.id,
-          necessityLevel: NecessityLevel.IMPORTANT,
-          valueAlignment: ValueAlignment.FREEDOM_ENABLING,
-        },
-        {
-          userId: user.id,
-          date: new Date(),
-          amount: 2500,
-          description: 'Aluguel',
-          type: TransactionType.EXPENSE,
-          categoryId: catHousing.id,
-          necessityLevel: NecessityLevel.IMPORTANT,
-          valueAlignment: ValueAlignment.ALIGNED,
-        },
-        {
-          userId: user.id,
-          date: new Date(),
-          amount: 600,
-          description: 'Supermercado Semanal',
-          type: TransactionType.EXPENSE,
-          categoryId: catFood.id,
-          necessityLevel: NecessityLevel.NEEDS,
-          valueAlignment: ValueAlignment.DEFAULT,
-        },
-      ],
+    // 3. Criar algumas transações de exemplo
+    console.log('💸 Criando transações de exemplo...');
+    const transactionsCheck = await prisma.transaction.count({
+      where: { userId: user.id },
     });
+
+    if (transactionsCheck === 0) {
+      const catSalary = await prisma.category.findFirstOrThrow({
+        where: { name: 'Salary', type: TransactionType.INCOME },
+        select: { id: true },
+      });
+      const catHousing = await prisma.category.findFirstOrThrow({
+        where: { name: 'Housing', type: TransactionType.EXPENSE },
+        select: { id: true },
+      });
+      const catFood = await prisma.category.findFirstOrThrow({
+        where: { name: 'Food', type: TransactionType.EXPENSE },
+        select: { id: true },
+      });
+
+      await prisma.transaction.createMany({
+        data: [
+          {
+            userId: user.id,
+            date: new Date(),
+            amount: 8500,
+            description: 'Salário Mensal',
+            type: TransactionType.INCOME,
+            categoryId: catSalary.id,
+            necessityLevel: NecessityLevel.IMPORTANT,
+            valueAlignment: ValueAlignment.FREEDOM_ENABLING,
+          },
+          {
+            userId: user.id,
+            date: new Date(),
+            amount: 2500,
+            description: 'Aluguel',
+            type: TransactionType.EXPENSE,
+            categoryId: catHousing.id,
+            necessityLevel: NecessityLevel.IMPORTANT,
+            valueAlignment: ValueAlignment.ALIGNED,
+          },
+          {
+            userId: user.id,
+            date: new Date(),
+            amount: 600,
+            description: 'Supermercado Semanal',
+            type: TransactionType.EXPENSE,
+            categoryId: catFood.id,
+            necessityLevel: NecessityLevel.NEEDS,
+            valueAlignment: ValueAlignment.DEFAULT,
+          },
+        ],
+      });
+    }
   }
 
   console.log('✅ Seed finalizado com sucesso!');
