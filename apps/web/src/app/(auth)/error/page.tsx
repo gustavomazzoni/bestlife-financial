@@ -23,7 +23,7 @@ const errorMessages: Record<string, string> = {
 export default async function AuthErrorPage({
   searchParams,
 }: {
-  searchParams: { error?: string };
+  searchParams: Promise<{ error?: string }>;
 }) {
   const params = await searchParams;
   const error = params.error || 'Default';
