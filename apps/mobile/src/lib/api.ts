@@ -26,6 +26,18 @@ interface RequestOptions {
   body?: unknown;
 }
 
+let onUnauthorized: (() => void) | null = null;
+
+/**
+ * Registered once by App.tsx. Fires whenever any request comes back 401,
+ * so a token that's gone stale mid-session (backend AUTH_SECRET rotated,
+ * pointed at a different backend, revoked, etc.) signs the user out
+ * instead of leaving every screen stuck retrying a doomed request.
+ */
+export function setUnauthorizedHandler(handler: (() => void) | null): void {
+  onUnauthorized = handler;
+}
+
 async function request<T>(
   path: string,
   options: RequestOptions = {}
@@ -49,6 +61,9 @@ async function request<T>(
   const json = await response.json().catch(() => null);
 
   if (!response.ok) {
+    if (response.status === 401) {
+      onUnauthorized?.();
+    }
     throw new ApiError(
       response.status,
       json?.error?.message ?? 'Request failed',

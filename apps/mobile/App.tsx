@@ -16,6 +16,7 @@ import {
   SpaceGrotesk_700Bold,
 } from '@expo-google-fonts/space-grotesk';
 import { getStoredToken, signOut } from './src/lib/auth';
+import { api, setUnauthorizedHandler } from './src/lib/api';
 import { AuthContext } from './src/lib/authContext';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { RootNavigator } from './src/navigation/RootNavigator';
@@ -36,8 +37,31 @@ export default function App() {
   );
 
   useEffect(() => {
-    getStoredToken().then(token => {
-      setStatus(token ? 'signed-in' : 'idle');
+    setUnauthorizedHandler(() => {
+      signOut();
+      setStatus('idle');
+    });
+    return () => setUnauthorizedHandler(null);
+  }, []);
+
+  useEffect(() => {
+    getStoredToken().then(async token => {
+      if (!token) {
+        setStatus('idle');
+        return;
+      }
+      // A stored token isn't necessarily still valid — it may have been
+      // issued by a different backend (e.g. switching from local dev to
+      // production) or revoked server-side. Confirm it against the
+      // current API before trusting it, instead of routing to Home and
+      // leaving every screen stuck on a doomed 401 retry.
+      try {
+        await api.get('/api/v1/user/profile');
+        setStatus('signed-in');
+      } catch {
+        await signOut();
+        setStatus('idle');
+      }
     });
   }, []);
 

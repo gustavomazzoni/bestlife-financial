@@ -39,6 +39,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
+    "start-tunnel": "expo start -c --tunnel",
     "type-check": "tsc --noEmit",
     "test": "jest"
   },
